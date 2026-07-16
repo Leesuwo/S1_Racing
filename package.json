@@ -14,7 +14,8 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.19.3",

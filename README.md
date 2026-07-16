@@ -29,7 +29,17 @@ npm run dev
 
 브라우저에서 Vite가 출력한 주소를 엽니다.
 
-## 검증 명령
+## 필수 검증
+
+모든 변경을 완료하기 전에는 반드시 다음 명령을 실행합니다.
+
+```bash
+npm run verify
+```
+
+이 명령은 타입 검사, 단위 테스트, 아키텍처 다이어그램 검증, 프로덕션 빌드, Chromium E2E를 순서대로 수행합니다. GitHub Actions의 `Required verification`도 동일한 명령을 실행합니다.
+
+개별 검증 명령은 다음과 같습니다.
 
 ```bash
 npm run typecheck
