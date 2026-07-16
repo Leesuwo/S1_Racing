@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
 import { FixedTimestepAccumulator } from "../game/loop/FixedTimestep";
 import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/VehicleSimulation";
+import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
 
 interface DrivingSceneProps {
   input: BrowserVehicleInput;
@@ -134,7 +135,7 @@ export function DrivingScene({ input, paused, onTelemetry }: DrivingSceneProps) 
     const snapshot = simulation.getRenderSnapshot(alpha);
     if (vehicleRef.current) {
       vehicleRef.current.position.set(snapshot.position.x, 0, snapshot.position.z);
-      vehicleRef.current.rotation.y = snapshot.yawRad;
+      vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
     }
 
     forward.set(Math.sin(snapshot.yawRad), 0, -Math.cos(snapshot.yawRad));
