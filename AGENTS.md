@@ -59,6 +59,7 @@ Milestone 0은 Project Foundation이다. 이번 단계에는 차량 물리, AI, 
 - `npm run test:e2e`는 선택 검사가 아니다. 사용자에게 보이는 기능·입력·HUD·흐름을 변경하면 해당 동작을 검증하는 E2E 시나리오를 추가하거나 갱신한 뒤 실행한다.
 - E2E가 환경 문제로 실행되지 않으면 완료로 표시하지 않고, 실패 원인과 사용자가 확인해야 할 항목을 명시한다.
 - GitHub Actions의 `Required verification` 워크플로와 로컬 `npm run verify`는 같은 완료 기준을 사용한다.
+- 마일스톤의 완료 조건을 통과하면 변경 사항을 하나의 의도적인 커밋으로 남기고, 현재 작업 브랜치를 `origin`에 푸시한다. 푸시 실패는 완료가 아니라 배포·동기화 보류 상태로 보고한다.
 - 모듈 경계나 데이터 흐름을 변경하면 `docs/architecture/`의 Archify JSON과 HTML을 함께 갱신하고 `npm run architecture:check`를 실행한다.
 - 테스트가 통과하기 전 다음 기능 단계로 넘어가지 않는다.
 - 주요 설계 결정은 `docs/DECISIONS.md`에 기록한다.
