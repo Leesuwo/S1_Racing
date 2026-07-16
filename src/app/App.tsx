@@ -109,7 +109,7 @@ export function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">S1 RACING / 물리 프로토타입 v0.4</p>
+          <p className="eyebrow">S1 RACING / 물리 프로토타입 v0.5</p>
           <h1>S1 Racing</h1>
           <p className="subtitle">고정 120Hz 차량 물리 테스트 트랙</p>
         </div>
@@ -194,6 +194,30 @@ export function App() {
               : "초기화 중"}
           </strong>
         </article>
+        <article>
+          <span>타이어 최대 슬립</span>
+          <strong>
+            {suspensionTelemetry
+              ? `${formatNumber(suspensionTelemetry.maximumSlipRatio * 100, 1)}%`
+              : "초기화 중"}
+          </strong>
+        </article>
+        <article>
+          <span>타이어 최대 슬립각</span>
+          <strong>
+            {suspensionTelemetry
+              ? `${formatNumber(suspensionTelemetry.maximumSlipAngleRad * 180 / Math.PI, 1)}°`
+              : "초기화 중"}
+          </strong>
+        </article>
+        <article>
+          <span>타이어 그립 사용률</span>
+          <strong>
+            {suspensionTelemetry
+              ? `${formatNumber(suspensionTelemetry.maximumFrictionUsage * 100, 0)}%`
+              : "초기화 중"}
+          </strong>
+        </article>
       </section>
 
       <section className="control-panel" aria-label="조작 안내">
@@ -207,7 +231,7 @@ export function App() {
         </div>
         <div>
           <span>물리 상태</span>
-          <strong>평면 구동 물리 + Rapier 4휠 접지 리그 · 120Hz 고정 스텝</strong>
+          <strong>Rapier 접지점 타이어 힘 + 4휠 레이캐스트 · 120Hz 고정 스텝</strong>
         </div>
       </section>
     </main>

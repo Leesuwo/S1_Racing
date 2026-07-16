@@ -33,6 +33,8 @@ input devices
 → VehicleControlInput
 → FixedTimestepAccumulator
 → VehicleSimulation / VehiclePhysics
+→ WheelKinematics / TireModel
+→ RapierChassisSuspension
 → immutable/read-only render snapshot
 → R3F canvas + telemetry HUD
 ```
@@ -40,6 +42,6 @@ input devices
 ## 테스트 경계
 
 - 단위 테스트: 순수 시간·입력·수학 함수
-- 통합 테스트: 물리 세계와 차량 상태
-- E2E: 앱 부팅, 캔버스, 메뉴, 포커스·일시정지 흐름
+- 통합 테스트: Rapier 접지점 타이어 힘, 가속·제동, 차량 상태
+- E2E: 앱 부팅, 캔버스, W 입력 가속, 조향·타이어 슬립 HUD
 - 성능 테스트: 20대 레이스와 최악 환경에서 별도 실행

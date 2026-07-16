@@ -7,6 +7,7 @@ import {
   RapierChassisSuspension,
   type RapierSuspensionTelemetry,
 } from "../game/physics/RapierChassisSuspension";
+import { sampleTestTrackSurface } from "../game/physics/TrackSurface";
 import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
 
@@ -103,6 +104,15 @@ function VehicleModel({ groupRef }: { groupRef: RefObject<THREE.Group | null> })
   );
 }
 
+function rapierRotationToPhysicsYaw(rotation: { x: number; y: number; z: number; w: number }): number {
+  const rapierYawRad = Math.atan2(
+    2 * (rotation.w * rotation.y + rotation.x * rotation.z),
+    1 - 2 * (rotation.y * rotation.y + rotation.z * rotation.z),
+  );
+
+  return -rapierYawRad;
+}
+
 export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry }: DrivingSceneProps) {
   const { camera } = useThree();
   const simulation = useMemo(() => new VehicleSimulation(), []);
@@ -123,6 +133,13 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
         return;
       }
 
+      const initialSnapshot = simulation.getRenderSnapshot(1);
+      rig.syncPlanarPose({
+        position: initialSnapshot.position,
+        velocity: initialSnapshot.velocity,
+        yawRad: initialSnapshot.yawRad,
+        yawRateRadS: initialSnapshot.yawRateRadS,
+      });
       suspensionRig.current = rig;
     }).catch(() => {
       if (!disposed) {
@@ -141,7 +158,15 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
     if (input.consumeReset()) {
       simulation.reset();
       input.resetSteering();
-      suspensionRig.current?.reset();
+      const rig = suspensionRig.current;
+      rig?.reset();
+      const resetSnapshot = simulation.getRenderSnapshot(1);
+      rig?.syncPlanarPose({
+        position: resetSnapshot.position,
+        velocity: resetSnapshot.velocity,
+        yawRad: resetSnapshot.yawRad,
+        yawRateRadS: resetSnapshot.yawRateRadS,
+      });
     }
 
     let alpha = 0;
@@ -157,14 +182,33 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
           },
           dt,
         );
-        const physicsSnapshot = simulation.getRenderSnapshot(1);
-        suspensionRig.current?.syncPlanarPose({
-          position: physicsSnapshot.position,
-          velocity: physicsSnapshot.velocity,
-          yawRad: physicsSnapshot.yawRad,
-          yawRateRadS: physicsSnapshot.yawRateRadS,
-        });
-        suspensionRig.current?.step(dt, frameInput.steering);
+        const rig = suspensionRig.current;
+        if (rig) {
+          const rapierSnapshot = rig.getSnapshot();
+          const surface = sampleTestTrackSurface({
+            x: rapierSnapshot.position.x,
+            z: rapierSnapshot.position.z,
+          });
+          rig.step(dt, {
+            steeringInput: frameInput.steering,
+            rearDriveForceN: simulation.current.engineForceN,
+            brakeForceN: simulation.current.brake * simulation.config.maxBrakeForceN,
+            surfaceGripMultiplier: surface.gripMultiplier,
+          });
+          const updatedRapierSnapshot = rig.getSnapshot();
+          simulation.synchronizeFromExternalPose({
+            position: {
+              x: updatedRapierSnapshot.position.x,
+              z: updatedRapierSnapshot.position.z,
+            },
+            velocity: {
+              x: updatedRapierSnapshot.linearVelocity.x,
+              z: updatedRapierSnapshot.linearVelocity.z,
+            },
+            yawRad: rapierRotationToPhysicsYaw(updatedRapierSnapshot.rotation),
+            yawRateRadS: -updatedRapierSnapshot.angularVelocity.y,
+          }, dt);
+        }
         stepIndex += 1;
       });
       alpha = result.alpha;

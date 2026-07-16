@@ -39,6 +39,21 @@ export interface VehicleTelemetry {
   wheelCompressionM: WheelValues;
 }
 
+export interface ExternalPlanarVehiclePose {
+  position: { x: number; z: number };
+  velocity: { x: number; z: number };
+  yawRad: number;
+  yawRateRadS: number;
+}
+
+function dot(a: { x: number; z: number }, b: { x: number; z: number }): number {
+  return a.x * b.x + a.z * b.z;
+}
+
+function rightVector(yawRad: number): { x: number; z: number } {
+  return { x: Math.cos(yawRad), z: Math.sin(yawRad) };
+}
+
 export class VehicleSimulation {
   readonly config: VehiclePhysicsConfig;
   readonly current: VehicleState;
@@ -67,6 +82,32 @@ export class VehicleSimulation {
   reset(): void {
     resetVehicleState(this.current);
     this.previous = cloneVehicleState(this.current);
+  }
+
+  /**
+   * M1C keeps the existing deterministic command, gear and telemetry model,
+   * but replaces its predicted X/Z pose with Rapier's tire-force result after
+   * each fixed step. `previous` intentionally remains the prior Rapier pose so
+   * the renderer can interpolate without reading the physics world directly.
+   */
+  synchronizeFromExternalPose(pose: ExternalPlanarVehiclePose, dtSeconds: number): void {
+    const safeDtSeconds = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : 1 / 120;
+    const previousLateralSpeedMps = dot(this.previous.velocity, rightVector(this.previous.yawRad));
+
+    this.current.position = { ...pose.position };
+    this.current.velocity = { ...pose.velocity };
+    this.current.yawRad = pose.yawRad;
+    this.current.yawRateRadS = pose.yawRateRadS;
+    this.current.speedMps = Math.hypot(pose.velocity.x, pose.velocity.z);
+    this.current.forwardSpeedMps = dot(
+      pose.velocity,
+      { x: Math.sin(pose.yawRad), z: -Math.cos(pose.yawRad) },
+    );
+    this.current.lateralSpeedMps = dot(pose.velocity, rightVector(pose.yawRad));
+    this.current.lateralAccelerationMps2 = (
+      this.current.lateralSpeedMps - previousLateralSpeedMps
+    ) / safeDtSeconds;
+    this.current.surface = sampleTestTrackSurface(this.current.position).type;
   }
 
   getRenderSnapshot(alpha: number): VehicleRenderSnapshot {

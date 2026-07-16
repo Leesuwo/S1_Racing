@@ -16,9 +16,9 @@ Rapier 동적 차체, 정적 지면, 4개 휠 레이캐스트, 스프링·댐퍼
 
 전륜 조향, 4개 휠 장착점·접지점·접지점 속도, Rapier 차체와 평면 물리의 pose 동기화, 조향 HUD와 단위·E2E 검증을 추가했다.
 
-## Milestone 1C — Tire forces
+## Milestone 1C — Tire forces (완료)
 
-슬립 비율, 슬립 각, 결합 그립, 하중 민감도를 추가한다.
+휠별 슬립 비율·슬립 각·하중 민감도·결합 그립을 순수 타이어 모델로 분리하고, Rapier 차체의 실제 접지점에 종·횡방향 힘을 적용했다. Rapier가 X/Z·yaw를 소유하고 기존 시뮬레이션은 입력·기어·RPM·렌더링 상태를 동기화한다.
 
 ## Milestone 1D — Drivetrain
 

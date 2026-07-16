@@ -3,6 +3,12 @@ import {
   calculateAllWheelKinematics,
   type WheelKinematicState,
 } from "./WheelKinematics";
+import {
+  calculateTireForce,
+  DEFAULT_TIRE_MODEL_CONFIG,
+  type TireForceState,
+  type TireModelConfig,
+} from "./TireModel";
 
 export type RaycastWheelId = "frontLeft" | "frontRight" | "rearLeft" | "rearRight";
 
@@ -36,6 +42,24 @@ export interface RapierSuspensionTelemetry {
   referenceRideHeightM: number;
   maximumCompressionM: number;
   frontSteeringAngleRad: number;
+  totalLongitudinalTireForceN: number;
+  totalLateralTireForceN: number;
+  maximumSlipRatio: number;
+  maximumSlipAngleRad: number;
+  maximumFrictionUsage: number;
+}
+
+export interface RapierTireControl {
+  steeringInput: number;
+  rearDriveForceN: number;
+  brakeForceN: number;
+  surfaceGripMultiplier: number;
+}
+
+export interface RapierWheelTireState extends TireForceState {
+  id: RaycastWheelId;
+  grounded: boolean;
+  wheelAngularSpeedRadS: number;
 }
 
 export interface PlanarChassisPose {
@@ -61,6 +85,8 @@ export interface RapierChassisSuspensionConfig {
   bumpDampingNsPerM: number;
   reboundDampingNsPerM: number;
   maxSuspensionForceN: number;
+  wheelRotationalInertiaKgM2: number;
+  tire: TireModelConfig;
 }
 
 export const DEFAULT_RAPIER_CHASSIS_SUSPENSION_CONFIG: RapierChassisSuspensionConfig = {
@@ -79,6 +105,8 @@ export const DEFAULT_RAPIER_CHASSIS_SUSPENSION_CONFIG: RapierChassisSuspensionCo
   bumpDampingNsPerM: 9_000,
   reboundDampingNsPerM: 14_000,
   maxSuspensionForceN: 28_000,
+  wheelRotationalInertiaKgM2: 1.15,
+  tire: DEFAULT_TIRE_MODEL_CONFIG,
 };
 
 const FIXED_WHEEL_ORDER: readonly RaycastWheelId[] = [
@@ -103,6 +131,10 @@ function add(a: Vec3, b: Vec3): Vec3 {
   return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
 }
 
+function subtract(a: Vec3, b: Vec3): Vec3 {
+  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
+}
+
 function scale(value: Vec3, scalar: number): Vec3 {
   return { x: value.x * scalar, y: value.y * scalar, z: value.z * scalar };
 }
@@ -114,6 +146,14 @@ function normalize(value: Vec3): Vec3 {
   }
 
   return scale(value, 1 / length);
+}
+
+function dot(a: Vec3, b: Vec3): number {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+function projectOntoPlane(value: Vec3, normal: Vec3): Vec3 {
+  return subtract(value, scale(normal, dot(value, normal)));
 }
 
 function rotateByQuaternion(vector: Vec3, rotation: { x: number; y: number; z: number; w: number }): Vec3 {
@@ -146,6 +186,38 @@ function emptyContact(id: RaycastWheelId): RaycastWheelContact {
   };
 }
 
+function emptyTireState(id: RaycastWheelId): RapierWheelTireState {
+  return {
+    id,
+    grounded: false,
+    wheelAngularSpeedRadS: 0,
+    slipRatio: 0,
+    slipAngleRad: 0,
+    longitudinalForceN: 0,
+    lateralForceN: 0,
+    maximumForceN: 0,
+    frictionUsage: 0,
+  };
+}
+
+function normalizeTireControl(control: RapierTireControl | number): RapierTireControl {
+  if (typeof control === "number") {
+    return {
+      steeringInput: control,
+      rearDriveForceN: 0,
+      brakeForceN: 0,
+      surfaceGripMultiplier: 1,
+    };
+  }
+
+  return {
+    steeringInput: clamp(control.steeringInput, -1, 1),
+    rearDriveForceN: Math.max(0, control.rearDriveForceN),
+    brakeForceN: Math.max(0, control.brakeForceN),
+    surfaceGripMultiplier: clamp(control.surfaceGripMultiplier, 0, 3),
+  };
+}
+
 function createWheelMounts(config: RapierChassisSuspensionConfig): Record<RaycastWheelId, Vec3> {
   const halfTrackM = config.trackWidthM * 0.5;
 
@@ -158,9 +230,9 @@ function createWheelMounts(config: RapierChassisSuspensionConfig): Record<Raycas
 }
 
 /**
- * Milestone 1A vertical suspension rig. It owns a Rapier dynamic chassis and
- * performs four downward scene-query raycasts against a ground collider.
- * Longitudinal tire forces remain in VehiclePhysics until Milestone 1B/1C.
+ * Rapier owns the dynamic chassis and four downward scene-query rays. M1C
+ * calculates each grounded wheel's slip and combined tire force before the
+ * Rapier world step, then applies the force at the physical contact point.
  */
 export class RapierChassisSuspension {
   private readonly world: RAPIER.World;
@@ -168,6 +240,8 @@ export class RapierChassisSuspension {
   private readonly wheelMounts: Record<RaycastWheelId, Vec3>;
   private readonly contacts = new Map<RaycastWheelId, RaycastWheelContact>();
   private readonly previousCompression = new Map<RaycastWheelId, number>();
+  private readonly tireStates = new Map<RaycastWheelId, RapierWheelTireState>();
+  private readonly wheelAngularSpeeds = new Map<RaycastWheelId, number>();
   private steeringInput = 0;
 
   private constructor(
@@ -182,6 +256,8 @@ export class RapierChassisSuspension {
     for (const id of FIXED_WHEEL_ORDER) {
       this.contacts.set(id, emptyContact(id));
       this.previousCompression.set(id, 0);
+      this.tireStates.set(id, emptyTireState(id));
+      this.wheelAngularSpeeds.set(id, 0);
     }
   }
 
@@ -214,14 +290,16 @@ export class RapierChassisSuspension {
     return new RapierChassisSuspension(config, world, chassis);
   }
 
-  step(dtSeconds: number, steeringInput = this.steeringInput): void {
+  step(dtSeconds: number, control: RapierTireControl | number = this.steeringInput): void {
     if (!Number.isFinite(dtSeconds) || dtSeconds <= 0) {
       return;
     }
 
-    this.steeringInput = clamp(steeringInput, -1, 1);
+    const tireControl = normalizeTireControl(control);
+    this.steeringInput = tireControl.steeringInput;
     this.world.timestep = dtSeconds;
     this.applySuspensionForces(dtSeconds);
+    this.applyTireForces(dtSeconds, tireControl);
     this.world.step();
     this.chassis.resetForces(false);
     this.chassis.resetTorques(false);
@@ -275,11 +353,13 @@ export class RapierChassisSuspension {
     );
   }
 
-  /**
-   * The planar prototype owns X/Z position and yaw until tire forces move into
-   * Rapier. This keeps the M1A vertical contact rig attached to the visible car
-   * without granting Rapier a second, conflicting planar integrator.
-   */
+  getWheelTireStates(): Record<RaycastWheelId, RapierWheelTireState> {
+    return Object.fromEntries(
+      FIXED_WHEEL_ORDER.map((id) => [id, { ...this.tireStates.get(id)! }]),
+    ) as Record<RaycastWheelId, RapierWheelTireState>;
+  }
+
+  /** Legacy helper for deterministic test setup. Runtime planar ownership is Rapier from M1C onward. */
   syncPlanarPosition(position: Pick<Vec3, "x" | "z">): void {
     const translation = this.chassis.translation();
     this.chassis.setTranslation({ x: position.x, y: translation.y, z: position.z }, true);
@@ -306,11 +386,14 @@ export class RapierChassisSuspension {
     for (const id of FIXED_WHEEL_ORDER) {
       this.contacts.set(id, emptyContact(id));
       this.previousCompression.set(id, 0);
+      this.tireStates.set(id, emptyTireState(id));
+      this.wheelAngularSpeeds.set(id, 0);
     }
   }
 
   getTelemetry(): RapierSuspensionTelemetry {
     const contacts = [...this.contacts.values()];
+    const tires = [...this.tireStates.values()];
 
     return {
       groundedWheelCount: contacts.filter((contact) => contact.grounded).length,
@@ -318,6 +401,11 @@ export class RapierChassisSuspension {
       referenceRideHeightM: this.getReferenceRideHeightM(),
       maximumCompressionM: Math.max(...contacts.map((contact) => contact.compressionM)),
       frontSteeringAngleRad: this.steeringInput * this.config.maxSteeringAngleRad,
+      totalLongitudinalTireForceN: tires.reduce((sum, tire) => sum + tire.longitudinalForceN, 0),
+      totalLateralTireForceN: tires.reduce((sum, tire) => sum + tire.lateralForceN, 0),
+      maximumSlipRatio: Math.max(...tires.map((tire) => Math.abs(tire.slipRatio))),
+      maximumSlipAngleRad: Math.max(...tires.map((tire) => Math.abs(tire.slipAngleRad))),
+      maximumFrictionUsage: Math.max(...tires.map((tire) => tire.frictionUsage)),
     };
   }
 
@@ -376,6 +464,71 @@ export class RapierChassisSuspension {
         suspensionForceN,
         point,
         normal,
+      });
+    }
+  }
+
+  private applyTireForces(dtSeconds: number, control: RapierTireControl): void {
+    const wheelKinematics = this.getWheelKinematics();
+    const rearDriveTorqueNm = control.rearDriveForceN * this.config.wheelRadiusM * 0.5;
+    const totalBrakeTorqueNm = control.brakeForceN * this.config.wheelRadiusM;
+    const wheelInertiaKgM2 = Math.max(0.05, this.config.wheelRotationalInertiaKgM2);
+
+    for (const id of FIXED_WHEEL_ORDER) {
+      const contact = this.contacts.get(id)!;
+      const previousAngularSpeedRadS = this.wheelAngularSpeeds.get(id) ?? 0;
+
+      if (!contact.grounded || !contact.point || !contact.normal) {
+        this.tireStates.set(id, emptyTireState(id));
+        this.wheelAngularSpeeds.set(id, previousAngularSpeedRadS * 0.998);
+        continue;
+      }
+
+      const kinematics = wheelKinematics[id];
+      const tire = calculateTireForce(
+        {
+          normalForceN: contact.suspensionForceN,
+          frictionCoefficient: 1.55 * control.surfaceGripMultiplier,
+          longitudinalSpeedMps: kinematics.longitudinalSpeedMps,
+          lateralSpeedMps: kinematics.lateralSpeedMps,
+          wheelAngularSpeedRadS: previousAngularSpeedRadS,
+          wheelRadiusM: this.config.wheelRadiusM,
+        },
+        this.config.tire,
+      );
+      const forward = normalize(projectOntoPlane(kinematics.forward, contact.normal));
+      const right = normalize(projectOntoPlane(kinematics.right, contact.normal));
+      const tireForce = add(
+        scale(forward, tire.longitudinalForceN),
+        scale(right, tire.lateralForceN),
+      );
+      const isFrontWheel = id.startsWith("front");
+      const driveTorqueNm = isFrontWheel ? 0 : rearDriveTorqueNm;
+      const brakeShare = isFrontWheel ? 0.29 : 0.21;
+      const speedDirection = Math.sign(
+        Math.abs(previousAngularSpeedRadS) > 0.1
+          ? previousAngularSpeedRadS
+          : kinematics.longitudinalSpeedMps || 1,
+      );
+      const brakeTorqueNm = totalBrakeTorqueNm * brakeShare * speedDirection;
+      const angularAccelerationRadS2 = (
+        driveTorqueNm
+        - brakeTorqueNm
+        - tire.longitudinalForceN * this.config.wheelRadiusM
+      ) / wheelInertiaKgM2;
+      const nextAngularSpeedRadS = clamp(
+        previousAngularSpeedRadS + angularAccelerationRadS2 * dtSeconds,
+        -500,
+        500,
+      );
+
+      this.chassis.addForceAtPoint(tireForce, contact.point, true);
+      this.wheelAngularSpeeds.set(id, nextAngularSpeedRadS);
+      this.tireStates.set(id, {
+        id,
+        grounded: true,
+        wheelAngularSpeedRadS: nextAngularSpeedRadS,
+        ...tire,
       });
     }
   }

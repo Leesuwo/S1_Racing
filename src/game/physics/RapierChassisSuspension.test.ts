@@ -38,4 +38,66 @@ describe("RapierChassisSuspension", () => {
 
     rig.dispose();
   });
+
+  it("applies combined tire forces at grounded Rapier contact points", async () => {
+    const rig = await RapierChassisSuspension.create();
+
+    for (let step = 0; step < 720; step += 1) {
+      rig.step(1 / 120);
+    }
+
+    rig.syncPlanarPose({
+      position: { x: 0, z: 0 },
+      velocity: { x: 0, z: 0 },
+      yawRad: 0,
+      yawRateRadS: 0,
+    });
+
+    for (let step = 0; step < 360; step += 1) {
+      rig.step(1 / 120, {
+        steeringInput: 0,
+        rearDriveForceN: 6_000,
+        brakeForceN: 0,
+        surfaceGripMultiplier: 1,
+      });
+    }
+
+    const drivenSnapshot = rig.getSnapshot();
+    const drivenTelemetry = rig.getTelemetry();
+    const tireStates = rig.getWheelTireStates();
+
+    expect(drivenSnapshot.position.z).toBeLessThan(-1);
+    expect(drivenSnapshot.linearVelocity.z).toBeLessThan(-1);
+    expect(Math.abs(drivenTelemetry.totalLongitudinalTireForceN)).toBeGreaterThan(100);
+    expect(drivenTelemetry.maximumSlipRatio).toBeGreaterThan(0);
+    expect(tireStates.rearLeft.wheelAngularSpeedRadS).toBeGreaterThan(0);
+
+    const xBeforeRightSteerM = drivenSnapshot.position.x;
+    for (let step = 0; step < 180; step += 1) {
+      rig.step(1 / 120, {
+        steeringInput: 0.5,
+        rearDriveForceN: 6_000,
+        brakeForceN: 0,
+        surfaceGripMultiplier: 1,
+      });
+    }
+
+    expect(rig.getSnapshot().position.x).toBeGreaterThan(xBeforeRightSteerM + 0.05);
+
+    const speedBeforeBrakeMps = Math.hypot(
+      rig.getSnapshot().linearVelocity.x,
+      rig.getSnapshot().linearVelocity.z,
+    );
+    for (let step = 0; step < 180; step += 1) {
+      rig.step(1 / 120, {
+        steeringInput: 0,
+        rearDriveForceN: 0,
+        brakeForceN: 14_500,
+        surfaceGripMultiplier: 1,
+      });
+    }
+
+    expect(Math.hypot(rig.getSnapshot().linearVelocity.x, rig.getSnapshot().linearVelocity.z)).toBeLessThan(speedBeforeBrakeMps);
+    rig.dispose();
+  });
 });
