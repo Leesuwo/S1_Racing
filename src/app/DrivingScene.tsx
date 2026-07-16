@@ -1,8 +1,12 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
 import { FixedTimestepAccumulator } from "../game/loop/FixedTimestep";
+import {
+  RapierChassisSuspension,
+  type RapierSuspensionTelemetry,
+} from "../game/physics/RapierChassisSuspension";
 import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
 
@@ -10,6 +14,7 @@ interface DrivingSceneProps {
   input: BrowserVehicleInput;
   paused: boolean;
   onTelemetry: (telemetry: VehicleTelemetry) => void;
+  onSuspensionTelemetry: (telemetry: RapierSuspensionTelemetry | null) => void;
 }
 
 function TrackSurface() {
@@ -98,7 +103,7 @@ function VehicleModel({ groupRef }: { groupRef: RefObject<THREE.Group | null> })
   );
 }
 
-export function DrivingScene({ input, paused, onTelemetry }: DrivingSceneProps) {
+export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry }: DrivingSceneProps) {
   const { camera } = useThree();
   const simulation = useMemo(() => new VehicleSimulation(), []);
   const accumulator = useMemo(() => new FixedTimestepAccumulator(), []);
@@ -107,11 +112,36 @@ export function DrivingScene({ input, paused, onTelemetry }: DrivingSceneProps) 
   const desiredCamera = useMemo(() => new THREE.Vector3(), []);
   const forward = useMemo(() => new THREE.Vector3(), []);
   const telemetryClock = useRef(0);
+  const suspensionRig = useRef<RapierChassisSuspension | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+
+    void RapierChassisSuspension.create().then((rig) => {
+      if (disposed) {
+        rig.dispose();
+        return;
+      }
+
+      suspensionRig.current = rig;
+    }).catch(() => {
+      if (!disposed) {
+        onSuspensionTelemetry(null);
+      }
+    });
+
+    return () => {
+      disposed = true;
+      suspensionRig.current?.dispose();
+      suspensionRig.current = null;
+    };
+  }, [onSuspensionTelemetry]);
 
   useFrame((_, deltaSeconds) => {
     if (input.consumeReset()) {
       simulation.reset();
       input.resetSteering();
+      suspensionRig.current?.reset();
     }
 
     let alpha = 0;
@@ -127,6 +157,9 @@ export function DrivingScene({ input, paused, onTelemetry }: DrivingSceneProps) 
           },
           dt,
         );
+        const physicsSnapshot = simulation.getRenderSnapshot(1);
+        suspensionRig.current?.syncPlanarPosition(physicsSnapshot.position);
+        suspensionRig.current?.step(dt);
         stepIndex += 1;
       });
       alpha = result.alpha;
@@ -134,7 +167,11 @@ export function DrivingScene({ input, paused, onTelemetry }: DrivingSceneProps) 
 
     const snapshot = simulation.getRenderSnapshot(alpha);
     if (vehicleRef.current) {
-      vehicleRef.current.position.set(snapshot.position.x, 0, snapshot.position.z);
+      const rapierTelemetry = suspensionRig.current?.getTelemetry();
+      const visualHeight = rapierTelemetry
+        ? rapierTelemetry.chassisHeightM - rapierTelemetry.referenceRideHeightM
+        : 0;
+      vehicleRef.current.position.set(snapshot.position.x, visualHeight, snapshot.position.z);
       vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
     }
 
@@ -156,6 +193,7 @@ export function DrivingScene({ input, paused, onTelemetry }: DrivingSceneProps) 
     if (telemetryClock.current >= 0.1) {
       telemetryClock.current = 0;
       onTelemetry(simulation.getTelemetry());
+      onSuspensionTelemetry(suspensionRig.current?.getTelemetry() ?? null);
     }
   });
 

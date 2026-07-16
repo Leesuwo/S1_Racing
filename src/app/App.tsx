@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
 import { zeroWheelValues } from "../game/physics/Suspension";
+import type { RapierSuspensionTelemetry } from "../game/physics/RapierChassisSuspension";
 import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { detectWebGL2, type WebGL2Support } from "./webgl2";
 import { DrivingScene } from "./DrivingScene";
@@ -29,7 +30,13 @@ function formatNumber(value: number, digits = 0): string {
   });
 }
 
-function AppTelemetry({ telemetry }: { telemetry: VehicleTelemetry }) {
+function AppTelemetry({
+  telemetry,
+  suspensionTelemetry,
+}: {
+  telemetry: VehicleTelemetry;
+  suspensionTelemetry: RapierSuspensionTelemetry | null;
+}) {
   const rpmRatio = Math.min(1, telemetry.rpm / telemetry.redlineRpm);
 
   return (
@@ -64,6 +71,14 @@ function AppTelemetry({ telemetry }: { telemetry: VehicleTelemetry }) {
           <b>RR {formatNumber(telemetry.wheelLoadsN.rearRight)}</b>
         </div>
       </div>
+      <div className="surface-readout">
+        <span>Rapier 접지</span>
+        <strong>
+          {suspensionTelemetry
+            ? `${suspensionTelemetry.groundedWheelCount}/4 · ${formatNumber(suspensionTelemetry.chassisHeightM, 3)} m`
+            : "초기화 중"}
+        </strong>
+      </div>
     </div>
   );
 }
@@ -72,6 +87,7 @@ export function App() {
   const [webgl, setWebgl] = useState<WebGL2Support | null>(null);
   const [paused, setPaused] = useState(() => document.hidden);
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
+  const [suspensionTelemetry, setSuspensionTelemetry] = useState<RapierSuspensionTelemetry | null>(null);
   const input = useMemo(() => new BrowserVehicleInput(window), []);
 
   useEffect(() => {
@@ -93,7 +109,7 @@ export function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">S1 RACING / 물리 프로토타입 v0.2</p>
+          <p className="eyebrow">S1 RACING / 물리 프로토타입 v0.3</p>
           <h1>S1 Racing</h1>
           <p className="subtitle">고정 120Hz 차량 물리 테스트 트랙</p>
         </div>
@@ -110,7 +126,12 @@ export function App() {
             shadows
             onCreated={({ gl }) => input.attach(gl.domElement)}
           >
-            <DrivingScene input={input} paused={paused} onTelemetry={setTelemetry} />
+          <DrivingScene
+            input={input}
+            paused={paused}
+            onTelemetry={setTelemetry}
+            onSuspensionTelemetry={setSuspensionTelemetry}
+          />
           </Canvas>
         ) : webgl ? (
           <div className="error-panel" role="alert">
@@ -124,7 +145,7 @@ export function App() {
 
         {webgl?.supported && (
           <>
-            <AppTelemetry telemetry={telemetry} />
+            <AppTelemetry telemetry={telemetry} suspensionTelemetry={suspensionTelemetry} />
             <div className="simulation-toolbar">
               <button type="button" onClick={() => input.requestPointerLock()}>
                 마우스 조향 활성화
@@ -157,6 +178,14 @@ export function App() {
           <span>서스펜션 압축</span>
           <strong>{formatNumber(Math.max(...Object.values(telemetry.wheelCompressionM)) * 1000)} mm</strong>
         </article>
+        <article>
+          <span>Rapier 차체 높이</span>
+          <strong>
+            {suspensionTelemetry
+              ? `${formatNumber(suspensionTelemetry.chassisHeightM, 3)} m`
+              : "초기화 중"}
+          </strong>
+        </article>
       </section>
 
       <section className="control-panel" aria-label="조작 안내">
@@ -170,7 +199,7 @@ export function App() {
         </div>
         <div>
           <span>물리 상태</span>
-          <strong>순수 TypeScript · 120Hz 고정 스텝 · 아스팔트/잔디 그립</strong>
+          <strong>평면 구동 물리 + Rapier 4휠 접지 리그 · 120Hz 고정 스텝</strong>
         </div>
       </section>
     </main>
