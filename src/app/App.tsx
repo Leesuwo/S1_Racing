@@ -75,6 +75,7 @@ export function App() {
   const input = useMemo(() => new BrowserVehicleInput(window), []);
 
   useEffect(() => {
+    input.connect();
     setWebgl(detectWebGL2());
 
     const handleVisibilityChange = () => {

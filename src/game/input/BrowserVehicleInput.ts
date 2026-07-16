@@ -12,6 +12,18 @@ function moveTowards(current: number, target: number, maxDelta: number): number 
   return current + Math.sign(target - current) * maxDelta;
 }
 
+function getKeyCode(event: KeyboardEvent): string {
+  if (event.code) {
+    return event.code;
+  }
+
+  if (event.key.length === 1 && /[a-z]/i.test(event.key)) {
+    return `Key${event.key.toUpperCase()}`;
+  }
+
+  return event.key;
+}
+
 export class BrowserVehicleInput {
   private readonly pressedKeys = new Set<string>();
   private steering = 0;
@@ -20,25 +32,27 @@ export class BrowserVehicleInput {
   private shiftDownQueued = false;
   private resetQueued = false;
   private attachedElement: HTMLElement | null = null;
+  private connected = false;
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
-    this.pressedKeys.add(event.code);
-    if (!event.repeat && event.code === "KeyE") {
+    const keyCode = getKeyCode(event);
+    this.pressedKeys.add(keyCode);
+    if (!event.repeat && keyCode === "KeyE") {
       this.shiftUpQueued = true;
     }
-    if (!event.repeat && event.code === "KeyQ") {
+    if (!event.repeat && keyCode === "KeyQ") {
       this.shiftDownQueued = true;
     }
-    if (!event.repeat && event.code === "KeyR") {
+    if (!event.repeat && keyCode === "KeyR") {
       this.resetQueued = true;
     }
-    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
+    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(keyCode)) {
       event.preventDefault();
     }
   };
 
   private readonly handleKeyUp = (event: KeyboardEvent): void => {
-    this.pressedKeys.delete(event.code);
+    this.pressedKeys.delete(getKeyCode(event));
   };
 
   private readonly handleMouseMove = (event: MouseEvent): void => {
@@ -67,12 +81,23 @@ export class BrowserVehicleInput {
   };
 
   constructor(private readonly target: Window) {
-    target.addEventListener("keydown", this.handleKeyDown);
-    target.addEventListener("keyup", this.handleKeyUp);
-    target.addEventListener("mousemove", this.handleMouseMove);
-    target.addEventListener("mousedown", this.handleMouseDown);
-    target.addEventListener("contextmenu", this.handleContextMenu);
-    target.document.addEventListener("pointerlockchange", this.handlePointerLockChange);
+    this.connect();
+  }
+
+  connect(): void {
+    if (this.connected) {
+      return;
+    }
+
+    this.target.addEventListener("keydown", this.handleKeyDown);
+    this.target.addEventListener("keyup", this.handleKeyUp);
+    this.target.addEventListener("mousemove", this.handleMouseMove);
+    this.target.addEventListener("mousedown", this.handleMouseDown);
+    this.target.addEventListener("contextmenu", this.handleContextMenu);
+    this.target.document.addEventListener("pointerlockchange", this.handlePointerLockChange);
+    this.target.document.addEventListener("keydown", this.handleKeyDown);
+    this.target.document.addEventListener("keyup", this.handleKeyUp);
+    this.connected = true;
   }
 
   attach(element: HTMLElement): void {
@@ -81,13 +106,20 @@ export class BrowserVehicleInput {
   }
 
   dispose(): void {
+    if (!this.connected) {
+      return;
+    }
+
     this.target.removeEventListener("keydown", this.handleKeyDown);
     this.target.removeEventListener("keyup", this.handleKeyUp);
     this.target.removeEventListener("mousemove", this.handleMouseMove);
     this.target.removeEventListener("mousedown", this.handleMouseDown);
     this.target.removeEventListener("contextmenu", this.handleContextMenu);
     this.target.document.removeEventListener("pointerlockchange", this.handlePointerLockChange);
+    this.target.document.removeEventListener("keydown", this.handleKeyDown);
+    this.target.document.removeEventListener("keyup", this.handleKeyUp);
     this.attachedElement?.removeEventListener("contextmenu", this.handleContextMenu);
+    this.connected = false;
   }
 
   requestPointerLock(): void {

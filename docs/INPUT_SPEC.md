@@ -45,3 +45,5 @@ interface VehicleControlInput {
 - 마우스 우클릭의 브라우저 컨텍스트 메뉴를 차단한다.
 - Pointer Lock이 해제되면 마우스 누적량을 버리고 조향을 중앙으로 복귀시킨다.
 - 탭이 숨겨지면 App이 주행을 일시정지한다.
+- 키보드 이벤트는 Window와 Document에서 모두 수신하고 `event.code`가 없는 환경에서는 `event.key`를 정규화한다.
+- `BrowserVehicleInput`은 `connect()`와 `dispose()`를 멱등적으로 제공해 React 개발 모드의 StrictMode effect 재실행 후에도 입력 리스너를 복구한다.

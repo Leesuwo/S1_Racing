@@ -16,6 +16,9 @@ test("loads the S1 Racing physics prototype", async ({ page }) => {
 test("moves the vehicle when throttle is held", async ({ page }) => {
   await page.goto("/");
 
+  await expect(page.locator("canvas")).toHaveCount(1);
+  await page.locator("canvas").click({ position: { x: 12, y: 12 } });
+  await page.waitForTimeout(250);
   await page.keyboard.down("w");
   await page.waitForTimeout(900);
   await page.keyboard.up("w");
