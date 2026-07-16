@@ -26,6 +26,22 @@ interface VehicleControlInput {
 - Gamepad: 스틱·트리거·범퍼
 - Wheel: 축 캘리브레이션 기반 best-effort 지원
 
-## Milestone 0
+## Physics Prototype v0.1
 
-입력 이벤트를 차량에 연결하지 않는다. 물리 계층이 UI나 브라우저 이벤트를 직접 import하지 않도록 타입 경계만 고정한다.
+`src/game/input/BrowserVehicleInput.ts`가 브라우저 이벤트를 수집하고 모든 입력을 `VehicleControlInput`으로 변환한다. 물리 계층은 이 파일이나 DOM을 import하지 않는다.
+
+### 현재 구현
+
+- W/S 또는 방향키: 가속·브레이크
+- A/D 또는 방향키: 키보드 조향
+- Pointer Lock 마우스 좌우 이동: 누적형 조향
+- 좌클릭 또는 E: 업시프트
+- 우클릭 또는 Q: 다운시프트
+- R: 차량 리셋
+- Shift/Ctrl: 액티브 에어로·오버테이크 입력 계약
+
+### 입력 안전 규칙
+
+- 마우스 우클릭의 브라우저 컨텍스트 메뉴를 차단한다.
+- Pointer Lock이 해제되면 마우스 누적량을 버리고 조향을 중앙으로 복귀시킨다.
+- 탭이 숨겨지면 App이 주행을 일시정지한다.

@@ -2,42 +2,42 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S1 Racing — Milestone 0 Foundation",
-    "subtitle": "Browser runtime boundaries before vehicle physics",
+    "title": "S1 Racing — Physics Prototype v0.1",
+    "subtitle": "120Hz 차량 물리와 브라우저 입력·렌더링 경계",
     "output": "s1-racing-foundation.html"
   },
   "components": [
-    { "id": "browser", "type": "external", "label": "Player Browser", "sublabel": "Chrome / Safari", "pos": [40, 280], "size": [140, 64] },
-    { "id": "app_shell", "type": "frontend", "label": "React App Shell", "sublabel": "Vite entry + status UI", "pos": [250, 280], "size": [150, 64] },
-    { "id": "renderer", "type": "frontend", "label": "R3F Canvas", "sublabel": "Three.js render shell", "pos": [470, 280], "size": [150, 64] },
-    { "id": "input_boundary", "type": "frontend", "label": "Input Boundary", "sublabel": "device adapters", "pos": [250, 120], "size": [150, 64] },
-    { "id": "vehicle_input", "type": "messagebus", "label": "VehicleControlInput", "sublabel": "typed control contract", "pos": [470, 120], "size": [165, 64], "tag": "shared boundary" },
-    { "id": "fixed_loop", "type": "backend", "label": "Fixed Timestep", "sublabel": "120 Hz accumulator", "pos": [690, 280], "size": [150, 64], "tag": "M0 skeleton" },
-    { "id": "physics_domain", "type": "backend", "label": "Physics Domain", "sublabel": "pure TypeScript", "pos": [900, 280], "size": [150, 64], "tag": "future" },
-    { "id": "render_snapshot", "type": "messagebus", "label": "Render Snapshot", "sublabel": "read-only state", "pos": [900, 120], "size": [160, 64] },
-    { "id": "telemetry", "type": "database", "label": "Telemetry Buffer", "sublabel": "debug metrics", "pos": [1110, 280], "size": [150, 64] },
-    { "id": "test_harness", "type": "cloud", "label": "Test Harness", "sublabel": "Vitest + Playwright", "pos": [690, 500], "size": [150, 64] },
-    { "id": "project_docs", "type": "cloud", "label": "Project Contracts", "sublabel": "AGENTS.md + docs/", "pos": [900, 500], "size": [150, 64] }
+    { "id": "browser", "type": "external", "label": "플레이어 브라우저", "sublabel": "Chrome / Safari", "pos": [40, 280], "size": [160, 64] },
+    { "id": "app_shell", "type": "frontend", "label": "React 앱 셸", "sublabel": "Vite 진입점 + 상태 UI", "pos": [250, 280], "size": [170, 64] },
+    { "id": "renderer", "type": "frontend", "label": "R3F 캔버스", "sublabel": "Three.js 렌더링 셸", "pos": [470, 280], "size": [165, 64] },
+    { "id": "input_boundary", "type": "frontend", "label": "입력 경계", "sublabel": "BrowserVehicleInput", "pos": [250, 120], "size": [150, 64] },
+    { "id": "vehicle_input", "type": "messagebus", "label": "차량 제어 입력", "sublabel": "VehicleControlInput 계약", "pos": [470, 120], "size": [180, 64], "tag": "공유 경계" },
+    { "id": "fixed_loop", "type": "backend", "label": "고정 타임스텝", "sublabel": "120Hz 누적기", "pos": [690, 280], "size": [165, 64], "tag": "120Hz 실행" },
+    { "id": "physics_domain", "type": "backend", "label": "차량 물리 도메인", "sublabel": "VehiclePhysics + Simulation", "pos": [900, 280], "size": [180, 64], "tag": "현재 구현" },
+    { "id": "render_snapshot", "type": "messagebus", "label": "렌더링 스냅샷", "sublabel": "읽기 전용 상태", "pos": [900, 120], "size": [170, 64] },
+    { "id": "telemetry", "type": "database", "label": "텔레메트리 HUD", "sublabel": "속도·RPM·G값", "pos": [1110, 280], "size": [170, 64] },
+    { "id": "test_harness", "type": "cloud", "label": "테스트 하네스", "sublabel": "Vitest + Playwright", "pos": [690, 500], "size": [165, 64] },
+    { "id": "project_docs", "type": "cloud", "label": "프로젝트 계약", "sublabel": "AGENTS.md + docs/", "pos": [900, 500], "size": [160, 64] }
   ],
   "boundaries": [
-    { "kind": "region", "label": "Browser Runtime", "wraps": ["browser", "app_shell", "renderer", "input_boundary", "vehicle_input", "fixed_loop", "physics_domain", "render_snapshot", "telemetry"] },
-    { "kind": "security-group", "label": "Pure Domain Boundary", "wraps": ["vehicle_input", "fixed_loop", "physics_domain", "render_snapshot", "telemetry"] }
+    { "kind": "region", "label": "브라우저 런타임", "wraps": ["browser", "app_shell", "renderer", "input_boundary", "vehicle_input", "fixed_loop", "physics_domain", "render_snapshot", "telemetry"] },
+    { "kind": "security-group", "label": "순수 도메인 경계", "wraps": ["vehicle_input", "fixed_loop", "physics_domain", "render_snapshot", "telemetry"] }
   ],
   "connections": [
-    { "from": "browser", "to": "app_shell", "label": "page load", "variant": "emphasis" },
-    { "from": "app_shell", "to": "renderer", "label": "Canvas shell" },
-    { "from": "input_boundary", "to": "vehicle_input", "label": "normalize controls", "variant": "security", "labelDy": 56 },
-    { "from": "vehicle_input", "to": "fixed_loop", "label": "fixed-step input", "fromSide": "right", "toSide": "top", "labelDy": -42 },
-    { "from": "fixed_loop", "to": "physics_domain", "label": "120 Hz step", "variant": "emphasis" },
-    { "from": "physics_domain", "to": "render_snapshot", "label": "read-only state", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [978, 116] },
-    { "from": "render_snapshot", "to": "renderer", "label": "interpolate + draw", "fromSide": "left", "toSide": "top", "labelDy": -42 },
-    { "from": "physics_domain", "to": "telemetry", "label": "debug metrics", "variant": "dashed", "labelDy": 56 },
-    { "from": "test_harness", "to": "fixed_loop", "label": "deterministic checks", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [765, 578] },
-    { "from": "project_docs", "to": "physics_domain", "label": "contracts", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [975, 578] }
+    { "from": "browser", "to": "app_shell", "label": "페이지 로드", "variant": "emphasis", "labelDy": -26 },
+    { "from": "app_shell", "to": "renderer", "label": "캔버스 셸" },
+    { "from": "input_boundary", "to": "vehicle_input", "label": "입력 정규화", "variant": "security", "labelDy": 56 },
+    { "from": "vehicle_input", "to": "fixed_loop", "label": "고정 스텝 입력", "fromSide": "right", "toSide": "top", "labelDy": -42 },
+    { "from": "fixed_loop", "to": "physics_domain", "label": "120Hz 스텝", "variant": "emphasis", "labelDy": -26 },
+    { "from": "physics_domain", "to": "render_snapshot", "label": "읽기 전용 상태", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [978, 116] },
+    { "from": "render_snapshot", "to": "renderer", "label": "보간 + 렌더링", "fromSide": "left", "toSide": "top", "labelDy": -42 },
+    { "from": "physics_domain", "to": "telemetry", "label": "디버그 지표", "variant": "dashed", "labelDy": 56 },
+    { "from": "test_harness", "to": "fixed_loop", "label": "결정적 검사", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [765, 578] },
+    { "from": "project_docs", "to": "physics_domain", "label": "계약 적용", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [975, 578] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "Milestone 0", "items": ["WebGL2 gate and R3F canvas shell", "Fixed-step accumulator contract", "Unit, build, and browser smoke checks"] },
-    { "dot": "emerald", "title": "Architecture rule", "items": ["Physics remains independent from React and R3F", "Player and AI will share VehicleControlInput", "Rendering consumes read-only snapshots"] },
-    { "dot": "rose", "title": "Next boundary", "items": ["Milestone 1A connects the fixed loop to simulation state", "Vehicle physics stays out of the app shell"] }
+    { "dot": "cyan", "title": "Physics Prototype v0.1", "items": ["고정 120Hz 차량 물리", "키보드·마우스 입력과 테스트 트랙", "속도·RPM·G값 텔레메트리 HUD"] },
+    { "dot": "emerald", "title": "아키텍처 규칙", "items": ["물리는 React와 R3F에서 독립", "플레이어와 AI가 VehicleControlInput 공유", "렌더링은 읽기 전용 스냅샷 사용"] },
+    { "dot": "rose", "title": "다음 경계", "items": ["차체와 4개 휠 레이캐스트 서스펜션", "Rapier 충돌과 트랙 리밋"] }
   ]
 }

@@ -8,7 +8,7 @@ src/
 ├─ game/
 │  ├─ loop/   고정 스텝 시간 관리
 │  ├─ input/  차량 입력 경계
-│  ├─ physics/ 향후 순수 물리 코드
+│  ├─ physics/ 순수 차량 물리·표면·시뮬레이션
 │  └─ vehicle/ 향후 차량 도메인 코드
 ├─ rendering/ 향후 Three.js/R3F 표시 계층
 ├─ state/     메뉴·세션 상태
@@ -29,10 +29,12 @@ rendering → read-only snapshots
 
 ```text
 input devices
+→ BrowserVehicleInput
 → VehicleControlInput
-→ fixed-step simulation
+→ FixedTimestepAccumulator
+→ VehicleSimulation / VehiclePhysics
 → immutable/read-only render snapshot
-→ R3F canvas
+→ R3F canvas + telemetry HUD
 ```
 
 ## 테스트 경계

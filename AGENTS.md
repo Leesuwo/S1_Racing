@@ -11,7 +11,22 @@
 
 그래픽 품질을 위해 물리 안정성이나 입력 반응성을 희생하지 않는다.
 
-## Milestone 0 scope
+## Current implementation stage
+
+Milestone 0 — Project Foundation을 완료했고, 현재는 `Physics Prototype v0.1`을 구현한다.
+
+현재 프로토타입에는 다음이 포함된다:
+
+- 순수 TypeScript 2D 평면 차량 물리
+- 120Hz 고정 스텝 실행과 렌더링 보간
+- 가속·제동·조향·8단 기어·RPM
+- 아스팔트·잔디 표면 그립 차이
+- 테스트 트랙·추적 카메라·텔레메트리 HUD
+- 키보드와 Pointer Lock 기반 마우스 입력
+
+이 프로토타입의 수치는 `initial_assumption`이며 실제 특정 차량을 재현하는 값으로 표현하지 않는다.
+
+## Milestone 0 scope (completed baseline)
 
 Milestone 0은 Project Foundation이다. 이번 단계에는 차량 물리, AI, 퀄리파잉, 레이스, 실제 트랙 콘텐츠를 구현하지 않는다.
 

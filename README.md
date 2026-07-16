@@ -4,9 +4,9 @@
 
 ## 현재 단계
 
-**Milestone 0 — Project Foundation**
+**Physics Prototype v0.1**
 
-현재는 차량·AI·레이스 콘텐츠를 구현하지 않고, 이후 개발이 안전하게 진행되도록 실행 기반과 검증 구조를 고정합니다.
+Milestone 0 기반 위에 120Hz 고정 스텝 차량 물리, 테스트 트랙, 키보드·마우스 입력, 추적 카메라, 텔레메트리 HUD를 구현했습니다. 타이어 열화·Rapier 충돌·AI·레이스 운영은 아직 구현하지 않습니다.
 
 ## 기술 스택
 
@@ -50,6 +50,7 @@ npx playwright install chromium
 - `CODEX_START_PROMPT.md`: 다음 Codex 세션용 시작 프롬프트
 - `docs/PRODUCT_SPEC.md`: 제품과 Milestone 0 범위
 - `docs/PHYSICS_SPEC.md`: 차량 물리 방향
+- `docs/PHYSICS_PROTOTYPE_SPEC.md`: 현재 프로토타입 구현 범위와 한계
 - `docs/PHYSICS_VALIDATION_SPEC.md`: 자동 검증 계획
 - `docs/VEHICLE_REFERENCE_TARGETS.md`: 기준 차량 초기 가정
 - `docs/COORDINATE_AND_UNITS_SPEC.md`: 좌표계·단위·부호 규칙
@@ -61,7 +62,7 @@ npx playwright install chromium
 
 ## 다음 마일스톤
 
-Milestone 1A — Fixed-step loop와 물리 데이터 구조입니다. 차량 모델·타이어·AI를 한 번에 추가하지 않고 고정 스텝과 정적 차체 안정성부터 검증합니다.
+Milestone 1A — 고정 스텝 차량 물리의 자동 검증과 차체·서스펜션 모델 고도화입니다. 이후 타이어 열화와 Rapier 충돌을 한 번에 추가하지 않고 검증 가능한 단위로 확장합니다.
 
 ## 아키텍처 다이어그램
 
