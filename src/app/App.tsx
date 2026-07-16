@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
+import { zeroWheelValues } from "../game/physics/Suspension";
 import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { detectWebGL2, type WebGL2Support } from "./webgl2";
 import { DrivingScene } from "./DrivingScene";
@@ -17,6 +18,8 @@ const INITIAL_TELEMETRY: VehicleTelemetry = {
   lateralG: 0,
   downforceN: 0,
   engineForceN: 0,
+  wheelLoadsN: zeroWheelValues(),
+  wheelCompressionM: zeroWheelValues(),
 };
 
 function formatNumber(value: number, digits = 0): string {
@@ -52,6 +55,15 @@ function AppTelemetry({ telemetry }: { telemetry: VehicleTelemetry }) {
         <span>노면</span>
         <strong>{telemetry.surface === "asphalt" ? "아스팔트" : "잔디"}</strong>
       </div>
+      <div className="wheel-load-readout">
+        <span>휠 하중 / N</span>
+        <div>
+          <b>FL {formatNumber(telemetry.wheelLoadsN.frontLeft)}</b>
+          <b>FR {formatNumber(telemetry.wheelLoadsN.frontRight)}</b>
+          <b>RL {formatNumber(telemetry.wheelLoadsN.rearLeft)}</b>
+          <b>RR {formatNumber(telemetry.wheelLoadsN.rearRight)}</b>
+        </div>
+      </div>
     </div>
   );
 }
@@ -80,7 +92,7 @@ export function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">S1 RACING / 물리 프로토타입 v0.1</p>
+          <p className="eyebrow">S1 RACING / 물리 프로토타입 v0.2</p>
           <h1>S1 Racing</h1>
           <p className="subtitle">고정 120Hz 차량 물리 테스트 트랙</p>
         </div>
@@ -139,6 +151,10 @@ export function App() {
         <article>
           <span>구동력</span>
           <strong>{formatNumber(telemetry.engineForceN)} N</strong>
+        </article>
+        <article>
+          <span>서스펜션 압축</span>
+          <strong>{formatNumber(Math.max(...Object.values(telemetry.wheelCompressionM)) * 1000)} mm</strong>
         </article>
       </section>
 

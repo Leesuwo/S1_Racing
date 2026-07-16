@@ -2,8 +2,8 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S1 Racing — Physics Prototype v0.1",
-    "subtitle": "120Hz 차량 물리와 브라우저 입력·렌더링 경계",
+    "title": "S1 Racing — Physics Prototype v0.2",
+    "subtitle": "120Hz 차량 물리와 4개 휠 하중·렌더링 경계",
     "output": "s1-racing-foundation.html"
   },
   "components": [
@@ -13,7 +13,7 @@
     { "id": "input_boundary", "type": "frontend", "label": "입력 경계", "sublabel": "BrowserVehicleInput", "pos": [250, 120], "size": [150, 64] },
     { "id": "vehicle_input", "type": "messagebus", "label": "차량 제어 입력", "sublabel": "VehicleControlInput 계약", "pos": [470, 120], "size": [180, 64], "tag": "공유 경계" },
     { "id": "fixed_loop", "type": "backend", "label": "고정 타임스텝", "sublabel": "120Hz 누적기", "pos": [690, 280], "size": [165, 64], "tag": "120Hz 실행" },
-    { "id": "physics_domain", "type": "backend", "label": "차량 물리 도메인", "sublabel": "VehiclePhysics + Simulation", "pos": [900, 280], "size": [180, 64], "tag": "현재 구현" },
+    { "id": "physics_domain", "type": "backend", "label": "차량 물리 도메인", "sublabel": "VehiclePhysics + Suspension + Simulation", "pos": [900, 280], "size": [180, 64], "tag": "현재 구현" },
     { "id": "render_snapshot", "type": "messagebus", "label": "렌더링 스냅샷", "sublabel": "읽기 전용 상태", "pos": [900, 120], "size": [170, 64] },
     { "id": "telemetry", "type": "database", "label": "텔레메트리 HUD", "sublabel": "속도·RPM·G값", "pos": [1110, 280], "size": [170, 64] },
     { "id": "test_harness", "type": "cloud", "label": "테스트 하네스", "sublabel": "Vitest + Playwright", "pos": [690, 500], "size": [165, 64] },
@@ -38,6 +38,6 @@
   "cards": [
     { "dot": "cyan", "title": "Physics Prototype v0.1", "items": ["고정 120Hz 차량 물리", "키보드·마우스 입력과 테스트 트랙", "속도·RPM·G값 텔레메트리 HUD"] },
     { "dot": "emerald", "title": "아키텍처 규칙", "items": ["물리는 React와 R3F에서 독립", "플레이어와 AI가 VehicleControlInput 공유", "렌더링은 읽기 전용 스냅샷 사용"] },
-    { "dot": "rose", "title": "다음 경계", "items": ["차체와 4개 휠 레이캐스트 서스펜션", "Rapier 충돌과 트랙 리밋"] }
+    { "dot": "rose", "title": "다음 경계", "items": ["Rapier 차체 충돌과 4개 휠 레이캐스트 접지", "실제 노면 높이·연석·트랙 리밋"] }
   ]
 }

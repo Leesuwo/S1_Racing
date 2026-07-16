@@ -10,6 +10,7 @@ import {
   type VehiclePhysicsConfig,
   type VehicleState,
 } from "./VehiclePhysics";
+import type { WheelValues } from "./Suspension";
 
 export interface VehicleRenderSnapshot {
   position: { x: number; z: number };
@@ -32,6 +33,8 @@ export interface VehicleTelemetry {
   lateralG: number;
   downforceN: number;
   engineForceN: number;
+  wheelLoadsN: WheelValues;
+  wheelCompressionM: WheelValues;
 }
 
 export class VehicleSimulation {
@@ -92,6 +95,8 @@ export class VehicleSimulation {
       lateralG: this.current.lateralAccelerationMps2 / 9.81,
       downforceN: this.current.downforceN,
       engineForceN: this.current.engineForceN,
+      wheelLoadsN: { ...this.current.wheelLoadsN },
+      wheelCompressionM: { ...this.current.wheelCompressionM },
     };
   }
 }

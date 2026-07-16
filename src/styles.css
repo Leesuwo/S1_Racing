@@ -57,6 +57,10 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 6vw, 4.5rem); line-height: 0.95; l
 .rpm-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #35d7a2, #ffcf5b 72%, #ff667f); }
 .surface-readout { display: flex; align-items: baseline; gap: 8px; }
 .surface-readout strong { color: #35d7a2; font-size: 0.76rem; }
+.wheel-load-readout { grid-column: 1 / -1; }
+.wheel-load-readout > span { display: block; margin-bottom: 6px; color: #8e9bad; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.1em; }
+.wheel-load-readout > div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; color: #c8d0dc; font-size: 0.68rem; }
+.wheel-load-readout b { font-weight: 600; }
 
 .simulation-toolbar { position: absolute; right: 20px; bottom: 18px; display: flex; align-items: center; gap: 12px; color: #9aa6b8; font-size: 0.72rem; }
 .simulation-toolbar button { color: #bcefe0; border-color: #2d8a71; background: #12342e; }

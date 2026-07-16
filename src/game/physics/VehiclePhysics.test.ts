@@ -53,4 +53,23 @@ describe("VehiclePhysics", () => {
 
     expect(grassState.speedMps).toBeLessThan(asphaltState.speedMps);
   });
+
+  it("exposes four-wheel loads and transfers load during braking", () => {
+    const state = createInitialVehicleState();
+    const throttleInput = { ...neutralVehicleControlInput(), throttle: 1 };
+    const brakeInput = { ...neutralVehicleControlInput(), brake: 1 };
+
+    for (let step = 0; step < 180; step += 1) {
+      stepVehicle(state, throttleInput, 1 / 120, DEFAULT_VEHICLE_CONFIG, ASPHALT_SURFACE);
+    }
+
+    stepVehicle(state, brakeInput, 1 / 120, DEFAULT_VEHICLE_CONFIG, ASPHALT_SURFACE);
+
+    const frontLoadN = state.wheelLoadsN.frontLeft + state.wheelLoadsN.frontRight;
+    const rearLoadN = state.wheelLoadsN.rearLeft + state.wheelLoadsN.rearRight;
+
+    expect(frontLoadN).toBeGreaterThan(rearLoadN);
+    expect(Object.values(state.wheelLoadsN).every(Number.isFinite)).toBe(true);
+    expect(Object.values(state.wheelCompressionM).every(Number.isFinite)).toBe(true);
+  });
 });

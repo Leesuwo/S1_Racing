@@ -1,4 +1,11 @@
 import type { VehicleControlInput } from "../input/VehicleControlInput";
+import {
+  calculateSuspensionStep,
+  DEFAULT_SUSPENSION_CONFIG,
+  type SuspensionConfig,
+  type WheelValues,
+  zeroWheelValues,
+} from "./Suspension";
 
 export interface Vec2 {
   x: number;
@@ -36,6 +43,7 @@ export interface VehiclePhysicsConfig {
   rollingResistance: number;
   yawInertiaKgM2: number;
   yawDamping: number;
+  suspension: SuspensionConfig;
 }
 
 export interface VehicleState {
@@ -54,6 +62,9 @@ export interface VehicleState {
   lateralAccelerationMps2: number;
   downforceN: number;
   engineForceN: number;
+  wheelLoadsN: WheelValues;
+  wheelCompressionM: WheelValues;
+  wheelCompressionVelocityMps: WheelValues;
   surface: SurfaceType;
 }
 
@@ -80,6 +91,7 @@ export const DEFAULT_VEHICLE_CONFIG: VehiclePhysicsConfig = {
   rollingResistance: 32,
   yawInertiaKgM2: 4_800,
   yawDamping: 1_100,
+  suspension: DEFAULT_SUSPENSION_CONFIG,
 };
 
 export const ASPHALT_SURFACE: VehicleSurface = {
@@ -233,6 +245,9 @@ export function createInitialVehicleState(
     lateralAccelerationMps2: 0,
     downforceN: 0,
     engineForceN: 0,
+    wheelLoadsN: zeroWheelValues(),
+    wheelCompressionM: zeroWheelValues(),
+    wheelCompressionVelocityMps: zeroWheelValues(),
     surface: "asphalt",
   };
 }
@@ -242,6 +257,9 @@ export function cloneVehicleState(state: VehicleState): VehicleState {
     ...state,
     position: { ...state.position },
     velocity: { ...state.velocity },
+    wheelLoadsN: { ...state.wheelLoadsN },
+    wheelCompressionM: { ...state.wheelCompressionM },
+    wheelCompressionVelocityMps: { ...state.wheelCompressionVelocityMps },
   };
 }
 
@@ -268,12 +286,6 @@ export function stepVehicle(
   const steeringAngleRad = safeSteering * config.maxSteeringAngleRad * clamp(1 - speedMps / 95, 0.25, 1);
 
   const downforceN = config.aeroDownforceCoefficient * speedMps * speedMps;
-  const frontNormalForceN =
-    config.massKg * GRAVITY_MPS2 * (config.rearAxleDistanceM / config.wheelBaseM) +
-    downforceN * config.aeroBalanceFront;
-  const rearNormalForceN =
-    config.massKg * GRAVITY_MPS2 * (config.frontAxleDistanceM / config.wheelBaseM) +
-    downforceN * (1 - config.aeroBalanceFront);
 
   const frontVelocity = add(state.velocity, scale(right, state.yawRateRadS * config.frontAxleDistanceM));
   const rearVelocity = add(state.velocity, scale(right, -state.yawRateRadS * config.rearAxleDistanceM));
@@ -285,6 +297,30 @@ export function stepVehicle(
   const rearLongitudinalSpeed = dot(rearVelocity, forward);
   const rearLateralSpeed = dot(rearVelocity, right);
 
+  const gearRatio = config.gearRatios[state.gear - 1] ?? config.gearRatios[0];
+  const rpm = calculateRpm(forwardSpeedMps, state.gear, throttle, config);
+  const engineTorqueNm = interpolateTorque(rpm, config);
+  const engineForceN = throttle * engineTorqueNm * gearRatio * config.finalDriveRatio * config.drivetrainEfficiency / config.wheelRadiusM;
+  const brakeForceN = Math.sign(forwardSpeedMps || 1) * brake * config.maxBrakeForceN;
+  const dragForceN = config.dragCoefficient * speedMps * speedMps * surface.dragMultiplier;
+  const rollingResistanceForceN = config.rollingResistance * Math.abs(forwardSpeedMps);
+  const longitudinalAccelerationEstimateMps2 =
+    (engineForceN - brakeForceN - Math.sign(forwardSpeedMps || 1) * (dragForceN + rollingResistanceForceN)) / config.massKg;
+  const suspension = calculateSuspensionStep({
+    massKg: config.massKg,
+    wheelBaseM: config.wheelBaseM,
+    staticFrontAxleLoadN: config.massKg * GRAVITY_MPS2 * (config.rearAxleDistanceM / config.wheelBaseM),
+    staticRearAxleLoadN: config.massKg * GRAVITY_MPS2 * (config.frontAxleDistanceM / config.wheelBaseM),
+    frontAeroLoadN: downforceN * config.aeroBalanceFront,
+    rearAeroLoadN: downforceN * (1 - config.aeroBalanceFront),
+    longitudinalAccelerationMps2: longitudinalAccelerationEstimateMps2,
+    lateralAccelerationMps2: state.lateralAccelerationMps2,
+    previousCompressionM: state.wheelCompressionM,
+    dtSeconds: dt,
+    config: config.suspension,
+  });
+  const frontNormalForceN = suspension.loadsN.frontLeft + suspension.loadsN.frontRight;
+  const rearNormalForceN = suspension.loadsN.rearLeft + suspension.loadsN.rearRight;
   const frontSlipAngle = calculateSlipAngle(frontLongitudinalSpeed, frontLateralSpeed);
   const rearSlipAngle = calculateSlipAngle(rearLongitudinalSpeed, rearLateralSpeed);
   const surfaceGrip = config.tireGripCoefficient * surface.gripMultiplier;
@@ -302,11 +338,6 @@ export function stepVehicle(
     rearMaximumForceN,
   );
 
-  const gearRatio = config.gearRatios[state.gear - 1] ?? config.gearRatios[0];
-  const rpm = calculateRpm(forwardSpeedMps, state.gear, throttle, config);
-  const engineTorqueNm = interpolateTorque(rpm, config);
-  const engineForceN = throttle * engineTorqueNm * gearRatio * config.finalDriveRatio * config.drivetrainEfficiency / config.wheelRadiusM;
-  const brakeForceN = Math.sign(forwardSpeedMps || 1) * brake * config.maxBrakeForceN;
   const frontLongitudinalForceN = -brakeForceN * 0.58;
   const rearLongitudinalForceN = engineForceN - brakeForceN * 0.42;
 
@@ -342,8 +373,6 @@ export function stepVehicle(
     scale(forward, -config.rearAxleDistanceM),
   );
 
-  const dragForceN = config.dragCoefficient * speedMps * speedMps * surface.dragMultiplier;
-  const rollingResistanceForceN = config.rollingResistance * Math.abs(forwardSpeedMps);
   const resistance = scale(forward, -(dragForceN + rollingResistanceForceN) * Math.sign(forwardSpeedMps || 1));
   totalForce.x += resistance.x;
   totalForce.z += resistance.z;
@@ -373,6 +402,9 @@ export function stepVehicle(
     : 0;
   state.downforceN = downforceN;
   state.engineForceN = engineForceN;
+  state.wheelLoadsN = suspension.loadsN;
+  state.wheelCompressionM = suspension.compressionM;
+  state.wheelCompressionVelocityMps = suspension.compressionVelocityMps;
   state.rpm = rpm;
   state.surface = surface.type;
 }
