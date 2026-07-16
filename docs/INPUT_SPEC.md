@@ -47,3 +47,4 @@ interface VehicleControlInput {
 - 탭이 숨겨지면 App이 주행을 일시정지한다.
 - 키보드 이벤트는 Window와 Document에서 모두 수신하고 `event.code`가 없는 환경에서는 `event.key`를 정규화한다.
 - `BrowserVehicleInput`은 `connect()`와 `dispose()`를 멱등적으로 제공해 React 개발 모드의 StrictMode effect 재실행 후에도 입력 리스너를 복구한다.
+- 창 포커스 손실 또는 숨김 탭 전환 시 눌린 키·누적 조향·예약된 변속 입력을 초기화해 키가 붙는 현상을 방지한다.

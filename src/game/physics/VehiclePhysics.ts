@@ -74,7 +74,7 @@ export const DEFAULT_VEHICLE_CONFIG: VehiclePhysicsConfig = {
   frontAxleDistanceM: 1.815,
   rearAxleDistanceM: 1.485,
   wheelRadiusM: 0.36,
-  maxSteeringAngleRad: 0.58,
+  maxSteeringAngleRad: 0.45,
   maxBrakeForceN: 14_500,
   maxEngineTorqueNm: 320,
   finalDriveRatio: 3.6,
@@ -90,7 +90,7 @@ export const DEFAULT_VEHICLE_CONFIG: VehiclePhysicsConfig = {
   dragCoefficient: 0.42,
   rollingResistance: 32,
   yawInertiaKgM2: 4_800,
-  yawDamping: 1_100,
+  yawDamping: 1_800,
   suspension: DEFAULT_SUSPENSION_CONFIG,
 };
 

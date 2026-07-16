@@ -72,4 +72,36 @@ describe("VehiclePhysics", () => {
     expect(Object.values(state.wheelLoadsN).every(Number.isFinite)).toBe(true);
     expect(Object.values(state.wheelCompressionM).every(Number.isFinite)).toBe(true);
   });
+
+  it("does not rotate at a standstill when steering is pressed", () => {
+    const state = createInitialVehicleState();
+    const input = { ...neutralVehicleControlInput(), steering: 1 };
+
+    for (let step = 0; step < 120; step += 1) {
+      stepVehicle(state, input, 1 / 120, DEFAULT_VEHICLE_CONFIG, ASPHALT_SURFACE);
+    }
+
+    expect(state.speedMps).toBe(0);
+    expect(state.yawRad).toBeCloseTo(Math.PI / 2, 8);
+    expect(state.yawRateRadS).toBeCloseTo(0, 8);
+  });
+
+  it("settles after a short steering correction", () => {
+    const state = createInitialVehicleState();
+    const throttle = { ...neutralVehicleControlInput(), throttle: 1 };
+    const steer = { ...throttle, steering: 1 };
+
+    for (let step = 0; step < 240; step += 1) {
+      stepVehicle(state, throttle, 1 / 120, DEFAULT_VEHICLE_CONFIG, ASPHALT_SURFACE);
+    }
+    for (let step = 0; step < 60; step += 1) {
+      stepVehicle(state, steer, 1 / 120, DEFAULT_VEHICLE_CONFIG, ASPHALT_SURFACE);
+    }
+    for (let step = 0; step < 240; step += 1) {
+      stepVehicle(state, throttle, 1 / 120, DEFAULT_VEHICLE_CONFIG, ASPHALT_SURFACE);
+    }
+
+    expect(Math.abs(state.yawRad - Math.PI / 2)).toBeLessThan(1);
+    expect(Math.abs(state.yawRateRadS)).toBeLessThan(0.5);
+  });
 });

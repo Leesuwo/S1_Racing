@@ -80,6 +80,25 @@ export class BrowserVehicleInput {
     }
   };
 
+  private readonly clearTransientInput = (): void => {
+    this.pressedKeys.clear();
+    this.steering = 0;
+    this.mouseDeltaX = 0;
+    this.shiftUpQueued = false;
+    this.shiftDownQueued = false;
+    this.resetQueued = false;
+  };
+
+  private readonly handleWindowBlur = (): void => {
+    this.clearTransientInput();
+  };
+
+  private readonly handleVisibilityChange = (): void => {
+    if (this.target.document.hidden) {
+      this.clearTransientInput();
+    }
+  };
+
   constructor(private readonly target: Window) {
     this.connect();
   }
@@ -94,9 +113,11 @@ export class BrowserVehicleInput {
     this.target.addEventListener("mousemove", this.handleMouseMove);
     this.target.addEventListener("mousedown", this.handleMouseDown);
     this.target.addEventListener("contextmenu", this.handleContextMenu);
+    this.target.addEventListener("blur", this.handleWindowBlur);
     this.target.document.addEventListener("pointerlockchange", this.handlePointerLockChange);
     this.target.document.addEventListener("keydown", this.handleKeyDown);
     this.target.document.addEventListener("keyup", this.handleKeyUp);
+    this.target.document.addEventListener("visibilitychange", this.handleVisibilityChange);
     this.connected = true;
   }
 
@@ -115,9 +136,11 @@ export class BrowserVehicleInput {
     this.target.removeEventListener("mousemove", this.handleMouseMove);
     this.target.removeEventListener("mousedown", this.handleMouseDown);
     this.target.removeEventListener("contextmenu", this.handleContextMenu);
+    this.target.removeEventListener("blur", this.handleWindowBlur);
     this.target.document.removeEventListener("pointerlockchange", this.handlePointerLockChange);
     this.target.document.removeEventListener("keydown", this.handleKeyDown);
     this.target.document.removeEventListener("keyup", this.handleKeyUp);
+    this.target.document.removeEventListener("visibilitychange", this.handleVisibilityChange);
     this.attachedElement?.removeEventListener("contextmenu", this.handleContextMenu);
     this.connected = false;
   }
