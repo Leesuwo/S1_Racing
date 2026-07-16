@@ -1,0 +1,64 @@
+# S1 Racing Development Instructions
+
+## Product priority
+
+1. 주행감
+2. 결정적이고 검증 가능한 차량 물리
+3. 입력 반응성
+4. AI 레이싱 품질
+5. 성능
+6. 그래픽
+
+그래픽 품질을 위해 물리 안정성이나 입력 반응성을 희생하지 않는다.
+
+## Milestone 0 scope
+
+Milestone 0은 Project Foundation이다. 이번 단계에는 차량 물리, AI, 퀄리파잉, 레이스, 실제 트랙 콘텐츠를 구현하지 않는다.
+
+포함 범위:
+
+- Vite + React + TypeScript 실행 기반
+- strict TypeScript 설정
+- WebGL2 지원 검사
+- 최소 Three.js/R3F 캔버스 셸
+- Page Visibility 기반 일시정지 상태
+- `VehicleControlInput` 경계 인터페이스
+- 고정 스텝 계산 골격
+- 단위 테스트, 프로덕션 빌드, 브라우저 smoke test
+- 구현 명세와 검증 계획 문서
+
+## Architecture
+
+- 물리 계층은 React, React Three Fiber, Zustand에 의존하지 않는다.
+- 렌더링은 물리 상태를 직접 소유하지 않고 읽기 전용 스냅샷을 표시한다.
+- 차량 물리는 고정 120Hz를 목표로 한다.
+- AI는 플레이어와 동일한 `VehicleControlInput` 경계를 사용한다.
+- AI가 차량을 순간이동하거나 숨겨진 그립·출력 보너스를 받게 하지 않는다.
+- 튜닝 가능한 값은 타입이 있는 설정 파일에 둔다.
+- 트랙별 예외를 범용 AI 컨트롤러에 하드코딩하지 않는다.
+
+## Workflow
+
+- 작은 검토 가능한 마일스톤으로 작업한다.
+- 각 마일스톤마다 `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e`를 실행한다.
+- 테스트가 통과하기 전 다음 기능 단계로 넘어가지 않는다.
+- 주요 설계 결정은 `docs/DECISIONS.md`에 기록한다.
+- 현재 동작을 보존하고, 요청 범위를 넘어서는 의존성·기술 스택 변경을 하지 않는다.
+- 새 production dependency가 필요하면 기존 의존성으로 해결할 수 있는지 먼저 확인하고 이유를 기록한다.
+
+## Physics conventions
+
+- +X는 오른쪽, +Y는 위, -Z는 차량 전방이다.
+- 내부 각도는 radian, 거리 m, 시간 s, 질량 kg, 힘 N, 토크 N·m을 사용한다.
+- 저속 0 나눗셈, NaN, Infinity를 방어한다.
+- 실제 차량 값으로 확인되지 않은 수치는 `initial_assumption` 또는 `simulation_required`로 표시한다.
+
+## Safety and licensing
+
+- API 키와 비밀값을 커밋하지 않는다.
+- 공식 F1 로고, 팀 정체성, 드라이버 이름, 리버리, 복제 트랙 자산을 사용하지 않는다.
+- 외부 자산은 `docs/ASSET_LICENSE_REGISTER.md`에 출처와 라이선스를 기록한다.
+
+## Completion reporting
+
+작업 완료 보고에는 변경 파일, 실행 명령과 결과, 완료 기준, 남은 위험, 다음 단일 마일스톤을 포함한다.
