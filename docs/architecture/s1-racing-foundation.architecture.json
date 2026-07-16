@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "S1 Racing — Milestone 0 Foundation",
+    "subtitle": "Browser runtime boundaries before vehicle physics",
+    "output": "s1-racing-foundation.html"
+  },
+  "components": [
+    { "id": "browser", "type": "external", "label": "Player Browser", "sublabel": "Chrome / Safari", "pos": [40, 280], "size": [140, 64] },
+    { "id": "app_shell", "type": "frontend", "label": "React App Shell", "sublabel": "Vite entry + status UI", "pos": [250, 280], "size": [150, 64] },
+    { "id": "renderer", "type": "frontend", "label": "R3F Canvas", "sublabel": "Three.js render shell", "pos": [470, 280], "size": [150, 64] },
+    { "id": "input_boundary", "type": "frontend", "label": "Input Boundary", "sublabel": "device adapters", "pos": [250, 120], "size": [150, 64] },
+    { "id": "vehicle_input", "type": "messagebus", "label": "VehicleControlInput", "sublabel": "typed control contract", "pos": [470, 120], "size": [165, 64], "tag": "shared boundary" },
+    { "id": "fixed_loop", "type": "backend", "label": "Fixed Timestep", "sublabel": "120 Hz accumulator", "pos": [690, 280], "size": [150, 64], "tag": "M0 skeleton" },
+    { "id": "physics_domain", "type": "backend", "label": "Physics Domain", "sublabel": "pure TypeScript", "pos": [900, 280], "size": [150, 64], "tag": "future" },
+    { "id": "render_snapshot", "type": "messagebus", "label": "Render Snapshot", "sublabel": "read-only state", "pos": [900, 120], "size": [160, 64] },
+    { "id": "telemetry", "type": "database", "label": "Telemetry Buffer", "sublabel": "debug metrics", "pos": [1110, 280], "size": [150, 64] },
+    { "id": "test_harness", "type": "cloud", "label": "Test Harness", "sublabel": "Vitest + Playwright", "pos": [690, 500], "size": [150, 64] },
+    { "id": "project_docs", "type": "cloud", "label": "Project Contracts", "sublabel": "AGENTS.md + docs/", "pos": [900, 500], "size": [150, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Browser Runtime", "wraps": ["browser", "app_shell", "renderer", "input_boundary", "vehicle_input", "fixed_loop", "physics_domain", "render_snapshot", "telemetry"] },
+    { "kind": "security-group", "label": "Pure Domain Boundary", "wraps": ["vehicle_input", "fixed_loop", "physics_domain", "render_snapshot", "telemetry"] }
+  ],
+  "connections": [
+    { "from": "browser", "to": "app_shell", "label": "page load", "variant": "emphasis" },
+    { "from": "app_shell", "to": "renderer", "label": "Canvas shell" },
+    { "from": "input_boundary", "to": "vehicle_input", "label": "normalize controls", "variant": "security", "labelDy": 56 },
+    { "from": "vehicle_input", "to": "fixed_loop", "label": "fixed-step input", "fromSide": "right", "toSide": "top", "labelDy": -42 },
+    { "from": "fixed_loop", "to": "physics_domain", "label": "120 Hz step", "variant": "emphasis" },
+    { "from": "physics_domain", "to": "render_snapshot", "label": "read-only state", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [978, 116] },
+    { "from": "render_snapshot", "to": "renderer", "label": "interpolate + draw", "fromSide": "left", "toSide": "top", "labelDy": -42 },
+    { "from": "physics_domain", "to": "telemetry", "label": "debug metrics", "variant": "dashed", "labelDy": 56 },
+    { "from": "test_harness", "to": "fixed_loop", "label": "deterministic checks", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [765, 578] },
+    { "from": "project_docs", "to": "physics_domain", "label": "contracts", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [975, 578] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Milestone 0", "items": ["WebGL2 gate and R3F canvas shell", "Fixed-step accumulator contract", "Unit, build, and browser smoke checks"] },
+    { "dot": "emerald", "title": "Architecture rule", "items": ["Physics remains independent from React and R3F", "Player and AI will share VehicleControlInput", "Rendering consumes read-only snapshots"] },
+    { "dot": "rose", "title": "Next boundary", "items": ["Milestone 1A connects the fixed loop to simulation state", "Vehicle physics stays out of the app shell"] }
+  ]
+}

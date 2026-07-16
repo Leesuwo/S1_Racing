@@ -41,6 +41,7 @@ Milestone 0은 Project Foundation이다. 이번 단계에는 차량 물리, AI, 
 
 - 작은 검토 가능한 마일스톤으로 작업한다.
 - 각 마일스톤마다 `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e`를 실행한다.
+- 모듈 경계나 데이터 흐름을 변경하면 `docs/architecture/`의 Archify JSON과 HTML을 함께 갱신하고 `npm run architecture:check`를 실행한다.
 - 테스트가 통과하기 전 다음 기능 단계로 넘어가지 않는다.
 - 주요 설계 결정은 `docs/DECISIONS.md`에 기록한다.
 - 현재 동작을 보존하고, 요청 범위를 넘어서는 의존성·기술 스택 변경을 하지 않는다.
@@ -62,3 +63,10 @@ Milestone 0은 Project Foundation이다. 이번 단계에는 차량 물리, AI, 
 ## Completion reporting
 
 작업 완료 보고에는 변경 파일, 실행 명령과 결과, 완료 기준, 남은 위험, 다음 단일 마일스톤을 포함한다.
+
+## Architecture diagrams
+
+- 시스템 구조·의존성·데이터 흐름은 `docs/architecture/*.architecture.json`을 원본으로 관리한다.
+- 생성된 HTML은 검토·공유용 산출물이며 JSON과 함께 커밋한다.
+- Archify 렌더러가 계산하는 배치와 검증 오류를 우선 사용하고, 생성된 SVG를 수동으로 수정하지 않는다.
+- 구조 변경이 없는 기능 작업에서는 다이어그램을 불필요하게 갱신하지 않는다.

@@ -57,7 +57,16 @@ npx playwright install chromium
 - `docs/ARCHITECTURE.md`: 코드 경계
 - `docs/ROADMAP.md`: 마일스톤 순서
 - `docs/DECISIONS.md`: 결정 이력
+- `docs/architecture/`: Archify 아키텍처 원본 JSON과 생성 HTML
 
 ## 다음 마일스톤
 
 Milestone 1A — Fixed-step loop와 물리 데이터 구조입니다. 차량 모델·타이어·AI를 한 번에 추가하지 않고 고정 스텝과 정적 차체 안정성부터 검증합니다.
+
+## 아키텍처 다이어그램
+
+```bash
+npm run architecture:check
+```
+
+원본은 [S1 Racing Foundation Architecture](./docs/architecture/s1-racing-foundation.architecture.json), 검토용 산출물은 [HTML 다이어그램](./docs/architecture/s1-racing-foundation.html)입니다.
