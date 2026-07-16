@@ -1,4 +1,4 @@
-# Physics Prototype v0.1
+# Physics Prototype v0.4
 
 ## 목적
 
@@ -17,7 +17,8 @@
 - 4개 휠 하중 분배와 종·횡방향 하중 이동
 - 스프링 압축·범프/리바운드 댐핑 텔레메트리
 - Rapier 동적 차체·정적 지면·4개 하향 Raycast 접지 리그
-- Rapier 접지 수·차체 높이 텔레메트리
+- 휠별 장착점·접지점·전륜 조향·접지점 속도 운동학
+- Rapier 접지 수·차체 높이·전륜 조향각 텔레메트리
 - 속도 제곱 기반 다운포스·항력
 - 아스팔트와 잔디의 그립·저항 차이
 - 키보드 W/S/A/D와 Pointer Lock 마우스 조향
@@ -39,7 +40,7 @@ BrowserVehicleInput
 
 `VehiclePhysics.ts`, `Suspension.ts`, `TrackSurface.ts`, `VehicleSimulation.ts`는 React, R3F, Zustand, DOM을 import하지 않는다. 브라우저 이벤트는 `BrowserVehicleInput.ts`에서만 처리한다.
 
-`RapierChassisSuspension.ts`도 React/R3F/DOM을 import하지 않는다. M1A에서는 이 리그가 수직 접지와 차체 높이만 계산하며, 기존 `VehicleSimulation`이 소유하는 X/Z 위치를 매 고정 스텝에 동기화한다. Rapier에 종·횡방향 타이어 힘을 적용하는 작업은 아직 시작하지 않았다.
+`RapierChassisSuspension.ts`, `WheelKinematics.ts`도 React/R3F/DOM을 import하지 않는다. M1B에서 `VehicleSimulation`이 소유하는 X/Z 위치·속도·yaw·yaw-rate를 매 고정 스텝에 Rapier 리그로 동기화하고, 휠 운동학 모듈이 접지점 속도와 조향 방향을 계산한다. Rapier에 종·횡방향 타이어 힘을 적용하는 작업은 아직 시작하지 않았다.
 
 ## 4개 휠 서스펜션 단계
 
@@ -74,6 +75,8 @@ BrowserVehicleInput
 
 Rapier 리그는 매 `world.step()` 뒤 외력·토크 누적값을 초기화한다. 이 처리가 없으면 이전 프레임의 서스펜션 힘이 유지되어 차체가 비정상적으로 가속한다.
 
+휠 운동학의 부호 규칙은 기존 차량 물리와 같다. 차량 전방은 -Z이고, 양의 조향 입력은 우회전이며, Rapier에는 이 yaw 부호를 반대로 변환해 동기화한다. 접지점 속도는 `v_point = v_chassis + ω × r`로 계산한다.
+
 저속에서 좌우 입력을 유지할 때 차량이 과도하게 회전하지 않도록 최대 조향각과 요 감쇠를 보수적으로 설정했다. 포커스 손실·탭 숨김 전환 시 입력을 초기화해 A/D 또는 W/S가 붙은 상태로 남지 않게 한다.
 
 ## 현재 수치의 상태
@@ -85,7 +88,7 @@ Rapier 리그는 매 `world.step()` 뒤 외력·토크 누적값을 초기화한
 - 실제 타이어 Magic Formula 계수
 - 서스펜션·안티롤바
 - Rapier 차체·트랙 충돌
-- Rapier 기반 종·횡방향 타이어 힘과 휠 운동학
+- Rapier 기반 종·횡방향 타이어 힘
 - 차량 손상과 공력 부품 손실
 
 ## 조작
@@ -116,12 +119,14 @@ Rapier 리그는 매 `world.step()` 뒤 외력·토크 누적값을 초기화한
 - 선회 시 바깥쪽 휠 하중이 증가한다.
 - HUD에서 네 휠 하중과 최대 서스펜션 압축을 확인할 수 있다.
 - Rapier 리그가 정지 상태에서 4/4 접지와 안정적인 차체 높이를 유지한다.
+- 전륜만 조향 입력에 따라 회전하고 후륜은 0rad를 유지한다.
+- 차체 yaw-rate가 각 휠의 종·횡방향 접지점 속도에 반영된다.
 - 정지 상태에서 조향만 입력해도 차량이 회전하지 않는다.
 - 짧은 조향 입력 후 요 레이트가 안정 범위로 수렴한다.
 
 ## 다음 확장
 
-1. 휠별 접지 좌표·조향 운동학
+1. 휠별 슬립 비율·슬립 각과 결합 그립
 2. Rapier 차체에 적용하는 종·횡방향 타이어 힘
 3. 실제 노면 높이·연석 반응
 4. 타이어 온도·마모·노면 진화

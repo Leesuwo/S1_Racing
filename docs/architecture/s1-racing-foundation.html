@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="archify 2.10.0">
-  <title>S1 Racing — Physics Prototype v0.3 Diagram</title>
+  <title>S1 Racing — Physics Prototype v0.4 Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
     // see a dark flash. The toolbar script below re-applies with UI state.
@@ -525,14 +525,14 @@
     <div class="header">
       <div class="header-row">
         <div class="pulse-dot"></div>
-        <h1>S1 Racing — Physics Prototype v0.3</h1>
+        <h1>S1 Racing — Physics Prototype v0.4</h1>
       </div>
-      <p class="subtitle">120Hz 평면 구동 물리와 Rapier 4휠 접지 리그</p>
+      <p class="subtitle">120Hz 평면 구동 물리, Rapier 접지와 휠 운동학</p>
     </div>
 
     <!-- Main Diagram -->
     <div class="diagram-container">
-      <svg viewBox="0 0 1360 632" role="img" aria-label="S1 Racing — Physics Prototype v0.3 — 120Hz 평면 구동 물리와 Rapier 4휠 접지 리그 (architecture diagram)">
+      <svg viewBox="0 0 1580 632" role="img" aria-label="S1 Racing — Physics Prototype v0.4 — 120Hz 평면 구동 물리, Rapier 접지와 휠 운동학 (architecture diagram)">
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -556,10 +556,10 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect x="10" y="90" width="1310" height="274" rx="12" class="c-region" stroke-width="1"/>
+        <rect x="10" y="90" width="1530" height="274" rx="12" class="c-region" stroke-width="1"/>
         <text x="18" y="108" class="t-cloud" font-size="9" font-weight="600">브라우저 런타임</text>
 
-        <rect x="440" y="90" width="880" height="274" rx="8" class="c-security-group" stroke-width="1"/>
+        <rect x="440" y="90" width="1100" height="274" rx="8" class="c-security-group" stroke-width="1"/>
         <text x="448" y="108" class="t-security" font-size="9" font-weight="600">순수 도메인 경계</text>
 
         <!-- Connection paths (before components for correct z-order) -->
@@ -570,11 +570,12 @@
         <path d="M 855 312 L 900 312" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path d="M 772.5 280 L 873.25 280 Q 881.25 280 881.25 272 L 881.25 192 Q 881.25 184 889.25 184 L 990 184" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path d="M 990 280 L 990 184" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
-        <path d="M 990 280 L 1089.5 280 Q 1097.5 280 1097.5 272 L 1097.5 192 Q 1097.5 184 1105.5 184 L 1205 184" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 990 280 L 1199.5 280 Q 1207.5 280 1207.5 272 L 1207.5 192 Q 1207.5 184 1215.5 184 L 1425 184" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 1080 152 L 1120 152" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
-        <path d="M 1120 152 L 844.25 152 Q 836.25 152 836.25 160 L 836.25 272 Q 836.25 280 828.25 280 L 552.5 280" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path d="M 1080 312 L 1110 312" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
-        <path d="M 1080 152 L 1129.5 152 Q 1137.5 152 1137.5 160 L 1137.5 272 Q 1137.5 280 1145.5 280 L 1195 280" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 1300 152 L 1340 152" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 1340 152 L 954.25 152 Q 946.25 152 946.25 160 L 946.25 272 Q 946.25 280 938.25 280 L 552.5 280" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 1080 312 L 1330 312" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 1300 152 L 1349.5 152 Q 1357.5 152 1357.5 160 L 1357.5 272 Q 1357.5 280 1365.5 280 L 1415 280" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 772.5 500 L 772.5 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 980 500 L 982.5 500 Q 985 500 985 497.5 L 985 346.5 Q 985 344 987.5 344 L 990 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
@@ -623,15 +624,21 @@
         <text x="990" y="166" class="t-muted" font-size="9" text-anchor="middle">동적 차체 + 4개 하향 Raycast</text>
         <text x="990" y="176" class="t-backend" font-size="7" text-anchor="middle">M1A</text>
 
-        <rect x="1120" y="120" width="170" height="64" rx="6" class="c-mask"/>
-        <rect x="1120" y="120" width="170" height="64" rx="6" class="c-messagebus" stroke-width="1.5"/>
-        <text x="1205" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">렌더링 스냅샷</text>
-        <text x="1205" y="166" class="t-muted" font-size="9" text-anchor="middle">평면 상태 + 차체 높이</text>
+        <rect x="1120" y="120" width="180" height="64" rx="6" class="c-mask"/>
+        <rect x="1120" y="120" width="180" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+        <text x="1210" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">휠 운동학</text>
+        <text x="1210" y="166" class="t-muted" font-size="9" text-anchor="middle">접지 좌표·조향·휠 속도</text>
+        <text x="1210" y="176" class="t-backend" font-size="7" text-anchor="middle">M1B</text>
 
-        <rect x="1110" y="280" width="170" height="64" rx="6" class="c-mask"/>
-        <rect x="1110" y="280" width="170" height="64" rx="6" class="c-database" stroke-width="1.5"/>
-        <text x="1195" y="310" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">텔레메트리 HUD</text>
-        <text x="1195" y="326" class="t-muted" font-size="9" text-anchor="middle">속도·RPM·G값</text>
+        <rect x="1340" y="120" width="170" height="64" rx="6" class="c-mask"/>
+        <rect x="1340" y="120" width="170" height="64" rx="6" class="c-messagebus" stroke-width="1.5"/>
+        <text x="1425" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">렌더링 스냅샷</text>
+        <text x="1425" y="166" class="t-muted" font-size="9" text-anchor="middle">평면 상태 + 차체 높이</text>
+
+        <rect x="1330" y="280" width="170" height="64" rx="6" class="c-mask"/>
+        <rect x="1330" y="280" width="170" height="64" rx="6" class="c-database" stroke-width="1.5"/>
+        <text x="1415" y="310" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">텔레메트리 HUD</text>
+        <text x="1415" y="326" class="t-muted" font-size="9" text-anchor="middle">속도·RPM·G값·조향</text>
 
         <rect x="690" y="500" width="165" height="64" rx="6" class="c-mask"/>
         <rect x="690" y="500" width="165" height="64" rx="6" class="c-cloud" stroke-width="1.5"/>
@@ -656,18 +663,20 @@
         <text x="877.5" y="276" class="t-backend" font-size="8" text-anchor="middle">120Hz 스텝</text>
         <rect x="840" y="188" width="82" height="14" rx="3" class="c-mask"/>
         <text x="881" y="198" class="t-backend" font-size="8" text-anchor="middle">120Hz 접지 스텝</text>
-        <rect x="947" y="220" width="82" height="14" rx="3" class="c-mask"/>
-        <text x="988" y="230" class="t-messagebus" font-size="8" text-anchor="middle">평면 X/Z 동기화</text>
-        <rect x="1133.4" y="228" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
-        <text x="1160" y="238" class="t-messagebus" font-size="8" text-anchor="middle">평면 상태</text>
+        <rect x="937.4" y="220" width="101.2" height="14" rx="3" class="c-mask"/>
+        <text x="988" y="230" class="t-messagebus" font-size="8" text-anchor="middle">X/Z·속도·yaw 동기화</text>
+        <rect x="1363.4" y="228" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
+        <text x="1390" y="238" class="t-messagebus" font-size="8" text-anchor="middle">평면 상태</text>
         <rect x="1061.4" y="188" width="77.2" height="14" rx="3" class="c-mask"/>
-        <text x="1100" y="198" class="t-messagebus" font-size="8" text-anchor="middle">차체 높이·접지</text>
-        <rect x="800.05" y="154" width="72.4" height="14" rx="3" class="c-mask"/>
-        <text x="836.25" y="164" class="t-muted" font-size="8" text-anchor="middle">보간 + 렌더링</text>
-        <rect x="1063.6" y="348" width="62.8" height="14" rx="3" class="c-mask"/>
-        <text x="1095" y="358" class="t-messagebus" font-size="8" text-anchor="middle">디버그 지표</text>
-        <rect x="1101.8" y="188" width="72.4" height="14" rx="3" class="c-mask"/>
-        <text x="1138" y="198" class="t-messagebus" font-size="8" text-anchor="middle">4휠 접지 상태</text>
+        <text x="1100" y="198" class="t-messagebus" font-size="8" text-anchor="middle">차체·접지 상태</text>
+        <rect x="1286.2" y="188" width="67.6" height="14" rx="3" class="c-mask"/>
+        <text x="1320" y="198" class="t-messagebus" font-size="8" text-anchor="middle">조향·휠 속도</text>
+        <rect x="909.8" y="188" width="72.4" height="14" rx="3" class="c-mask"/>
+        <text x="946" y="198" class="t-muted" font-size="8" text-anchor="middle">보간 + 렌더링</text>
+        <rect x="1173.6" y="348" width="62.8" height="14" rx="3" class="c-mask"/>
+        <text x="1205" y="358" class="t-messagebus" font-size="8" text-anchor="middle">디버그 지표</text>
+        <rect x="1303.8" y="220" width="72.4" height="14" rx="3" class="c-mask"/>
+        <text x="1340" y="230" class="t-messagebus" font-size="8" text-anchor="middle">4휠 접지·조향</text>
         <rect x="733.6" y="568" width="62.8" height="14" rx="3" class="c-mask"/>
         <text x="765" y="578" class="t-messagebus" font-size="8" text-anchor="middle">결정적 검사</text>
         <rect x="948.4" y="568" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
@@ -695,12 +704,12 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Physics Prototype v0.3</h3>
+          <h3>Physics Prototype v0.4</h3>
         </div>
         <ul>
           <li>&bull; 고정 120Hz 평면 구동 물리</li>
           <li>&bull; 키보드·마우스 입력과 테스트 트랙</li>
-          <li>&bull; Rapier 4휠 접지·차체 높이 HUD</li>
+          <li>&bull; Rapier 4휠 접지·차체 높이·전륜 조향 HUD</li>
         </ul>
       </div>
 
@@ -722,7 +731,7 @@
           <h3>다음 경계</h3>
         </div>
         <ul>
-          <li>&bull; 휠별 접지 좌표·조향 운동학</li>
+          <li>&bull; 휠별 슬립 비율·슬립 각</li>
           <li>&bull; 타이어 힘을 Rapier 차체에 직접 적용</li>
           <li>&bull; 실제 노면 높이·연석·트랙 리밋</li>
         </ul>

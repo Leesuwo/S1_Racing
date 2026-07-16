@@ -75,7 +75,7 @@ function AppTelemetry({
         <span>Rapier 접지</span>
         <strong>
           {suspensionTelemetry
-            ? `${suspensionTelemetry.groundedWheelCount}/4 · ${formatNumber(suspensionTelemetry.chassisHeightM, 3)} m`
+            ? `${suspensionTelemetry.groundedWheelCount}/4 · ${formatNumber(suspensionTelemetry.chassisHeightM, 3)} m · 전륜 ${formatNumber(suspensionTelemetry.frontSteeringAngleRad * 180 / Math.PI, 1)}°`
             : "초기화 중"}
         </strong>
       </div>
@@ -109,7 +109,7 @@ export function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">S1 RACING / 물리 프로토타입 v0.3</p>
+          <p className="eyebrow">S1 RACING / 물리 프로토타입 v0.4</p>
           <h1>S1 Racing</h1>
           <p className="subtitle">고정 120Hz 차량 물리 테스트 트랙</p>
         </div>
@@ -183,6 +183,14 @@ export function App() {
           <strong>
             {suspensionTelemetry
               ? `${formatNumber(suspensionTelemetry.chassisHeightM, 3)} m`
+              : "초기화 중"}
+          </strong>
+        </article>
+        <article>
+          <span>전륜 조향각</span>
+          <strong>
+            {suspensionTelemetry
+              ? `${formatNumber(suspensionTelemetry.frontSteeringAngleRad * 180 / Math.PI, 1)}°`
               : "초기화 중"}
           </strong>
         </article>

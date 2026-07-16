@@ -158,8 +158,13 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
           dt,
         );
         const physicsSnapshot = simulation.getRenderSnapshot(1);
-        suspensionRig.current?.syncPlanarPosition(physicsSnapshot.position);
-        suspensionRig.current?.step(dt);
+        suspensionRig.current?.syncPlanarPose({
+          position: physicsSnapshot.position,
+          velocity: physicsSnapshot.velocity,
+          yawRad: physicsSnapshot.yawRad,
+          yawRateRadS: physicsSnapshot.yawRateRadS,
+        });
+        suspensionRig.current?.step(dt, frameInput.steering);
         stepIndex += 1;
       });
       alpha = result.alpha;

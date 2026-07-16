@@ -12,9 +12,9 @@
 
 Rapier 동적 차체, 정적 지면, 4개 휠 레이캐스트, 스프링·댐퍼 접지, 120Hz 정적 안정성 검증과 HUD를 추가했다. 평면 구동력과 yaw는 다음 단계까지 기존 TypeScript 모델이 소유한다.
 
-## Milestone 1B — Wheel kinematics
+## Milestone 1B — Wheel kinematics (완료)
 
-휠 속도·조향·접지 좌표를 구현한다.
+전륜 조향, 4개 휠 장착점·접지점·접지점 속도, Rapier 차체와 평면 물리의 pose 동기화, 조향 HUD와 단위·E2E 검증을 추가했다.
 
 ## Milestone 1C — Tire forces
 

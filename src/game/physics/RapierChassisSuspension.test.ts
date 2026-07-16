@@ -23,6 +23,19 @@ describe("RapierChassisSuspension", () => {
     expect(rig.getSnapshot().position.x).toBeCloseTo(12, 4);
     expect(rig.getSnapshot().position.z).toBeCloseTo(-4, 4);
 
+    rig.syncPlanarPose({
+      position: { x: 4, z: 3 },
+      velocity: { x: 0, z: -20 },
+      yawRad: 0,
+      yawRateRadS: 0,
+    });
+    rig.step(1 / 120, 0.5);
+    const kinematics = rig.getWheelKinematics();
+    expect(kinematics.frontLeft.steeringAngleRad).toBeCloseTo(0.225, 8);
+    expect(kinematics.frontRight.steeringAngleRad).toBeCloseTo(0.225, 8);
+    expect(kinematics.rearLeft.steeringAngleRad).toBe(0);
+    expect(kinematics.frontLeft.longitudinalSpeedMps).toBeGreaterThan(15);
+
     rig.dispose();
   });
 });

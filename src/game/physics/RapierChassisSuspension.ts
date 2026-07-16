@@ -1,4 +1,8 @@
 import RAPIER from "@dimforge/rapier3d-compat";
+import {
+  calculateAllWheelKinematics,
+  type WheelKinematicState,
+} from "./WheelKinematics";
 
 export type RaycastWheelId = "frontLeft" | "frontRight" | "rearLeft" | "rearRight";
 
@@ -31,6 +35,14 @@ export interface RapierSuspensionTelemetry {
   chassisHeightM: number;
   referenceRideHeightM: number;
   maximumCompressionM: number;
+  frontSteeringAngleRad: number;
+}
+
+export interface PlanarChassisPose {
+  position: Pick<Vec3, "x" | "z">;
+  velocity: Pick<Vec3, "x" | "z">;
+  yawRad: number;
+  yawRateRadS: number;
 }
 
 export interface RapierChassisSuspensionConfig {
@@ -39,6 +51,8 @@ export interface RapierChassisSuspensionConfig {
   frontAxleDistanceM: number;
   rearAxleDistanceM: number;
   trackWidthM: number;
+  wheelRadiusM: number;
+  maxSteeringAngleRad: number;
   mountHeightBelowCenterM: number;
   initialChassisHeightM: number;
   restLengthM: number;
@@ -55,6 +69,8 @@ export const DEFAULT_RAPIER_CHASSIS_SUSPENSION_CONFIG: RapierChassisSuspensionCo
   frontAxleDistanceM: 1.815,
   rearAxleDistanceM: 1.485,
   trackWidthM: 1.6,
+  wheelRadiusM: 0.36,
+  maxSteeringAngleRad: 0.45,
   mountHeightBelowCenterM: 0.12,
   initialChassisHeightM: 0.7,
   restLengthM: 0.35,
@@ -152,6 +168,7 @@ export class RapierChassisSuspension {
   private readonly wheelMounts: Record<RaycastWheelId, Vec3>;
   private readonly contacts = new Map<RaycastWheelId, RaycastWheelContact>();
   private readonly previousCompression = new Map<RaycastWheelId, number>();
+  private steeringInput = 0;
 
   private constructor(
     private readonly config: RapierChassisSuspensionConfig,
@@ -197,11 +214,12 @@ export class RapierChassisSuspension {
     return new RapierChassisSuspension(config, world, chassis);
   }
 
-  step(dtSeconds: number): void {
+  step(dtSeconds: number, steeringInput = this.steeringInput): void {
     if (!Number.isFinite(dtSeconds) || dtSeconds <= 0) {
       return;
     }
 
+    this.steeringInput = clamp(steeringInput, -1, 1);
     this.world.timestep = dtSeconds;
     this.applySuspensionForces(dtSeconds);
     this.world.step();
@@ -229,6 +247,34 @@ export class RapierChassisSuspension {
     ) as Record<RaycastWheelId, RaycastWheelContact>;
   }
 
+  getWheelKinematics(): Record<RaycastWheelId, WheelKinematicState> {
+    const position = this.chassis.translation();
+    const rotation = this.chassis.rotation();
+    const linearVelocity = this.chassis.linvel();
+    const angularVelocity = this.chassis.angvel();
+
+    return calculateAllWheelKinematics(
+      {
+        frontAxleDistanceM: this.config.frontAxleDistanceM,
+        rearAxleDistanceM: this.config.rearAxleDistanceM,
+        trackWidthM: this.config.trackWidthM,
+        mountHeightBelowCenterM: this.config.mountHeightBelowCenterM,
+        wheelRadiusM: this.config.wheelRadiusM,
+        maxSteeringAngleRad: this.config.maxSteeringAngleRad,
+      },
+      {
+        chassisPosition: { x: position.x, y: position.y, z: position.z },
+        chassisRotation: { x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w },
+        chassisLinearVelocity: { x: linearVelocity.x, y: linearVelocity.y, z: linearVelocity.z },
+        chassisAngularVelocity: { x: angularVelocity.x, y: angularVelocity.y, z: angularVelocity.z },
+        steeringInput: this.steeringInput,
+        contactPoints: Object.fromEntries(
+          FIXED_WHEEL_ORDER.map((id) => [id, this.contacts.get(id)?.point ?? null]),
+        ) as Partial<Record<RaycastWheelId, Vec3 | null>>,
+      },
+    );
+  }
+
   /**
    * The planar prototype owns X/Z position and yaw until tire forces move into
    * Rapier. This keeps the M1A vertical contact rig attached to the visible car
@@ -237,6 +283,17 @@ export class RapierChassisSuspension {
   syncPlanarPosition(position: Pick<Vec3, "x" | "z">): void {
     const translation = this.chassis.translation();
     this.chassis.setTranslation({ x: position.x, y: translation.y, z: position.z }, true);
+  }
+
+  syncPlanarPose(pose: PlanarChassisPose): void {
+    const translation = this.chassis.translation();
+    const linearVelocity = this.chassis.linvel();
+    const halfYawRad = -pose.yawRad * 0.5;
+
+    this.chassis.setTranslation({ x: pose.position.x, y: translation.y, z: pose.position.z }, true);
+    this.chassis.setRotation({ x: 0, y: Math.sin(halfYawRad), z: 0, w: Math.cos(halfYawRad) }, true);
+    this.chassis.setLinvel({ x: pose.velocity.x, y: linearVelocity.y, z: pose.velocity.z }, true);
+    this.chassis.setAngvel({ x: 0, y: -pose.yawRateRadS, z: 0 }, true);
   }
 
   reset(): void {
@@ -260,6 +317,7 @@ export class RapierChassisSuspension {
       chassisHeightM: this.chassis.translation().y,
       referenceRideHeightM: this.getReferenceRideHeightM(),
       maximumCompressionM: Math.max(...contacts.map((contact) => contact.compressionM)),
+      frontSteeringAngleRad: this.steeringInput * this.config.maxSteeringAngleRad,
     };
   }
 

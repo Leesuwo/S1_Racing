@@ -14,7 +14,9 @@ import type { WheelValues } from "./Suspension";
 
 export interface VehicleRenderSnapshot {
   position: { x: number; z: number };
+  velocity: { x: number; z: number };
   yawRad: number;
+  yawRateRadS: number;
   speedMps: number;
   rpm: number;
   gear: number;
@@ -74,7 +76,9 @@ export class VehicleSimulation {
         x: this.previous.position.x + (this.current.position.x - this.previous.position.x) * blend,
         z: this.previous.position.z + (this.current.position.z - this.previous.position.z) * blend,
       },
+      velocity: { ...this.current.velocity },
       yawRad: this.previous.yawRad + (this.current.yawRad - this.previous.yawRad) * blend,
+      yawRateRadS: this.current.yawRateRadS,
       speedMps: this.current.speedMps,
       rpm: this.current.rpm,
       gear: this.current.gear,
