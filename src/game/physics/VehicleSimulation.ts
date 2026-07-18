@@ -34,7 +34,11 @@ export interface VehicleTelemetry {
   surface: VehicleState["surface"];
   lateralG: number;
   downforceN: number;
+  dragForceN: number;
   engineForceN: number;
+  engineTorqueNm: number;
+  driveTorqueNm: number;
+  engineBrakeTorqueNm: number;
   wheelLoadsN: WheelValues;
   wheelCompressionM: WheelValues;
 }
@@ -44,6 +48,7 @@ export interface ExternalPlanarVehiclePose {
   velocity: { x: number; z: number };
   yawRad: number;
   yawRateRadS: number;
+  drivenWheelAngularSpeedRadS?: number;
 }
 
 function dot(a: { x: number; z: number }, b: { x: number; z: number }): number {
@@ -107,6 +112,9 @@ export class VehicleSimulation {
     this.current.lateralAccelerationMps2 = (
       this.current.lateralSpeedMps - previousLateralSpeedMps
     ) / safeDtSeconds;
+    if (pose.drivenWheelAngularSpeedRadS !== undefined && Number.isFinite(pose.drivenWheelAngularSpeedRadS)) {
+      this.current.drivenWheelAngularSpeedRadS = pose.drivenWheelAngularSpeedRadS;
+    }
     this.current.surface = sampleTestTrackSurface(this.current.position).type;
   }
 
@@ -139,7 +147,11 @@ export class VehicleSimulation {
       surface: this.current.surface,
       lateralG: this.current.lateralAccelerationMps2 / 9.81,
       downforceN: this.current.downforceN,
+      dragForceN: this.current.dragForceN,
       engineForceN: this.current.engineForceN,
+      engineTorqueNm: this.current.engineTorqueNm,
+      driveTorqueNm: this.current.driveTorqueNm,
+      engineBrakeTorqueNm: this.current.engineBrakeTorqueNm,
       wheelLoadsN: { ...this.current.wheelLoadsN },
       wheelCompressionM: { ...this.current.wheelCompressionM },
     };

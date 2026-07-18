@@ -4,9 +4,9 @@
 
 ## 현재 단계
 
-**Physics Prototype v0.5**
+**Milestone 1E — Aero and validation**
 
-Milestone 0 기반 위에 120Hz 고정 스텝 차량 물리, 테스트 트랙, 키보드·마우스 입력, 추적 카메라, 텔레메트리 HUD를 구현했습니다. Rapier 4륜 접지 리그에 휠별 슬립·하중 민감도·결합 그립 기반 타이어 종·횡력을 실제 접지점으로 적용합니다. 타이어 열화·AI·레이스 운영은 아직 구현하지 않습니다.
+Milestone 0 기반 위에 120Hz 고정 스텝 차량 물리, 테스트 트랙, 키보드·마우스 입력, 추적 카메라, 텔레메트리 HUD를 구현했습니다. Rapier 4륜 접지 리그에 구동계 토크·엔진 브레이크·전후 다운포스·드래그와 휠별 타이어 종·횡력을 적용합니다. 입력 프리셋·AI·레이스 운영은 아직 구현하지 않습니다.
 
 ## 기술 스택
 
@@ -44,6 +44,7 @@ npm run verify
 ```bash
 npm run typecheck
 npm test
+npm run physics:validate
 npm run build
 npm run test:e2e
 ```
@@ -67,12 +68,13 @@ npx playwright install chromium
 - `docs/BROWSER_SUPPORT_MATRIX.md`: 브라우저·기기 지원 범위
 - `docs/ARCHITECTURE.md`: 코드 경계
 - `docs/ROADMAP.md`: 마일스톤 순서
+- `docs/MILESTONE_1D.md`, `docs/MILESTONE_1E.md`: 완료된 물리 마일스톤 계약과 검증 결과
 - `docs/DECISIONS.md`: 결정 이력
 - `docs/architecture/`: Archify 아키텍처 원본 JSON과 생성 HTML
 
 ## 다음 마일스톤
 
-Milestone 1D — 토크 커브·8단 변속·후륜구동·엔진 브레이크를 Rapier 휠 회전에 완전히 연결합니다. 이후 기능도 검증 가능한 단위로 확장합니다.
+Milestone 1F — 입력 프리셋과 반복 가능한 테스트 트랙 콘텐츠를 공통 `VehicleControlInput` 경계로 확장합니다. 이후 단일 AI, 다차량 세션, 퀄리파잉, 레이스 전략 순서로 진행합니다. 상세 순서는 [로드맵](./docs/ROADMAP.md)을 따릅니다.
 
 ## 아키텍처 다이어그램
 

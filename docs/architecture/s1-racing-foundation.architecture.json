@@ -2,8 +2,8 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S1 Racing — Physics Prototype v0.5",
-    "subtitle": "120Hz Rapier 접지점 타이어 힘과 휠 운동학",
+    "title": "S1 Racing — Milestone 1E",
+    "subtitle": "120Hz 구동계·공력·결정적 물리 검증",
     "output": "s1-racing-foundation.html"
   },
   "components": [
@@ -13,18 +13,20 @@
     { "id": "input_boundary", "type": "frontend", "label": "입력 경계", "sublabel": "BrowserVehicleInput", "pos": [250, 120], "size": [150, 64] },
     { "id": "vehicle_input", "type": "messagebus", "label": "차량 제어 입력", "sublabel": "VehicleControlInput 계약", "pos": [470, 120], "size": [180, 64], "tag": "공유 경계" },
     { "id": "fixed_loop", "type": "backend", "label": "고정 타임스텝", "sublabel": "120Hz 누적기", "pos": [690, 280], "size": [165, 64], "tag": "120Hz 실행" },
-    { "id": "physics_domain", "type": "backend", "label": "차량 물리 도메인", "sublabel": "VehiclePhysics + Suspension + Simulation", "pos": [900, 280], "size": [180, 64], "tag": "현재 구현" },
-    { "id": "rapier_suspension", "type": "backend", "label": "Rapier 접지 리그", "sublabel": "동적 차체 + 4개 하향 Raycast", "pos": [900, 120], "size": [180, 64], "tag": "M1A" },
+    { "id": "physics_domain", "type": "backend", "label": "차량 물리 도메인", "sublabel": "VehiclePhysics + Simulation", "pos": [900, 280], "size": [180, 64], "tag": "M1D/M1E" },
+    { "id": "rapier_suspension", "type": "backend", "label": "Rapier 접지 리그", "sublabel": "양의 밀도 차체 + 접지·공력 힘", "pos": [900, 120], "size": [180, 64], "tag": "M1D/M1E" },
     { "id": "wheel_kinematics", "type": "backend", "label": "휠 운동학", "sublabel": "접지 좌표·조향·휠 속도", "pos": [1120, 120], "size": [180, 64], "tag": "M1B" },
+    { "id": "drivetrain", "type": "backend", "label": "구동계 경계", "sublabel": "토크 커브·8단·RWD·엔진 브레이크", "pos": [1120, 200], "size": [180, 64], "tag": "M1D 완료" },
     { "id": "tire_model", "type": "backend", "label": "타이어 힘 모델", "sublabel": "슬립·하중 민감도·결합 그립", "pos": [1120, 280], "size": [180, 64], "tag": "M1C" },
-    { "id": "render_snapshot", "type": "messagebus", "label": "렌더링 스냅샷", "sublabel": "평면 상태 + 차체 높이", "pos": [1340, 120], "size": [170, 64] },
+    { "id": "aero_model", "type": "backend", "label": "공력 모델", "sublabel": "전후 다운포스·속도 반대 드래그", "pos": [1340, 200], "size": [170, 64], "tag": "M1E 완료" },
+    { "id": "render_snapshot", "type": "messagebus", "label": "렌더링 스냅샷", "sublabel": "Rapier pose + 차체 높이", "pos": [1340, 120], "size": [170, 64] },
     { "id": "telemetry", "type": "database", "label": "텔레메트리 HUD", "sublabel": "속도·RPM·G값·조향", "pos": [1330, 280], "size": [170, 64] },
-    { "id": "test_harness", "type": "cloud", "label": "테스트 하네스", "sublabel": "Vitest + Playwright", "pos": [690, 500], "size": [165, 64] },
+    { "id": "test_harness", "type": "cloud", "label": "테스트 하네스", "sublabel": "PhysicsValidation + Vitest + Playwright", "pos": [690, 500], "size": [165, 64], "tag": "M1E" },
     { "id": "project_docs", "type": "cloud", "label": "프로젝트 계약", "sublabel": "AGENTS.md + docs/", "pos": [900, 500], "size": [160, 64] }
   ],
   "boundaries": [
-    { "kind": "region", "label": "브라우저 런타임", "wraps": ["browser", "app_shell", "renderer", "input_boundary", "vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "tire_model", "render_snapshot", "telemetry"] },
-    { "kind": "security-group", "label": "순수 도메인 경계", "wraps": ["vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "tire_model", "render_snapshot", "telemetry"] }
+    { "kind": "region", "label": "브라우저 런타임", "wraps": ["browser", "app_shell", "renderer", "input_boundary", "vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "aero_model", "render_snapshot", "telemetry"] },
+    { "kind": "security-group", "label": "순수 도메인 경계", "wraps": ["vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "aero_model", "render_snapshot", "telemetry"] }
   ],
   "connections": [
     { "from": "browser", "to": "app_shell", "label": "페이지 로드", "variant": "emphasis", "labelDy": -26 },
@@ -33,20 +35,25 @@
     { "from": "vehicle_input", "to": "fixed_loop", "label": "고정 스텝 입력", "fromSide": "right", "toSide": "top", "labelDy": -42 },
     { "from": "fixed_loop", "to": "physics_domain", "label": "120Hz 스텝", "variant": "emphasis", "labelDy": -26 },
     { "from": "fixed_loop", "to": "rapier_suspension", "label": "120Hz 접지 스텝", "variant": "emphasis", "fromSide": "top", "toSide": "bottom", "labelAt": [881, 198] },
-    { "from": "physics_domain", "to": "tire_model", "label": "구동·제동 명령", "variant": "dashed", "labelDy": -26 },
+    { "from": "physics_domain", "to": "drivetrain", "label": "기어·RPM·토크 명령", "variant": "emphasis", "fromSide": "right", "toSide": "left", "labelAt": [1100, 278] },
+    { "from": "drivetrain", "to": "rapier_suspension", "label": "후륜 구동·엔진 브레이크", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [1090, 195] },
+    { "from": "physics_domain", "to": "tire_model", "label": "구동·제동 상태", "variant": "dashed", "labelDy": -26 },
     { "from": "rapier_suspension", "to": "wheel_kinematics", "label": "차체·접지 상태", "variant": "dashed", "labelAt": [1100, 198] },
-    { "from": "wheel_kinematics", "to": "tire_model", "label": "접지점 속도", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [1210, 230] },
+    { "from": "wheel_kinematics", "to": "tire_model", "label": "접지점 속도", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [1210, 196] },
     { "from": "tire_model", "to": "rapier_suspension", "label": "접지점 종·횡력", "variant": "emphasis", "fromSide": "left", "toSide": "bottom", "route": "orthogonal-v", "labelAt": [1015, 370] },
+    { "from": "rapier_suspension", "to": "aero_model", "label": "차체 속도·노면 배율", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [1210, 198] },
+    { "from": "aero_model", "to": "rapier_suspension", "label": "전후 다운포스·드래그", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [1210, 358] },
     { "from": "rapier_suspension", "to": "render_snapshot", "label": "힘 적용 차체 상태", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [1190, 95] },
     { "from": "render_snapshot", "to": "renderer", "label": "보간 + 렌더링", "fromSide": "left", "toSide": "top", "labelAt": [946, 198] },
     { "from": "physics_domain", "to": "telemetry", "label": "디버그 지표", "variant": "dashed", "labelDy": 56 },
     { "from": "tire_model", "to": "telemetry", "label": "슬립·그립 사용률", "variant": "dashed", "labelDy": 56 },
+    { "from": "drivetrain", "to": "telemetry", "label": "RPM·구동력", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [1280, 278] },
     { "from": "test_harness", "to": "fixed_loop", "label": "결정적 검사", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [765, 578] },
     { "from": "project_docs", "to": "physics_domain", "label": "계약 적용", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [975, 578] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "Physics Prototype v0.5", "items": ["고정 120Hz 입력·기어·RPM 명령", "Rapier 4휠 접지점의 종·횡력", "휠별 슬립·결합 그립 HUD"] },
+    { "dot": "cyan", "title": "Milestone 1E", "items": ["M1D 구동계 토크·엔진 브레이크", "전후 다운포스·속도 반대 드래그", "결정적 물리 검증·Rapier yaw 회귀"] },
     { "dot": "emerald", "title": "아키텍처 규칙", "items": ["물리는 React와 R3F에서 독립", "플레이어와 AI가 VehicleControlInput 공유", "렌더링은 읽기 전용 스냅샷 사용"] },
-    { "dot": "rose", "title": "다음 경계", "items": ["구동계 토크·엔진 브레이크의 완전 이관", "실제 노면 높이·연석·트랙 리밋", "타이어 온도·마모·노면 진화"] }
+    { "dot": "rose", "title": "다음 경계", "items": ["입력 프리셋·반복 가능한 테스트 트랙", "단일 AI와 공유 VehicleControlInput", "다차량·퀄리파잉·레이스 전략"] }
   ]
 }

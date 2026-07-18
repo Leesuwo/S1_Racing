@@ -41,6 +41,24 @@ describe("VehiclePhysics", () => {
     expect(state.speedMps).toBeLessThan(speedBeforeBrake);
   });
 
+  it("uses engine braking during a connected throttle lift", () => {
+    const state = createInitialVehicleState();
+    const throttleInput = { ...neutralVehicleControlInput(), throttle: 1 };
+    const liftInput = neutralVehicleControlInput();
+
+    for (let step = 0; step < 240; step += 1) {
+      stepVehicle(state, throttleInput, 1 / 120, DEFAULT_VEHICLE_CONFIG, ASPHALT_SURFACE);
+    }
+    const speedBeforeLiftMps = state.speedMps;
+
+    for (let step = 0; step < 120; step += 1) {
+      stepVehicle(state, liftInput, 1 / 120, DEFAULT_VEHICLE_CONFIG, ASPHALT_SURFACE);
+    }
+
+    expect(state.engineBrakeTorqueNm).toBeGreaterThan(0);
+    expect(state.speedMps).toBeLessThan(speedBeforeLiftMps);
+  });
+
   it("has less grip and more resistance on grass", () => {
     const asphaltState = createInitialVehicleState();
     const grassState = createInitialVehicleState();

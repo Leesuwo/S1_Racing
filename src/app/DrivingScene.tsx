@@ -191,11 +191,18 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
           });
           rig.step(dt, {
             steeringInput: frameInput.steering,
-            rearDriveForceN: simulation.current.engineForceN,
+            rearDriveTorqueNm: simulation.current.driveTorqueNm,
+            engineBrakeTorqueNm: simulation.current.engineBrakeTorqueNm,
             brakeForceN: simulation.current.brake * simulation.config.maxBrakeForceN,
             surfaceGripMultiplier: surface.gripMultiplier,
+            surfaceDragMultiplier: surface.dragMultiplier,
           });
           const updatedRapierSnapshot = rig.getSnapshot();
+          const tireStates = rig.getWheelTireStates();
+          const drivenWheelAngularSpeedRadS = (
+            tireStates.rearLeft.wheelAngularSpeedRadS
+            + tireStates.rearRight.wheelAngularSpeedRadS
+          ) * 0.5;
           simulation.synchronizeFromExternalPose({
             position: {
               x: updatedRapierSnapshot.position.x,
@@ -207,6 +214,7 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
             },
             yawRad: rapierRotationToPhysicsYaw(updatedRapierSnapshot.rotation),
             yawRateRadS: -updatedRapierSnapshot.angularVelocity.y,
+            drivenWheelAngularSpeedRadS,
           }, dt);
         }
         stepIndex += 1;

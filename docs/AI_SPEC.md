@@ -13,4 +13,4 @@ AI는 플레이어와 같은 차량 물리를 사용하고 `VehicleControlInput`
 
 ## Milestone 0
 
-AI 구현과 트랙 데이터는 제외한다. AI 개발은 Milestone 1F 이후 별도 검증 시나리오와 함께 시작한다.
+AI 구현과 트랙 데이터는 제외한다. 테스트 트랙과 입력 프리셋을 고정하는 Milestone 1F 이후, Milestone 2A에서 별도 검증 시나리오와 함께 시작한다.

@@ -173,7 +173,9 @@ export class BrowserVehicleInput {
 
     if (this.isPointerLocked()) {
       this.steering = clampAnalogInput(this.steering + this.mouseDeltaX * 0.0025);
-      if (keyboardSteering === 0 && Math.abs(this.mouseDeltaX) < 0.01) {
+      if (keyboardSteering !== 0) {
+        this.steering = moveTowards(this.steering, keyboardSteering, deltaSeconds * 5.5);
+      } else if (Math.abs(this.mouseDeltaX) < 0.01) {
         this.steering = moveTowards(this.steering, 0, deltaSeconds * 2.8);
       }
     } else {

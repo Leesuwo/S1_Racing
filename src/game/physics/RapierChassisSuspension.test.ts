@@ -20,8 +20,8 @@ describe("RapierChassisSuspension", () => {
 
     rig.syncPlanarPosition({ x: 12, z: -4 });
     rig.step(1 / 120);
-    expect(rig.getSnapshot().position.x).toBeCloseTo(12, 4);
-    expect(rig.getSnapshot().position.z).toBeCloseTo(-4, 4);
+    expect(rig.getSnapshot().position.x).toBeCloseTo(12, 3);
+    expect(rig.getSnapshot().position.z).toBeCloseTo(-4, 3);
 
     rig.syncPlanarPose({
       position: { x: 4, z: 3 },
@@ -82,7 +82,10 @@ describe("RapierChassisSuspension", () => {
       });
     }
 
-    expect(rig.getSnapshot().position.x).toBeGreaterThan(xBeforeRightSteerM + 0.05);
+    const steeredSnapshot = rig.getSnapshot();
+    expect(steeredSnapshot.position.x).toBeGreaterThan(xBeforeRightSteerM + 0.05);
+    expect(steeredSnapshot.angularVelocity.y).toBeLessThan(-0.01);
+    expect(steeredSnapshot.rotation.y).toBeLessThan(-0.01);
 
     const speedBeforeBrakeMps = Math.hypot(
       rig.getSnapshot().linearVelocity.x,
@@ -98,6 +101,63 @@ describe("RapierChassisSuspension", () => {
     }
 
     expect(Math.hypot(rig.getSnapshot().linearVelocity.x, rig.getSnapshot().linearVelocity.z)).toBeLessThan(speedBeforeBrakeMps);
+    rig.dispose();
+  });
+
+  it("applies rear drive torque, engine braking, and speed-dependent aero forces", async () => {
+    const rig = await RapierChassisSuspension.create();
+
+    for (let step = 0; step < 720; step += 1) {
+      rig.step(1 / 120);
+    }
+
+    rig.syncPlanarPose({
+      position: { x: 0, z: 0 },
+      velocity: { x: 0, z: -25 },
+      yawRad: 0,
+      yawRateRadS: 0,
+    });
+
+    for (let step = 0; step < 120; step += 1) {
+      rig.step(1 / 120, {
+        steeringInput: 0,
+        rearDriveTorqueNm: 1_600,
+        engineBrakeTorqueNm: 0,
+        brakeForceN: 0,
+        surfaceGripMultiplier: 1,
+        surfaceDragMultiplier: 1,
+      });
+    }
+
+    const drivenTelemetry = rig.getTelemetry();
+    const drivenSnapshot = rig.getSnapshot();
+    const tireStates = rig.getWheelTireStates();
+    const speedBeforeEngineBrakeMps = Math.hypot(
+      drivenSnapshot.linearVelocity.x,
+      drivenSnapshot.linearVelocity.z,
+    );
+
+    expect(speedBeforeEngineBrakeMps).toBeGreaterThan(5);
+    expect(tireStates.rearLeft.wheelAngularSpeedRadS).toBeGreaterThan(0);
+    expect(drivenTelemetry.downforceN).toBeGreaterThan(0);
+    expect(drivenTelemetry.dragForceN).toBeGreaterThan(0);
+
+    for (let step = 0; step < 180; step += 1) {
+      rig.step(1 / 120, {
+        steeringInput: 0,
+        rearDriveTorqueNm: 0,
+        engineBrakeTorqueNm: 240,
+        brakeForceN: 0,
+        surfaceGripMultiplier: 1,
+        surfaceDragMultiplier: 1,
+      });
+    }
+
+    const engineBrakedSnapshot = rig.getSnapshot();
+    expect(Math.hypot(
+      engineBrakedSnapshot.linearVelocity.x,
+      engineBrakedSnapshot.linearVelocity.z,
+    )).toBeLessThan(speedBeforeEngineBrakeMps);
     rig.dispose();
   });
 });

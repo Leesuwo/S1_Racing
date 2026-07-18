@@ -1,4 +1,10 @@
 import type { VehicleControlInput } from "../input/VehicleControlInput";
+import { calculateAeroForces } from "./AeroModel";
+import {
+  calculateDrivetrainCommand,
+  DEFAULT_TORQUE_CURVE,
+  type DrivetrainConfig,
+} from "./Drivetrain";
 import {
   calculateSuspensionStep,
   DEFAULT_SUSPENSION_CONFIG,
@@ -29,6 +35,8 @@ export interface VehiclePhysicsConfig {
   maxSteeringAngleRad: number;
   maxBrakeForceN: number;
   maxEngineTorqueNm: number;
+  engineBrakeTorqueNm: number;
+  engineRpmResponseRpmPerSecond: number;
   finalDriveRatio: number;
   drivetrainEfficiency: number;
   gearRatios: readonly number[];
@@ -61,11 +69,16 @@ export interface VehicleState {
   lateralSpeedMps: number;
   lateralAccelerationMps2: number;
   downforceN: number;
+  dragForceN: number;
   engineForceN: number;
   wheelLoadsN: WheelValues;
   wheelCompressionM: WheelValues;
   wheelCompressionVelocityMps: WheelValues;
   surface: SurfaceType;
+  engineTorqueNm: number;
+  driveTorqueNm: number;
+  engineBrakeTorqueNm: number;
+  drivenWheelAngularSpeedRadS: number;
 }
 
 export const DEFAULT_VEHICLE_CONFIG: VehiclePhysicsConfig = {
@@ -79,6 +92,8 @@ export const DEFAULT_VEHICLE_CONFIG: VehiclePhysicsConfig = {
   maxEngineTorqueNm: 320,
   finalDriveRatio: 3.6,
   drivetrainEfficiency: 0.9,
+  engineBrakeTorqueNm: 110,
+  engineRpmResponseRpmPerSecond: 24_000,
   gearRatios: [3.2, 2.2, 1.65, 1.32, 1.1, 0.94, 0.82, 0.72],
   idleRpm: 900,
   redlineRpm: 8_000,
@@ -108,6 +123,7 @@ export const GRASS_SURFACE: VehicleSurface = {
 
 const GRAVITY_MPS2 = 9.81;
 const MIN_FORWARD_SPEED_FOR_SLIP = 0.5;
+const drivetrainConfigCache = new WeakMap<VehiclePhysicsConfig, DrivetrainConfig>();
 
 function forwardVector(yawRad: number): Vec2 {
   return { x: Math.sin(yawRad), z: -Math.cos(yawRad) };
@@ -143,51 +159,31 @@ function clampMagnitude(x: number, z: number, maxMagnitude: number): Vec2 {
   return { x: x * factor, z: z * factor };
 }
 
-function moveTowards(current: number, target: number, maxDelta: number): number {
-  if (Math.abs(target - current) <= maxDelta) {
-    return target;
+function getDrivetrainConfig(config: VehiclePhysicsConfig): DrivetrainConfig {
+  const cached = drivetrainConfigCache.get(config);
+  if (cached) {
+    return cached;
   }
 
-  return current + Math.sign(target - current) * maxDelta;
-}
-
-function interpolateTorque(rpm: number, config: VehiclePhysicsConfig): number {
-  const points = [
-    { rpm: config.idleRpm, torque: 210 },
-    { rpm: 2_500, torque: 285 },
-    { rpm: 4_500, torque: config.maxEngineTorqueNm },
-    { rpm: 6_500, torque: 305 },
-    { rpm: config.redlineRpm, torque: 245 },
-  ];
-
-  const safeRpm = clamp(rpm, points[0].rpm, points[points.length - 1].rpm);
-  for (let index = 1; index < points.length; index += 1) {
-    const current = points[index];
-    const previous = points[index - 1];
-    if (safeRpm <= current.rpm) {
-      const ratio = (safeRpm - previous.rpm) / (current.rpm - previous.rpm);
-      return previous.torque + (current.torque - previous.torque) * ratio;
-    }
-  }
-
-  return points[points.length - 1].torque;
-}
-
-function calculateRpm(
-  forwardSpeedMps: number,
-  gear: number,
-  throttle: number,
-  config: VehiclePhysicsConfig,
-): number {
-  const gearRatio = config.gearRatios[gear - 1] ?? config.gearRatios[0];
-  const wheelAngularSpeed = Math.abs(forwardSpeedMps) / config.wheelRadiusM;
-  const drivenRpm = wheelAngularSpeed * gearRatio * config.finalDriveRatio * 60 / (2 * Math.PI);
-  const throttleBlipRpm = throttle * 1_500;
-  return clamp(
-    Math.max(config.idleRpm, drivenRpm + throttleBlipRpm),
-    config.idleRpm,
-    config.redlineRpm,
-  );
+  const torqueCurve = config.maxEngineTorqueNm === DEFAULT_TORQUE_CURVE[2].torqueNm
+    ? DEFAULT_TORQUE_CURVE
+    : DEFAULT_TORQUE_CURVE.map((point) => (
+      point.rpm === 4_500 ? { rpm: point.rpm, torqueNm: config.maxEngineTorqueNm } : point
+    ));
+  const drivetrainConfig: DrivetrainConfig = {
+    gearRatios: config.gearRatios,
+    finalDriveRatio: config.finalDriveRatio,
+    drivetrainEfficiency: config.drivetrainEfficiency,
+    wheelRadiusM: config.wheelRadiusM,
+    idleRpm: config.idleRpm,
+    redlineRpm: config.redlineRpm,
+    maxEngineTorqueNm: config.maxEngineTorqueNm,
+    engineBrakeTorqueNm: config.engineBrakeTorqueNm,
+    rpmResponseRpmPerSecond: config.engineRpmResponseRpmPerSecond,
+    torqueCurve,
+  };
+  drivetrainConfigCache.set(config, drivetrainConfig);
+  return drivetrainConfig;
 }
 
 function calculateSlipAngle(longitudinalSpeedMps: number, lateralSpeedMps: number): number {
@@ -244,11 +240,16 @@ export function createInitialVehicleState(
     lateralSpeedMps: 0,
     lateralAccelerationMps2: 0,
     downforceN: 0,
+    dragForceN: 0,
     engineForceN: 0,
     wheelLoadsN: zeroWheelValues(),
     wheelCompressionM: zeroWheelValues(),
     wheelCompressionVelocityMps: zeroWheelValues(),
     surface: "asphalt",
+    engineTorqueNm: 0,
+    driveTorqueNm: 0,
+    engineBrakeTorqueNm: 0,
+    drivenWheelAngularSpeedRadS: 0,
   };
 }
 
@@ -285,8 +286,6 @@ export function stepVehicle(
   const speedMps = Math.hypot(state.velocity.x, state.velocity.z);
   const steeringAngleRad = safeSteering * config.maxSteeringAngleRad * clamp(1 - speedMps / 95, 0.25, 1);
 
-  const downforceN = config.aeroDownforceCoefficient * speedMps * speedMps;
-
   const frontVelocity = add(state.velocity, scale(right, state.yawRateRadS * config.frontAxleDistanceM));
   const rearVelocity = add(state.velocity, scale(right, -state.yawRateRadS * config.rearAxleDistanceM));
   const frontForward = forwardVector(state.yawRad + steeringAngleRad);
@@ -297,12 +296,28 @@ export function stepVehicle(
   const rearLongitudinalSpeed = dot(rearVelocity, forward);
   const rearLateralSpeed = dot(rearVelocity, right);
 
-  const gearRatio = config.gearRatios[state.gear - 1] ?? config.gearRatios[0];
-  const rpm = calculateRpm(forwardSpeedMps, state.gear, throttle, config);
-  const engineTorqueNm = interpolateTorque(rpm, config);
-  const engineForceN = throttle * engineTorqueNm * gearRatio * config.finalDriveRatio * config.drivetrainEfficiency / config.wheelRadiusM;
+  const drivetrain = calculateDrivetrainCommand({
+    gear: state.gear,
+    throttle,
+    clutch: input.clutch,
+    forwardSpeedMps,
+    drivenWheelAngularSpeedRadS: Math.abs(state.drivenWheelAngularSpeedRadS) > 0.5
+      ? state.drivenWheelAngularSpeedRadS
+      : forwardSpeedMps / config.wheelRadiusM,
+    previousRpm: state.rpm,
+    dtSeconds: dt,
+  }, getDrivetrainConfig(config));
+  const rpm = drivetrain.rpm;
+  const engineTorqueNm = drivetrain.engineTorqueNm;
+  const engineForceN = drivetrain.driveForceN - drivetrain.engineBrakeForceN;
   const brakeForceN = Math.sign(forwardSpeedMps || 1) * brake * config.maxBrakeForceN;
-  const dragForceN = config.dragCoefficient * speedMps * speedMps * surface.dragMultiplier;
+  const aero = calculateAeroForces({ speedMps, surfaceDragMultiplier: surface.dragMultiplier }, {
+    downforceCoefficientNPerMps2: config.aeroDownforceCoefficient,
+    dragCoefficientNPerMps2: config.dragCoefficient,
+    frontBalance: config.aeroBalanceFront,
+  });
+  const downforceN = aero.downforceN;
+  const dragForceN = aero.dragForceN;
   const rollingResistanceForceN = config.rollingResistance * Math.abs(forwardSpeedMps);
   const longitudinalAccelerationEstimateMps2 =
     (engineForceN - brakeForceN - Math.sign(forwardSpeedMps || 1) * (dragForceN + rollingResistanceForceN)) / config.massKg;
@@ -401,7 +416,12 @@ export function stepVehicle(
     ? Math.abs(totalForce.x * right.x + totalForce.z * right.z) / config.massKg
     : 0;
   state.downforceN = downforceN;
+  state.dragForceN = dragForceN;
   state.engineForceN = engineForceN;
+  state.engineTorqueNm = engineTorqueNm;
+  state.driveTorqueNm = drivetrain.driveTorqueNm;
+  state.engineBrakeTorqueNm = drivetrain.wheelEngineBrakeTorqueNm;
+  state.drivenWheelAngularSpeedRadS = drivetrain.wheelAngularSpeedRadS;
   state.wheelLoadsN = suspension.loadsN;
   state.wheelCompressionM = suspension.compressionM;
   state.wheelCompressionVelocityMps = suspension.compressionVelocityMps;

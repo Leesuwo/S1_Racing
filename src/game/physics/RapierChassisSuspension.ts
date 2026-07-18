@@ -1,4 +1,5 @@
 import RAPIER from "@dimforge/rapier3d-compat";
+import { calculateAeroForces } from "./AeroModel";
 import {
   calculateAllWheelKinematics,
   type WheelKinematicState,
@@ -47,13 +48,18 @@ export interface RapierSuspensionTelemetry {
   maximumSlipRatio: number;
   maximumSlipAngleRad: number;
   maximumFrictionUsage: number;
+  downforceN: number;
+  dragForceN: number;
 }
 
 export interface RapierTireControl {
   steeringInput: number;
-  rearDriveForceN: number;
+  rearDriveForceN?: number;
+  rearDriveTorqueNm?: number;
+  engineBrakeTorqueNm?: number;
   brakeForceN: number;
   surfaceGripMultiplier: number;
+  surfaceDragMultiplier?: number;
 }
 
 export interface RapierWheelTireState extends TireForceState {
@@ -86,6 +92,9 @@ export interface RapierChassisSuspensionConfig {
   reboundDampingNsPerM: number;
   maxSuspensionForceN: number;
   wheelRotationalInertiaKgM2: number;
+  aeroDownforceCoefficient: number;
+  aeroBalanceFront: number;
+  dragCoefficient: number;
   tire: TireModelConfig;
 }
 
@@ -106,6 +115,9 @@ export const DEFAULT_RAPIER_CHASSIS_SUSPENSION_CONFIG: RapierChassisSuspensionCo
   reboundDampingNsPerM: 14_000,
   maxSuspensionForceN: 28_000,
   wheelRotationalInertiaKgM2: 1.15,
+  aeroDownforceCoefficient: 1.25,
+  aeroBalanceFront: 0.43,
+  dragCoefficient: 0.42,
   tire: DEFAULT_TIRE_MODEL_CONFIG,
 };
 
@@ -115,6 +127,10 @@ const FIXED_WHEEL_ORDER: readonly RaycastWheelId[] = [
   "rearLeft",
   "rearRight",
 ];
+
+const CHASSIS_HALF_EXTENTS = { x: 0.9, y: 0.18, z: 1.65 } as const;
+const CHASSIS_COLLIDER_VOLUME_M3 =
+  8 * CHASSIS_HALF_EXTENTS.x * CHASSIS_HALF_EXTENTS.y * CHASSIS_HALF_EXTENTS.z;
 
 let rapierInitialization: Promise<void> | null = null;
 
@@ -205,16 +221,25 @@ function normalizeTireControl(control: RapierTireControl | number): RapierTireCo
     return {
       steeringInput: control,
       rearDriveForceN: 0,
+      rearDriveTorqueNm: 0,
+      engineBrakeTorqueNm: 0,
       brakeForceN: 0,
       surfaceGripMultiplier: 1,
+      surfaceDragMultiplier: 1,
     };
   }
 
   return {
     steeringInput: clamp(control.steeringInput, -1, 1),
-    rearDriveForceN: Math.max(0, control.rearDriveForceN),
+    rearDriveForceN: Number.isFinite(control.rearDriveForceN) ? control.rearDriveForceN : undefined,
+    rearDriveTorqueNm: Number.isFinite(control.rearDriveTorqueNm) ? control.rearDriveTorqueNm : undefined,
+    engineBrakeTorqueNm: Math.max(
+      0,
+      Number.isFinite(control.engineBrakeTorqueNm ?? 0) ? control.engineBrakeTorqueNm ?? 0 : 0,
+    ),
     brakeForceN: Math.max(0, control.brakeForceN),
     surfaceGripMultiplier: clamp(control.surfaceGripMultiplier, 0, 3),
+    surfaceDragMultiplier: clamp(control.surfaceDragMultiplier ?? 1, 0, 5),
   };
 }
 
@@ -230,9 +255,10 @@ function createWheelMounts(config: RapierChassisSuspensionConfig): Record<Raycas
 }
 
 /**
- * Rapier owns the dynamic chassis and four downward scene-query rays. M1C
- * calculates each grounded wheel's slip and combined tire force before the
- * Rapier world step, then applies the force at the physical contact point.
+ * Rapier owns the dynamic chassis and four downward scene-query rays. M1D
+ * supplies rear-drive and engine-brake torque, while M1C calculates each
+ * grounded wheel's slip and combined tire force before the Rapier world step.
+ * M1E adds front/rear downforce and velocity-opposing drag at the same step.
  */
 export class RapierChassisSuspension {
   private readonly world: RAPIER.World;
@@ -243,6 +269,7 @@ export class RapierChassisSuspension {
   private readonly tireStates = new Map<RaycastWheelId, RapierWheelTireState>();
   private readonly wheelAngularSpeeds = new Map<RaycastWheelId, number>();
   private steeringInput = 0;
+  private surfaceDragMultiplier = 1;
 
   private constructor(
     private readonly config: RapierChassisSuspensionConfig,
@@ -276,14 +303,18 @@ export class RapierChassisSuspension {
 
     const chassisBody = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(0, config.initialChassisHeightM, 0)
-      .setAdditionalMass(config.massKg)
       .setLinearDamping(0.12)
       .setAngularDamping(3.2)
       .setCanSleep(false)
       .setCcdEnabled(true);
     const chassis = world.createRigidBody(chassisBody);
-    const chassisCollider = RAPIER.ColliderDesc.cuboid(0.9, 0.18, 1.65)
-      .setDensity(0)
+    const chassisDensityKgPerM3 = Math.max(0.001, config.massKg / CHASSIS_COLLIDER_VOLUME_M3);
+    const chassisCollider = RAPIER.ColliderDesc.cuboid(
+      CHASSIS_HALF_EXTENTS.x,
+      CHASSIS_HALF_EXTENTS.y,
+      CHASSIS_HALF_EXTENTS.z,
+    )
+      .setDensity(chassisDensityKgPerM3)
       .setFriction(0.9);
     world.createCollider(chassisCollider, chassis);
 
@@ -297,8 +328,10 @@ export class RapierChassisSuspension {
 
     const tireControl = normalizeTireControl(control);
     this.steeringInput = tireControl.steeringInput;
+    this.surfaceDragMultiplier = tireControl.surfaceDragMultiplier ?? 1;
     this.world.timestep = dtSeconds;
     this.applySuspensionForces(dtSeconds);
+    this.applyAeroForces(tireControl);
     this.applyTireForces(dtSeconds, tireControl);
     this.world.step();
     this.chassis.resetForces(false);
@@ -382,6 +415,7 @@ export class RapierChassisSuspension {
     this.chassis.setAngvel({ x: 0, y: 0, z: 0 }, true);
     this.chassis.resetForces(false);
     this.chassis.resetTorques(false);
+    this.surfaceDragMultiplier = 1;
 
     for (const id of FIXED_WHEEL_ORDER) {
       this.contacts.set(id, emptyContact(id));
@@ -394,6 +428,7 @@ export class RapierChassisSuspension {
   getTelemetry(): RapierSuspensionTelemetry {
     const contacts = [...this.contacts.values()];
     const tires = [...this.tireStates.values()];
+    const aero = this.calculateCurrentAero(this.surfaceDragMultiplier);
 
     return {
       groundedWheelCount: contacts.filter((contact) => contact.grounded).length,
@@ -406,6 +441,8 @@ export class RapierChassisSuspension {
       maximumSlipRatio: Math.max(...tires.map((tire) => Math.abs(tire.slipRatio))),
       maximumSlipAngleRad: Math.max(...tires.map((tire) => Math.abs(tire.slipAngleRad))),
       maximumFrictionUsage: Math.max(...tires.map((tire) => tire.frictionUsage)),
+      downforceN: aero.downforceN,
+      dragForceN: aero.dragForceN,
     };
   }
 
@@ -470,7 +507,11 @@ export class RapierChassisSuspension {
 
   private applyTireForces(dtSeconds: number, control: RapierTireControl): void {
     const wheelKinematics = this.getWheelKinematics();
-    const rearDriveTorqueNm = control.rearDriveForceN * this.config.wheelRadiusM * 0.5;
+    const rearDriveTorqueNm = (
+      control.rearDriveTorqueNm
+      ?? (control.rearDriveForceN ?? 0) * this.config.wheelRadiusM
+    ) * 0.5;
+    const rearEngineBrakeTorqueNm = Math.max(0, control.engineBrakeTorqueNm ?? 0) * 0.5;
     const totalBrakeTorqueNm = control.brakeForceN * this.config.wheelRadiusM;
     const wheelInertiaKgM2 = Math.max(0.05, this.config.wheelRotationalInertiaKgM2);
 
@@ -504,6 +545,7 @@ export class RapierChassisSuspension {
       );
       const isFrontWheel = id.startsWith("front");
       const driveTorqueNm = isFrontWheel ? 0 : rearDriveTorqueNm;
+      const engineBrakeTorqueNm = isFrontWheel ? 0 : rearEngineBrakeTorqueNm;
       const brakeShare = isFrontWheel ? 0.29 : 0.21;
       const speedDirection = Math.sign(
         Math.abs(previousAngularSpeedRadS) > 0.1
@@ -513,6 +555,7 @@ export class RapierChassisSuspension {
       const brakeTorqueNm = totalBrakeTorqueNm * brakeShare * speedDirection;
       const angularAccelerationRadS2 = (
         driveTorqueNm
+        - engineBrakeTorqueNm * speedDirection
         - brakeTorqueNm
         - tire.longitudinalForceN * this.config.wheelRadiusM
       ) / wheelInertiaKgM2;
@@ -531,6 +574,48 @@ export class RapierChassisSuspension {
         ...tire,
       });
     }
+  }
+
+  private applyAeroForces(control: RapierTireControl): void {
+    const aero = this.calculateCurrentAero(control.surfaceDragMultiplier ?? 1);
+    const translation = this.chassis.translation();
+    const rotation = this.chassis.rotation();
+    const linearVelocity = this.chassis.linvel();
+    const horizontalSpeedMps = Math.hypot(linearVelocity.x, linearVelocity.z);
+
+    if (aero.dragForceN > 0 && horizontalSpeedMps > 1e-6) {
+      this.chassis.addForce({
+        x: -linearVelocity.x / horizontalSpeedMps * aero.dragForceN,
+        y: 0,
+        z: -linearVelocity.z / horizontalSpeedMps * aero.dragForceN,
+      }, true);
+    }
+
+    const frontOffset = rotateByQuaternion(
+      { x: 0, y: 0, z: -this.config.frontAxleDistanceM },
+      rotation,
+    );
+    const rearOffset = rotateByQuaternion(
+      { x: 0, y: 0, z: this.config.rearAxleDistanceM },
+      rotation,
+    );
+    const frontPoint = add(translation, frontOffset);
+    const rearPoint = add(translation, rearOffset);
+
+    this.chassis.addForceAtPoint({ x: 0, y: -aero.frontDownforceN, z: 0 }, frontPoint, true);
+    this.chassis.addForceAtPoint({ x: 0, y: -aero.rearDownforceN, z: 0 }, rearPoint, true);
+  }
+
+  private calculateCurrentAero(surfaceDragMultiplier: number) {
+    const velocity = this.chassis.linvel();
+    return calculateAeroForces({
+      speedMps: Math.hypot(velocity.x, velocity.z),
+      surfaceDragMultiplier,
+    }, {
+      downforceCoefficientNPerMps2: this.config.aeroDownforceCoefficient,
+      dragCoefficientNPerMps2: this.config.dragCoefficient,
+      frontBalance: this.config.aeroBalanceFront,
+    });
   }
 
   private getReferenceRideHeightM(): number {

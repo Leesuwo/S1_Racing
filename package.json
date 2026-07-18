@@ -13,6 +13,7 @@
     "architecture:check": "node scripts/archify.mjs --check",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
+    "physics:validate": "vitest run src/game/physics/PhysicsValidation.test.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "verify": "node scripts/verify.mjs"

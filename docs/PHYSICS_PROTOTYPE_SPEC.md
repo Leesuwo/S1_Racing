@@ -1,4 +1,4 @@
-# Physics Prototype v0.5
+# Physics Prototype v0.6 / Milestone 1E
 
 ## 목적
 
@@ -12,6 +12,7 @@
 - 780kg 초기 가정 차량
 - 후륜 구동과 8단 기어
 - 토크 곡선 기반 엔진 구동력
+- 8단 후륜 구동 토크와 엔진 브레이크
 - 앞·뒤 타이어의 단순 슬립각 기반 횡력
 - 결합 그립 제한(friction circle)
 - 4개 휠 하중 분배와 종·횡방향 하중 이동
@@ -20,6 +21,7 @@
 - 휠별 장착점·접지점·전륜 조향·접지점 속도 운동학
 - 휠별 슬립 비율·슬립 각·하중 민감도·결합 그립
 - Rapier 접지점에 적용하는 종·횡방향 타이어 힘
+- Rapier 전·후 차축 다운포스와 차체 중심 드래그
 - Rapier 접지 수·차체 높이·전륜 조향·슬립·그립 사용률 텔레메트리
 - 속도 제곱 기반 다운포스·항력
 - 아스팔트와 잔디의 그립·저항 차이
@@ -27,6 +29,7 @@
 - 좌클릭 업시프트·우클릭 다운시프트
 - 테스트 트랙과 추적 카메라
 - 속도·RPM·기어·G값·다운포스·4개 휠 하중 텔레메트리
+- 결정적 직선 가속·코스트다운·공력 스케일·유한 상태 검증
 
 ## 구현 경계
 
@@ -35,14 +38,15 @@ BrowserVehicleInput
 → VehicleControlInput
 → FixedTimestepAccumulator
 → VehicleSimulation
-→ VehiclePhysics
+→ Drivetrain / VehiclePhysics / AeroModel
+→ RapierChassisSuspension
 → VehicleRenderSnapshot
 → R3F Canvas
 ```
 
-`VehiclePhysics.ts`, `Suspension.ts`, `TrackSurface.ts`, `VehicleSimulation.ts`는 React, R3F, Zustand, DOM을 import하지 않는다. 브라우저 이벤트는 `BrowserVehicleInput.ts`에서만 처리한다.
+`VehiclePhysics.ts`, `Drivetrain.ts`, `AeroModel.ts`, `Suspension.ts`, `TrackSurface.ts`, `VehicleSimulation.ts`는 React, R3F, Zustand, DOM을 import하지 않는다. 브라우저 이벤트는 `BrowserVehicleInput.ts`에서만 처리한다.
 
-`RapierChassisSuspension.ts`, `WheelKinematics.ts`, `TireModel.ts`도 React/R3F/DOM을 import하지 않는다. M1C부터는 휠 운동학이 접지점 속도와 조향 방향을 계산하고, `TireModel.ts`가 순수 함수로 슬립·하중 민감도·결합 그립을 계산한다. 계산된 종·횡방향 힘은 Rapier 차체의 실제 접지점에 적용되고, Rapier가 X/Z 위치·속도·yaw를 소유한다. `VehicleSimulation`은 입력·기어·RPM·표면 상태를 산출하고 Rapier 결과를 읽기 전용 렌더링 스냅샷으로 동기화한다.
+`RapierChassisSuspension.ts`, `WheelKinematics.ts`, `TireModel.ts`도 React/R3F/DOM을 import하지 않는다. M1C부터는 휠 운동학이 접지점 속도와 조향 방향을 계산하고, `TireModel.ts`가 순수 함수로 슬립·하중 민감도·결합 그립을 계산한다. M1D의 `Drivetrain.ts`는 후륜 토크·엔진 브레이크를 만들고 M1E의 `AeroModel.ts`는 전후 다운포스·드래그를 계산한다. 계산된 힘은 Rapier 차체의 실제 접지점과 차축·차체 중심에 적용되고, Rapier가 X/Z 위치·속도·yaw를 소유한다. `VehicleSimulation`은 입력·기어·RPM·공력 상태를 산출하고 Rapier 결과를 읽기 전용 렌더링 스냅샷으로 동기화한다.
 
 ## 4개 휠 서스펜션 단계
 
@@ -138,10 +142,14 @@ M1C 타이어 모델은 휠 회전 속도에서 다음을 계산한다.
 - HUD에서 최대 슬립 비율·슬립 각·그립 사용률을 확인할 수 있다.
 - 정지 상태에서 조향만 입력해도 차량이 회전하지 않는다.
 - 짧은 조향 입력 후 요 레이트가 안정 범위로 수렴한다.
+- 주행 중 스로틀 해제 시 엔진 브레이크가 발생하고 정지 상태에서는 발생하지 않는다.
+- 속도 2배에서 전후 다운포스와 드래그가 약 4배로 증가한다.
+- 직선 가속·코스트다운·공력 스케일·유한 상태 자동 검증이 통과한다.
 
 ## 다음 확장
 
-1. 구동계 토크와 엔진 브레이크를 Rapier 휠 회전에 완전히 이관
-2. 실제 노면 높이·연석 반응
-3. 타이어 온도·마모·노면 진화
-4. Rapier 충돌과 트랙 리밋
+1. 입력 프리셋과 반복 가능한 테스트 트랙 콘텐츠
+2. 공유 입력 경계를 사용하는 단일 AI
+3. 다차량 세션·퀄리파잉·레이스 전략
+4. 실제 노면 높이·연석·벽 충돌과 트랙 리밋
+5. 타이어 온도·마모·노면 진화
