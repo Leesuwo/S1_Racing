@@ -55,6 +55,9 @@ Milestone 0은 Project Foundation이다. 이번 단계에는 차량 물리, AI, 
 ## Workflow
 
 - 작은 검토 가능한 마일스톤으로 작업한다.
+- 여러 에이전트를 사용할 때는 `docs/agent-orchestration/README.md`와 `docs/agent-orchestration/roles/*.md`의 작업 패킷, 파일 소유권, QA 보고 형식을 따른다. 프로젝트 custom agent 설정은 `.codex/agents/*.toml`을 목표 위치로 하며, 현재 실행 환경에서는 템플릿만 검토한다.
+- 기본 병렬 배치는 구현 에이전트 1개와 읽기 전용 QA 1개다. 파일 소유권이 겹치지 않는 독립 작업만 최대 3개까지 병렬 실행한다.
+- `src/app/**`, `package.json`, 공통 입력 경계, 물리 스냅샷, `docs/architecture/**`는 Lead가 명시적으로 예약하지 않으면 병렬 수정하지 않는다.
 - 모든 코드·문서 변경 후 `npm run verify`를 실행한다. 이 명령은 타입 검사, 단위 테스트, 아키텍처 검증, 프로덕션 빌드, 브라우저 E2E를 순서대로 실행한다.
 - `npm run test:e2e`는 선택 검사가 아니다. 사용자에게 보이는 기능·입력·HUD·흐름을 변경하면 해당 동작을 검증하는 E2E 시나리오를 추가하거나 갱신한 뒤 실행한다.
 - E2E가 환경 문제로 실행되지 않으면 완료로 표시하지 않고, 실패 원인과 사용자가 확인해야 할 항목을 명시한다.

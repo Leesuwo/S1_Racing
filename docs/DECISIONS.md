@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-07-19 — D-014
+
+**결정:** S1 Racing의 모델 라우팅은 Lead `gpt-5.6-terra/high`, Writer·Explorer `gpt-5.6-luna/medium`, Physics·QA `gpt-5.6-terra/high`로 구성한다.
+
+**이유:** Lead와 물리·QA는 여러 파일과 검증 결과를 종합하고 경계·회귀를 판단해야 하므로 Terra를 사용한다. Writer와 Explorer는 명확히 bounded된 문서·탐색·기계적 작업의 비용을 줄이기 위해 Luna를 사용한다. 물리 설계처럼 판단 난도가 올라가는 작업은 Writer가 아니라 Physics Worker로 승격한다.
+
+**검증:** 역할별 TOML 템플릿과 모델 라우팅 표를 일치시켰다. 모든 Worker 결과는 기존 QA와 `npm run verify` 게이트를 거치며, 이 설정 변경은 코드 모듈 경계를 바꾸지 않으므로 Archify 다이어그램은 갱신하지 않는다.
+
+## 2026-07-19 — D-013
+
+**결정:** S1 Racing의 기본 오케스트레이션은 Lead가 최종 책임을 유지하는 manager 패턴으로 운영하고, Codex custom agent 설정은 `.codex/agents/*.toml`을 목표 위치로 삼는다. 현재 `.codex/`가 읽기 전용이므로 저장소에는 검토 가능한 TOML 템플릿만 둔다.
+
+**이유:** 공식 Codex 문서는 `AGENTS.md`를 작고 지속적인 규칙에 한정하고, 전문 custom agent는 별도 설정 파일에 좁은 책임과 맞는 도구·권한으로 정의하도록 안내한다. 공식 multi-agent 문서는 독립·bounded 작업에는 병렬화와 분리된 컨텍스트가 유효하지만, 공유 mutable state·순차 의존성·고정 실행 그래프에는 단일 에이전트가 낫다고 설명한다. S1 Racing은 물리·입력·렌더링 공유 경계가 강하므로 이 구분이 우선이다.
+
+**검증:** 탐색·QA는 read-only, 구현은 명시된 파일 소유권, 기본 `max_threads = 4`·`max_depth = 1`, 실패 후 1회 제한 재시도, 최종 `npm run verify` 게이트를 운영 계약에 추가했다. 코드 모듈 경계는 변경하지 않으므로 Archify 다이어그램은 갱신하지 않는다.
+
+## 2026-07-19 — D-012
+
+**결정:** 에이전트 오케스트레이션의 저장소 기준을 `docs/agent-orchestration/`로 두고, Lead Agent가 파일 소유권·합격 기준·QA 게이트를 작업 패킷으로 확정한다.
+
+**이유:** 현재 실행 환경에서는 `.agents/`가 읽기 전용이고, 여러 에이전트가 공유 통합 파일을 동시에 수정하면 물리·입력·렌더링 경계와 검증 책임이 흐려진다. 저장소 문서로 역할과 작업 큐를 관리하면 Codex Desktop 병렬 스레드에서도 동일한 계약을 재사용할 수 있다.
+
+**검증:** `PROJECT_STATUS.md`, `TASKS.md`, 역할별 파일, `AGENTS.md`의 병렬 실행 규칙을 서로 연결하고, 기능 변경은 구현 에이전트와 읽기 전용 QA 에이전트를 분리한다. 이 문서 추가는 코드 모듈 경계를 변경하지 않으므로 Archify 다이어그램은 갱신하지 않는다.
+
 ## 2026-07-19 — D-011
 
 **결정:** 공력은 순수 `AeroModel`에서 속도 제곱 기반 전후 다운포스·드래그를 계산하고, Rapier 고정 스텝이 전·후 차축과 차체 중심에 힘으로 적용한다.

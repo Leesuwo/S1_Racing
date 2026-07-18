@@ -58,6 +58,8 @@ npx playwright install chromium
 ## 문서
 
 - `AGENTS.md`: Codex 작업 규칙
+- `PROJECT_STATUS.md`, `TASKS.md`: 현재 상태와 오케스트레이션 작업 큐
+- `docs/agent-orchestration/`: Lead·전문 에이전트·QA 운영 계약과 Codex 설정 템플릿
 - `CODEX_START_PROMPT.md`: 다음 Codex 세션용 시작 프롬프트
 - `docs/PRODUCT_SPEC.md`: 제품과 Milestone 0 범위
 - `docs/PHYSICS_SPEC.md`: 차량 물리 방향

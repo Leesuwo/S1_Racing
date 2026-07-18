@@ -1,0 +1,6 @@
+# Copy to .codex/config.toml only after project-scoped Codex configuration is approved.
+# Keep the parent session's sandbox and approval policy explicit; do not use --yolo.
+
+[agents]
+max_threads = 4
+max_depth = 1

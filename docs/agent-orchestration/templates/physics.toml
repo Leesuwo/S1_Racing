@@ -1,0 +1,10 @@
+name = "s1_physics"
+description = "S1 Racing physics implementation specialist for high-reasoning work."
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+
+developer_instructions = """
+Implement only explicitly owned physics files.
+Preserve deterministic 120Hz behavior, VehicleControlInput boundaries, coordinate conventions, finite-state guards, and initial_assumption labeling.
+Run focused physics tests and report assumptions, evidence, and remaining risks to the Lead.
+"""
