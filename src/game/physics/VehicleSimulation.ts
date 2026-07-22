@@ -17,6 +17,7 @@ import {
   type TestTrackDefinition,
 } from "../../tracks/TestTrack";
 
+/** 렌더러가 물리 스냅샷에서 읽을 수 있는 보간 상태다. 위치·속도 단위는 각각 m, m/s다. */
 export interface VehicleRenderSnapshot {
   position: { x: number; z: number };
   velocity: { x: number; z: number };
@@ -28,6 +29,7 @@ export interface VehicleRenderSnapshot {
   surface: VehicleState["surface"];
 }
 
+/** HUD에 필요한 저주기 차량·트랙 상태다. 힘은 N, 토크는 N·m, 각도는 radian이다. */
 export interface VehicleTelemetry {
   speedKmh: number;
   rpm: number;
@@ -52,6 +54,7 @@ export interface VehicleTelemetry {
   distanceToBoundaryM: number;
 }
 
+/** Rapier 등 외부 물리 소유자가 평면 차량 상태를 다시 주입하는 경계다. */
 export interface ExternalPlanarVehiclePose {
   position: { x: number; z: number };
   velocity: { x: number; z: number };
@@ -60,14 +63,21 @@ export interface ExternalPlanarVehiclePose {
   drivenWheelAngularSpeedRadS?: number;
 }
 
+/** X/Z 벡터를 차량 local 축에 투영한다. */
 function dot(a: { x: number; z: number }, b: { x: number; z: number }): number {
   return a.x * b.x + a.z * b.z;
 }
 
+/** 물리 yaw 기준의 우측 단위 벡터를 반환한다. */
 function rightVector(yawRad: number): { x: number; z: number } {
   return { x: Math.cos(yawRad), z: Math.sin(yawRad) };
 }
 
+/**
+ * 순수 평면 명령 모델과 외부 Rapier pose를 연결하는 차량 시뮬레이션 파사드다.
+ * `previous`는 렌더 보간 전용으로 보존하고, 외부 pose 동기화 후에도 현재 상태의
+ * 기어·RPM·텔레메트리 계약을 유지한다.
+ */
 export class VehicleSimulation {
   readonly config: VehiclePhysicsConfig;
   readonly current: VehicleState;
@@ -84,6 +94,7 @@ export class VehicleSimulation {
     this.previous = cloneVehicleState(this.current);
   }
 
+  /** 입력 에지를 기어에 적용한 뒤 현재 노면에서 한 고정 스텝을 진행한다. */
   step(input: VehicleControlInput, dt: number): void {
     this.previous = cloneVehicleState(this.current);
 
@@ -98,6 +109,7 @@ export class VehicleSimulation {
     stepVehicle(this.current, input, dt, this.config, surface);
   }
 
+  /** 트랙 시작 pose와 초기 기어·RPM으로 현재·이전 스냅샷을 함께 되돌린다. */
   reset(): void {
     resetVehicleState(this.current, this.track.startPose.position, this.track.startPose.yawRad);
     this.previous = cloneVehicleState(this.current);
@@ -110,6 +122,7 @@ export class VehicleSimulation {
    * the renderer can interpolate without reading the physics world directly.
    */
   synchronizeFromExternalPose(pose: ExternalPlanarVehiclePose, dtSeconds: number): void {
+    // 이전 Rapier pose와의 차이를 사용해 렌더·HUD에 필요한 횡가속도를 근사한다.
     const safeDtSeconds = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : 1 / 120;
     const previousLateralSpeedMps = dot(this.previous.velocity, rightVector(this.previous.yawRad));
 
@@ -132,6 +145,7 @@ export class VehicleSimulation {
     this.current.surface = sampleTestTrackLocation(this.current.position, this.track).surface;
   }
 
+  /** 이전/현재 상태를 alpha로 보간해 렌더러에 제공한다. 물리 계층은 직접 노출하지 않는다. */
   getRenderSnapshot(alpha: number): VehicleRenderSnapshot {
     const blend = Math.max(0, Math.min(1, alpha));
     return {
@@ -149,6 +163,7 @@ export class VehicleSimulation {
     };
   }
 
+  /** 현재 상태와 트랙 위치를 UI 계약으로 복사해 반환한다. 반환 객체는 호출자가 변형해도 안전하다. */
   getTelemetry(): VehicleTelemetry {
     const trackLocation = sampleTestTrackLocation(this.current.position, this.track);
 

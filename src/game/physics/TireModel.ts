@@ -1,3 +1,4 @@
+/** 슬립에서 타이어 힘을 계산하는 순수 모델의 튜닝값. 단위는 N, m/s, rad이다. */
 export interface TireModelConfig {
   referenceLoadN: number;
   loadSensitivityExponent: number;
@@ -6,6 +7,7 @@ export interface TireModelConfig {
   minimumSlipSpeedMps: number;
 }
 
+/** 한 휠에 필요한 접지 하중·속도·회전 입력이다. 힘 단위는 N이다. */
 export interface TireForceInput {
   normalForceN: number;
   frictionCoefficient: number;
@@ -15,6 +17,7 @@ export interface TireForceInput {
   wheelRadiusM: number;
 }
 
+/** 계산된 슬립과 결합 타이어 힘. `frictionUsage`는 0..1 무차원 값이다. */
 export interface TireForceState {
   slipRatio: number;
   slipAngleRad: number;
@@ -24,6 +27,7 @@ export interface TireForceState {
   frictionUsage: number;
 }
 
+/** 실차 Magic Formula가 아닌 검증용 `initial_assumption` 계수다. */
 export const DEFAULT_TIRE_MODEL_CONFIG: TireModelConfig = {
   referenceLoadN: 1_950,
   loadSensitivityExponent: 0.9,
@@ -32,14 +36,17 @@ export const DEFAULT_TIRE_MODEL_CONFIG: TireModelConfig = {
   minimumSlipSpeedMps: 0.5,
 };
 
+/** 결과 힘과 마찰 사용률을 계산하기 전 무차원 값을 제한한다. */
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
+/** NaN·Infinity를 모델의 안전한 기본값으로 치환한다. */
 function finiteOr(value: number, fallback = 0): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
+/** 휠 접선 속도와 차량 종속도의 차이를 저속 분모 보호와 함께 계산한다. */
 export function calculateSlipRatio(
   longitudinalSpeedMps: number,
   wheelAngularSpeedRadS: number,
@@ -54,6 +61,7 @@ export function calculateSlipRatio(
   return clamp((wheelSurfaceSpeed - longitudinalSpeed) / denominator, -4, 4);
 }
 
+/** 종속도 대비 횡속도의 방향을 radian 슬립각으로 계산한다. */
 export function calculateSlipAngle(
   longitudinalSpeedMps: number,
   lateralSpeedMps: number,
@@ -66,6 +74,7 @@ export function calculateSlipAngle(
   return Math.atan2(lateralSpeed, denominator);
 }
 
+/** 하중 민감도 지수로 정상 하중이 커질수록 효율이 낮아지는 최대 마찰력을 계산한다. */
 export function calculateLoadSensitiveMaximumForce(
   normalForceN: number,
   frictionCoefficient: number,
@@ -79,6 +88,10 @@ export function calculateLoadSensitiveMaximumForce(
   return safeFriction * referenceLoadN * Math.pow(safeLoadN / referenceLoadN, exponent);
 }
 
+/**
+ * 종·횡 슬립을 각각 tanh 응답으로 변환한 뒤 결합 마찰 원 안으로 제한한다.
+ * 접지가 없으면 모든 힘과 사용률을 0으로 반환해 NaN·무한 가속을 차단한다.
+ */
 export function calculateTireForce(
   input: TireForceInput,
   config: TireModelConfig = DEFAULT_TIRE_MODEL_CONFIG,
