@@ -1,5 +1,5 @@
-name = "s1_explorer"
-description = "Read-only S1 Racing explorer for bounded codebase, test, and documentation analysis."
+name = "scout"
+description = "Scout: read-only S1 Racing explorer for bounded codebase, test, and documentation analysis."
 model = "gpt-5.6-luna"
 model_reasoning_effort = "medium"
 sandbox_mode = "read-only"

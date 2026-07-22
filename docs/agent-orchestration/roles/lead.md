@@ -1,4 +1,4 @@
-# Lead Agent
+# Pitwall — Lead Agent
 
 ## 책임
 

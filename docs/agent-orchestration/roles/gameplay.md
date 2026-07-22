@@ -1,4 +1,4 @@
-# Gameplay Agent
+# Grid — Gameplay Agent
 
 ## 기본 소유권
 

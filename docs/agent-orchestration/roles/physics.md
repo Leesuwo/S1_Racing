@@ -1,4 +1,4 @@
-# Physics Agent
+# Apex — Physics Agent
 
 ## 기본 소유권
 

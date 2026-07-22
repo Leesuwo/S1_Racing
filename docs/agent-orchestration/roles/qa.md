@@ -1,4 +1,4 @@
-# QA and Review Agent
+# Marshal — QA and Review Agent
 
 ## 권한
 

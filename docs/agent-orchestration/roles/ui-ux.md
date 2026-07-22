@@ -1,4 +1,4 @@
-# UI/UX Agent
+# Dash — UI/UX Agent
 
 ## 기본 소유권
 

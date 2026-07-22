@@ -79,6 +79,7 @@ Milestone 1F에서는 공통 `VehicleControlInput` 경계를 유지하면서 입
 
 - 작은 검토 가능한 마일스톤으로 작업한다.
 - 여러 에이전트를 사용할 때는 `docs/agent-orchestration/README.md`와 `docs/agent-orchestration/roles/*.md`의 작업 패킷, 파일 소유권, QA 보고 형식을 따른다. 프로젝트 custom agent 설정은 `.codex/agents/*.toml`을 목표 위치로 하며, 현재 실행 환경에서는 템플릿만 검토한다. 게임 관련 작업은 `.agents/skills/s1-racing-game-studio/SKILL.md`의 스택·검증 규칙도 적용한다.
+- 역할 호출명과 책임 범위는 `docs/agent-orchestration/TEAM.md`를 기준으로 한다. 작업 패킷·오케스트레이션 메시지·QA 보고서에는 닉네임과 역할을 함께 표기한다.
 - 기본 병렬 배치는 구현 에이전트 1개와 읽기 전용 QA 1개다. 파일 소유권이 겹치지 않는 독립 작업만 최대 3개까지 병렬 실행한다.
 - `src/app/**`, `package.json`, 공통 입력 경계, 물리 스냅샷, `docs/architecture/**`는 Lead가 명시적으로 예약하지 않으면 병렬 수정하지 않는다.
 - 모든 코드·문서 변경 후 `npm run verify`를 실행한다. 이 명령은 타입 검사, 단위 테스트, 아키텍처 검증, 프로덕션 빌드, 브라우저 E2E를 순서대로 실행한다.

@@ -1,5 +1,5 @@
-name = "s1_qa_reviewer"
-description = "Read-only QA reviewer for S1 Racing regressions, boundaries, and validation evidence."
+name = "marshal"
+description = "Marshal: read-only QA reviewer for S1 Racing regressions, boundaries, and validation evidence."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"

@@ -1,5 +1,5 @@
-name = "s1_physics"
-description = "S1 Racing physics implementation specialist for high-reasoning work."
+name = "apex"
+description = "Apex: S1 Racing physics implementation specialist for high-reasoning work."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 

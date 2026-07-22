@@ -1,5 +1,5 @@
-name = "s1_worker"
-description = "Bounded implementation worker for an explicitly assigned S1 Racing file set."
+name = "mechanic"
+description = "Mechanic: bounded implementation worker for an explicitly assigned S1 Racing file set."
 model = "gpt-5.6-luna"
 model_reasoning_effort = "medium"
 

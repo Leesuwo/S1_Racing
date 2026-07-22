@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-07-22 — D-018
+
+**결정:** S1 Racing의 역할별 에이전트에 안정적인 호출명을 부여한다. Studio Lead는 `Pitwall`, Physics는 `Apex`, Gameplay은 `Grid`, Track and World는 `Circuit`, UI/UX는 `Dash`, Rendering and Performance는 `Vector`, QA and Review는 `Marshal`, Explorer는 `Scout`, 제한된 구현 Worker는 `Mechanic`으로 부른다. 호출명과 권한·소유권의 기준은 `docs/agent-orchestration/TEAM.md`로 관리한다.
+
+**이유:** 역할명만 사용하면 작업 패킷과 보고서에서 책임 주체를 빠르게 구분하기 어렵다. 닉네임을 역할에 고정하면 게임회사형 협업 흐름을 유지하면서도 개인 신원이나 모델과 역할을 혼동하지 않고, 작업 분배·QA·통합의 책임 경계를 명확히 표현할 수 있다.
+
+**검증:** 역할 문서의 제목, 오케스트레이션 모델 표, TOML 템플릿의 `name`과 `description`을 canonical roster와 일치시킨다. 이는 코드 모듈 경계를 변경하지 않으므로 Archify 다이어그램은 갱신하지 않는다.
+
 ## 2026-07-22 — D-015
 
 **결정:** Milestone 1F의 입력 프리셋과 테스트 트랙은 각각 `BrowserVehicleInput`과 `src/tracks/TestTrack.ts`를 단일 브라우저·데이터 경계로 사용한다. 입력 장치는 `VehicleControlInput`만 출력하고, 물리 표면 샘플러와 R3F 월드 시각화는 같은 트랙 정의를 읽는다.

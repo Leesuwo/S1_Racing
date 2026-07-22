@@ -1,6 +1,6 @@
 현재 저장소의 `AGENTS.md`, `README.md`, `docs/` 아래 문서를 먼저 읽어라.
 
-여러 에이전트를 사용하거나 작업을 위임할 때는 `docs/agent-orchestration/README.md`, 해당 역할 파일, `PROJECT_STATUS.md`, `TASKS.md`를 함께 읽어라. 작업 시작 전에 소유 파일과 합격 기준을 확정하고, 구현 에이전트와 QA 에이전트의 책임을 분리하라.
+여러 에이전트를 사용하거나 작업을 위임할 때는 `docs/agent-orchestration/README.md`, `docs/agent-orchestration/TEAM.md`, 해당 역할 파일, `PROJECT_STATUS.md`, `TASKS.md`를 함께 읽어라. 작업 시작 전에 소유 파일과 합격 기준을 확정하고, 구현 에이전트와 QA 에이전트의 책임을 분리하라. 작업 패킷과 보고서에는 `TEAM.md`의 호출명과 역할을 함께 표기하라.
 
 현재 저장소 문서상 **Milestone 1F — Input presets and test track**이 완료되었고, 다음 작업은 **Milestone 2A — Single AI opponent**다. 새 작업은 `PROJECT_STATUS.md`, `TASKS.md`, `docs/ROADMAP.md`, `docs/MILESTONE_1F.md`를 기준으로 범위를 정한다.
 
