@@ -5,6 +5,7 @@ import {
   type WheelKinematicsConfig,
 } from "./WheelKinematics";
 
+// -Z 전방 좌표계, 전륜 조향, yaw-rate 접지점 속도를 독립적으로 검증한다.
 const config: WheelKinematicsConfig = {
   frontAxleDistanceM: 1.8,
   rearAxleDistanceM: 1.5,
@@ -14,6 +15,7 @@ const config: WheelKinematicsConfig = {
   maxSteeringAngleRad: 0.4,
 };
 
+// 휠 배치 데이터와 관계없이 운동학 공식 자체도 별도 테스트한다.
 describe("WheelKinematics", () => {
   it("applies steering only to the two front wheels in the -Z-forward convention", () => {
     const wheels = calculateAllWheelKinematics(config, {

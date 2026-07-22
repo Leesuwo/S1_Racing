@@ -5,6 +5,7 @@ import {
   type DrivetrainConfig,
 } from "./Drivetrain";
 
+// 실제 엔진이 아니라 순수 구동계 명령의 기어·클러치·엔진 브레이크 계약을 검증한다.
 const config: DrivetrainConfig = {
   gearRatios: [3.2, 2.2, 1.65, 1.32, 1.1, 0.94, 0.82, 0.72],
   finalDriveRatio: 3.6,
@@ -18,6 +19,7 @@ const config: DrivetrainConfig = {
   torqueCurve: DEFAULT_TORQUE_CURVE,
 };
 
+// 같은 휠 속도에서 기어비만 바뀌었을 때 RPM과 휠 토크가 결정적으로 달라지는지 확인한다.
 describe("Drivetrain", () => {
   it("maps the same rear wheel speed to different RPM and torque by gear", () => {
     const firstGear = calculateDrivetrainCommand({

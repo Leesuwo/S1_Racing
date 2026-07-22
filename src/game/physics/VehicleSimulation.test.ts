@@ -3,6 +3,7 @@ import { neutralVehicleControlInput } from "../input/VehicleControlInput";
 import { TEST_TRACK_DATA } from "../../tracks/TestTrack";
 import { VehicleSimulation } from "./VehicleSimulation";
 
+// 트랙 데이터가 VehicleSimulation의 초기 pose·텔레메트리·리셋 계약으로 이어지는지 확인한다.
 describe("VehicleSimulation track contract", () => {
   it("starts in the data-defined section and reports the outer boundary", () => {
     const simulation = new VehicleSimulation();

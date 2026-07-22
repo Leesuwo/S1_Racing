@@ -6,6 +6,7 @@ import {
   calculateTireForce,
 } from "./TireModel";
 
+// 저속 분모 보호, 슬립 부호, 결합 마찰 원, 하중 민감도를 순수 모델로 검증한다.
 describe("TireModel", () => {
   it("calculates signed longitudinal slip and lateral slip angle", () => {
     expect(calculateSlipRatio(20, 60, 0.36)).toBeCloseTo(0.08, 8);

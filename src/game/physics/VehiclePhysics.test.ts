@@ -8,6 +8,7 @@ import {
 } from "./VehiclePhysics";
 import { neutralVehicleControlInput } from "../input/VehicleControlInput";
 
+// 순수 평면 물리의 가속·제동·엔진 브레이크·노면·하중 이동·yaw 안정성을 검증한다.
 describe("VehiclePhysics", () => {
   it("accelerates under throttle and keeps the simulation finite", () => {
     const state = createInitialVehicleState();

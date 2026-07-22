@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+// 실제 브라우저에서 WebGL 장면·HUD·물리 입력·트랙 경계의 사용자 관찰 계약을 검증한다.
 test("loads the S1 Racing physics prototype", async ({ page }) => {
   await page.goto("/");
 
@@ -26,6 +27,7 @@ test("loads the S1 Racing physics prototype", async ({ page }) => {
 });
 
 test("moves the vehicle when throttle is held", async ({ page }) => {
+  // 장면 준비와 Rapier 접지 HUD를 기다린 뒤 입력을 보내 초기화 중 상태를 오판하지 않는다.
   await page.goto("/");
 
   await expect(page.locator("canvas")).toHaveCount(1);
@@ -105,6 +107,7 @@ test("keeps keyboard steering available while mouse steering is active", async (
   await page.goto("/");
 
   await expect(page.locator("canvas")).toHaveCount(1);
+  // 브라우저 자동화 환경에서 Pointer Lock 자체를 요청하지 않고 잠금 상태만 재현한다.
   await page.evaluate(() => {
     const canvas = document.querySelector("canvas");
     if (!canvas) {

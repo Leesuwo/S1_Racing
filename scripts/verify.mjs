@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 
+// CI와 로컬이 공유하는 순서다. 빠른 타입·단위 실패를 먼저 보여주고 최종 산출물 검사를 뒤에 둔다.
 const checks = [
   ["타입 검사", ["run", "typecheck"]],
   ["단위 테스트", ["run", "test", "--", "--run"]],
@@ -10,6 +11,7 @@ const checks = [
 
 for (const [label, npmArgs] of checks) {
   console.log(`\n[검증] ${label}`);
+  // spawnSync를 사용해 앞 단계가 통과한 경우에만 다음 단계로 넘어가는 단일 게이트를 만든다.
   const result = spawnSync("npm", npmArgs, {
     stdio: "inherit",
     shell: process.platform === "win32",

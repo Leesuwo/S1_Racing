@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isOnTestTrackAsphalt, sampleTestTrackLocation, sampleTestTrackSurface } from "./TrackSurface";
 
+// 레거시 직사각형 샘플러와 데이터 기반 구간·경계 판정이 같은 노면 계약을 유지하는지 확인한다.
 describe("TrackSurface", () => {
   it("classifies the rectangular test loop and its infield", () => {
     expect(isOnTestTrackAsphalt({ x: -10, z: 10 })).toBe(true);

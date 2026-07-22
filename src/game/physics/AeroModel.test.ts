@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateAeroForces, DEFAULT_AERO_MODEL_CONFIG } from "./AeroModel";
 
+// 정지 시 0, 속도 제곱 스케일, 전후 balance와 잔디 항력 배율을 검증한다.
 describe("AeroModel", () => {
   it("splits downforce by the configured front balance and stays zero at rest", () => {
     const rest = calculateAeroForces({ speedMps: 0 });

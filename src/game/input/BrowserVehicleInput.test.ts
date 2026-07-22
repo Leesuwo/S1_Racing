@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BrowserVehicleInput } from "./BrowserVehicleInput";
 
+// 브라우저 이벤트를 실제 window에 등록하지 않고 포커스·Gamepad·Pointer Lock 경계를 재현한다.
 class FakeDocument extends EventTarget {
   pointerLockElement: Element | null = null;
   hidden = false;
@@ -8,6 +9,7 @@ class FakeDocument extends EventTarget {
   exitPointerLock(): void {}
 }
 
+// 테스트마다 독립된 이벤트 타깃을 만들어 리스너 누수나 이전 입력 상태가 섞이지 않게 한다.
 class FakeWindow extends EventTarget {
   document = new FakeDocument();
   gamepads: Gamepad[] = [];
@@ -16,6 +18,7 @@ class FakeWindow extends EventTarget {
   };
 }
 
+/** 필요한 KeyboardEvent 필드만 주입한 합성 이벤트를 만든다. */
 function createKeyboardEvent(type: "keydown" | "keyup", code: string): KeyboardEvent {
   const event = new Event(type);
   Object.defineProperties(event, {
@@ -25,6 +28,7 @@ function createKeyboardEvent(type: "keydown" | "keyup", code: string): KeyboardE
   return event as KeyboardEvent;
 }
 
+// 각 테스트는 물리 경계에 전달되는 첫 샘플과 일회성 에지 소비를 검증한다.
 describe("BrowserVehicleInput", () => {
   it("keeps keyboard steering available while mouse steering is active", () => {
     const target = new FakeWindow();
@@ -58,6 +62,7 @@ describe("BrowserVehicleInput", () => {
     const target = new FakeWindow();
     const input = new BrowserVehicleInput(target as unknown as Window);
     input.setPreset("gamepad");
+    // Gamepad 버튼 상승 에지는 첫 샘플에서만 변속 플래그가 되어야 한다.
     target.gamepads = [createGamepad({ axis0: 0.5, throttle: 0.75, shiftUp: true })];
 
     expect(input.sample(1 / 60)).toMatchObject({
@@ -96,6 +101,7 @@ describe("BrowserVehicleInput", () => {
   });
 });
 
+/** 표준 Gamepad API가 반환하는 값 중 입력 어댑터가 사용하는 최소 부분집합이다. */
 interface GamepadOptions {
   id?: string;
   axis0?: number;
@@ -105,6 +111,7 @@ interface GamepadOptions {
   shiftUp?: boolean;
 }
 
+/** 테스트용 Gamepad을 만들어 실제 장치·브라우저 의존성을 제거한다. */
 function createGamepad(options: GamepadOptions = {}): Gamepad {
   const buttons = Array.from({ length: 8 }, () => ({
     pressed: false,

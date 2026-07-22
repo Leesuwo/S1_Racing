@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { clampAnalogInput, neutralVehicleControlInput } from "./VehicleControlInput";
 
+// 장치 어댑터가 물리 계층에 전달하기 전 지켜야 하는 중립 상태와 범위 계약이다.
 describe("VehicleControlInput", () => {
   it("creates a neutral input without hidden controls", () => {
     expect(neutralVehicleControlInput()).toEqual({

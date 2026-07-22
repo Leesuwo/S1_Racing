@@ -5,6 +5,7 @@ import {
   zeroWheelValues,
 } from "./Suspension";
 
+// 종·횡 하중 이동, 휠별 압축, travel clamp를 순수 서스펜션 계산으로 검증한다.
 const baseInput = {
   massKg: 780,
   wheelBaseM: 3.3,
@@ -19,6 +20,7 @@ const baseInput = {
   config: DEFAULT_SUSPENSION_CONFIG,
 };
 
+// 하중 이동 부호는 +X 오른쪽, +종가속도 후륜 전달이라는 프로젝트 좌표계와 일치해야 한다.
 describe("Suspension", () => {
   it("preserves static axle load across four wheels", () => {
     const result = calculateSuspensionStep(baseInput);

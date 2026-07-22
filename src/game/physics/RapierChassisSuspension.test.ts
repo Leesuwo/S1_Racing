@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { RapierChassisSuspension } from "./RapierChassisSuspension";
 
+// Rapier native world를 고정 dt로 진행해 접지·타이어 접점·구동 토크·공력 회귀를 검증한다.
 describe("RapierChassisSuspension", () => {
   it("settles a dynamic chassis on four raycast suspension contacts", async () => {
     const rig = await RapierChassisSuspension.create();
 
+    // 초기 낙하가 끝나고 네 ray가 정적 ground를 찾을 때까지 8초를 진행한다.
     for (let step = 0; step < 960; step += 1) {
       rig.step(1 / 120);
     }
@@ -42,6 +44,7 @@ describe("RapierChassisSuspension", () => {
   it("applies combined tire forces at grounded Rapier contact points", async () => {
     const rig = await RapierChassisSuspension.create();
 
+    // 먼저 정적 차체를 접지시킨 뒤 평면 pose를 주입해 구동력만 비교한다.
     for (let step = 0; step < 720; step += 1) {
       rig.step(1 / 120);
     }
@@ -107,6 +110,7 @@ describe("RapierChassisSuspension", () => {
   it("applies rear drive torque, engine braking, and speed-dependent aero forces", async () => {
     const rig = await RapierChassisSuspension.create();
 
+    // 공력은 속도에 따라 달라지므로 같은 초기 높이에서 안정화 후 25m/s pose를 주입한다.
     for (let step = 0; step < 720; step += 1) {
       rig.step(1 / 120);
     }
