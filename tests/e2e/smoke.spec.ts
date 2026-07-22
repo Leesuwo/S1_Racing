@@ -29,6 +29,7 @@ test("loads the S1 Racing physics prototype", async ({ page }) => {
 test("runs the single AI opponent through the shared physics path", async ({ page }) => {
   await page.goto("/");
 
+  // AI가 초기화된 뒤 HUD에서 읽는 상대 차량 속도 샘플이다.
   const aiReadout = page.locator(".ai-readout strong");
   await expect(aiReadout).toBeVisible();
   await page.waitForTimeout(1_200);

@@ -116,6 +116,7 @@ export function App() {
   const [webgl, setWebgl] = useState<WebGL2Support | null>(null);
   const [paused, setPaused] = useState(() => document.hidden);
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
+  // AI 차량의 속도와 현재 트랙 구간을 표시하는 마지막 100 ms 샘플이다.
   const [opponentTelemetry, setOpponentTelemetry] = useState(INITIAL_TELEMETRY);
   const [suspensionTelemetry, setSuspensionTelemetry] = useState<RapierSuspensionTelemetry | null>(null);
   const input = useMemo(() => new BrowserVehicleInput(window), []);

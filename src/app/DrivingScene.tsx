@@ -69,6 +69,7 @@ function syncRigFromSimulation(
   rig: RapierChassisSuspension,
   simulation: VehicleSimulation,
 ): void {
+  // 렌더링 보간 기준이 되는 현재 물리 포즈 스냅샷이다.
   const snapshot = simulation.getRenderSnapshot(1);
   rig.syncPlanarPose({
     position: snapshot.position,
@@ -93,7 +94,9 @@ function stepSimulationWithRig(
     return;
   }
 
+  // 힘을 적용하기 직전 Rapier 차체의 위치로 노면 배율을 샘플링한다.
   const rapierSnapshot = rig.getSnapshot();
+  // 플레이어와 AI가 공유하는 트랙 데이터에서 현재 노면 물리 계수를 읽는다.
   const surface = sampleTestTrackSurface({
     x: rapierSnapshot.position.x,
     z: rapierSnapshot.position.z,
@@ -106,8 +109,11 @@ function stepSimulationWithRig(
     surfaceGripMultiplier: surface.gripMultiplier,
     surfaceDragMultiplier: surface.dragMultiplier,
   });
+  // 한 fixed step 뒤 Rapier가 소유한 최신 차체 포즈다.
   const updatedRapierSnapshot = rig.getSnapshot();
+  // 후륜 타이어 각속도 상태를 차량 구동계 RPM 피드백으로 전달한다.
   const tireStates = rig.getWheelTireStates();
+  // 좌우 후륜 각속도의 평균(rad/s)으로 좌우 타이어 노이즈를 줄인다.
   const drivenWheelAngularSpeedRadS = (
     tireStates.rearLeft.wheelAngularSpeedRadS
     + tireStates.rearRight.wheelAngularSpeedRadS
@@ -137,7 +143,9 @@ function updateVehicleModel(
     return;
   }
 
+  // 차체 높이와 기준 승차 높이 차이를 시각화용 수직 오프셋으로 사용한다.
   const rapierTelemetry = rig?.getTelemetry();
+  // Rapier 높이를 기준 승차 높이 대비 상대값(m)으로 렌더링한다.
   const visualHeight = rapierTelemetry
     ? rapierTelemetry.chassisHeightM - rapierTelemetry.referenceRideHeightM
     : 0;
@@ -165,19 +173,23 @@ export function DrivingScene({
 }: DrivingSceneProps) {
   const { camera } = useThree();
   const simulation = useMemo(() => new VehicleSimulation(), []);
+  // 플레이어와 다른 데이터 정의 그리드 포즈를 사용하는 AI 차량 시뮬레이션이다.
   const opponentSimulation = useMemo(
     () => new VehicleSimulation(undefined, undefined, simulation.track.opponentStartPose),
     [simulation],
   );
+  // AI 시뮬레이션에만 입력을 공급하는 순수 컨트롤러 인스턴스다.
   const opponentAI = useMemo(() => new SingleOpponentAI(opponentSimulation.track), [opponentSimulation]);
   const accumulator = useMemo(() => new FixedTimestepAccumulator(), []);
   const vehicleRef = useRef<THREE.Group>(null);
+  // 두 번째 차량 모델의 Three.js 표시 그룹 참조다.
   const opponentVehicleRef = useRef<THREE.Group>(null);
   const target = useMemo(() => new THREE.Vector3(), []);
   const desiredCamera = useMemo(() => new THREE.Vector3(), []);
   const forward = useMemo(() => new THREE.Vector3(), []);
   const telemetryClock = useRef(0);
   const suspensionRig = useRef<RapierChassisSuspension | null>(null);
+  // AI 차량의 독립 Rapier world와 차체를 소유하는 리그 참조다.
   const opponentSuspensionRig = useRef<RapierChassisSuspension | null>(null);
 
   useEffect(() => {
@@ -187,6 +199,7 @@ export function DrivingScene({
       RapierChassisSuspension.create(),
       RapierChassisSuspension.create(),
     ]).then(([playerRig, opponentRig]) => {
+      // 플레이어와 AI가 각각 소유하는 독립 Rapier 리그다.
       if (disposed) {
         playerRig.dispose();
         opponentRig.dispose();
@@ -226,16 +239,22 @@ export function DrivingScene({
       if (opponentRig) syncRigFromSimulation(opponentRig, opponentSimulation);
     }
 
+    // 누적기에서 반환하는 렌더 보간 계수(0..1)다.
     let alpha = 0;
     if (!paused) {
+      // 한 렌더 프레임에서 읽은 플레이어 장치 입력을 모든 fixed step에 재사용한다.
       const frameInput = input.sample(deltaSeconds);
+      // 여러 fixed step이 발생해도 수동 변속 edge는 첫 step에만 전달한다.
       let stepIndex = 0;
+      // 한 렌더 프레임 동안 실행된 fixed step 수와 최종 보간 계수다.
       const result = accumulator.advance(deltaSeconds, (dt) => {
+        // 플레이어 입력은 브라우저 입력 경계에서 온 값을 fixed step 명령으로 제한한다.
         const playerInput = {
           ...frameInput,
           shiftUp: stepIndex === 0 && frameInput.shiftUp,
           shiftDown: stepIndex === 0 && frameInput.shiftDown,
         };
+        // AI도 같은 VehicleControlInput을 매 fixed step 새로 생성한다.
         const aiInput = opponentAI.update({
           ...opponentSimulation.current,
           maxGear: opponentSimulation.config.gearRatios.length,
@@ -247,7 +266,9 @@ export function DrivingScene({
       alpha = result.alpha;
     }
 
+    // 두 차량 모두 현재 누적기 alpha로 보간된 표시 포즈를 읽는다.
     const snapshot = simulation.getRenderSnapshot(alpha);
+    // AI 차량도 동일한 보간 계수로 렌더링해 두 차량의 시간축을 일치시킨다.
     const opponentSnapshot = opponentSimulation.getRenderSnapshot(alpha);
     updateVehicleModel(vehicleRef, snapshot, suspensionRig.current);
     updateVehicleModel(opponentVehicleRef, opponentSnapshot, opponentSuspensionRig.current);
