@@ -14,6 +14,7 @@ import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/Vehicl
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 
+/** R3F 장면과 플레이어·AI 텔레메트리 콜백 사이의 통합 경계다. */
 interface DrivingSceneProps {
   input: BrowserVehicleInput;
   paused: boolean;
@@ -22,6 +23,7 @@ interface DrivingSceneProps {
   onSuspensionTelemetry: (telemetry: RapierSuspensionTelemetry | null) => void;
 }
 
+/** 물리 스냅샷을 표시하는 단순 차량 모델이며 물리 상태를 소유하지 않는다. */
 function VehicleModel({
   groupRef,
   color,
@@ -62,6 +64,7 @@ function VehicleModel({
   );
 }
 
+/** 시뮬레이션의 시작·리셋 포즈를 해당 Rapier 리그에 동기화한다. */
 function syncRigFromSimulation(
   rig: RapierChassisSuspension,
   simulation: VehicleSimulation,
@@ -75,8 +78,10 @@ function syncRigFromSimulation(
   });
 }
 
-// 두 차량 모두 동일한 순서로 Simulation 명령을 만든 뒤 Rapier에 힘을 적용한다.
-// 이 순서를 지켜야 AI가 위치를 덮어쓰지 않고 플레이어와 같은 120Hz 물리 경계를 통과한다.
+/**
+ * 두 차량 모두 동일한 순서로 Simulation 명령을 만든 뒤 Rapier에 힘을 적용한다.
+ * 이 순서를 지켜야 AI가 위치를 덮어쓰지 않고 플레이어와 같은 120Hz 물리 경계를 통과한다.
+ */
 function stepSimulationWithRig(
   simulation: VehicleSimulation,
   rig: RapierChassisSuspension | null,
@@ -122,6 +127,7 @@ function stepSimulationWithRig(
   }, dtSeconds);
 }
 
+/** Rapier 차체 높이와 보간된 평면 포즈를 Three.js 차량 그룹에 반영한다. */
 function updateVehicleModel(
   vehicleRef: RefObject<THREE.Group | null>,
   snapshot: ReturnType<VehicleSimulation["getRenderSnapshot"]>,
@@ -139,7 +145,7 @@ function updateVehicleModel(
   vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
 }
 
-// Rapier quaternion은 물리 yaw의 부호와 반대 방향으로 저장되므로 시각화 전에 반전한다.
+/** Rapier quaternion을 프로젝트 물리 좌표계의 yaw(rad)로 변환한다. */
 function rapierRotationToPhysicsYaw(rotation: { x: number; y: number; z: number; w: number }): number {
   const rapierYawRad = Math.atan2(
     2 * (rotation.w * rotation.y + rotation.x * rotation.z),

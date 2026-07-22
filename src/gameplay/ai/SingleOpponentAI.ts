@@ -68,10 +68,12 @@ export const DEFAULT_SINGLE_OPPONENT_AI_CONFIG: SingleOpponentAIConfig = {
   shiftCooldownSeconds: 0.25,
 };
 
+/** 입력 제어값을 허용 범위로 제한해 NaN이 아닌 유한한 명령을 유지한다. */
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
+/** 헤딩 오차를 -π부터 π까지로 접어 가장 짧은 회전 방향을 선택한다. */
 function normalizeAngle(angleRad: number): number {
   let normalized = angleRad;
   while (normalized > Math.PI) normalized -= Math.PI * 2;
@@ -79,10 +81,12 @@ function normalizeAngle(angleRad: number): number {
   return normalized;
 }
 
+/** 레이싱 라인 인접 점 사이의 평면 거리(m)를 계산한다. */
 function distanceBetween(a: TrackPoint, b: TrackPoint): number {
   return Math.hypot(a.x - b.x, a.z - b.z);
 }
 
+/** 외부 물리 스냅샷의 비유한 수치를 안전한 제어 입력 기본값으로 치환한다. */
 function finiteOr(value: number, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;
 }
@@ -198,6 +202,7 @@ export class SingleOpponentAI {
     };
   }
 
+  /** 현재 차량 위치와 유클리드 거리가 가장 작은 레이싱 라인 점을 선택한다. */
   private findClosestPointIndex(position: TrackPoint): number {
     let closestIndex = 0;
     let closestDistanceSquared = Number.POSITIVE_INFINITY;
@@ -214,6 +219,7 @@ export class SingleOpponentAI {
     return closestIndex;
   }
 
+  /** 폐곡선 레이싱 라인에서 주어진 거리(m)만큼 앞선 점의 인덱스를 계산한다. */
   private advanceIndex(startIndex: number, distanceM: number): number {
     if (this.track.racingLine.length <= 1 || distanceM <= 0) {
       return startIndex;

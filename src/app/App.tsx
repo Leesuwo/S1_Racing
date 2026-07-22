@@ -39,6 +39,7 @@ function formatNumber(value: number, digits = 0): string {
   });
 }
 
+/** 플레이어 물리 지표와 AI 상대의 진행 상태를 표시하는 읽기 전용 HUD다. */
 function AppTelemetry({
   telemetry,
   opponentTelemetry,
