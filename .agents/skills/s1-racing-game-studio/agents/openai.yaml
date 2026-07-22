@@ -1,0 +1,7 @@
+interface:
+  display_name: "S1 Racing Game Studio"
+  short_description: "React 3D 게임 제작과 차량 물리 검증 워크플로"
+  default_prompt: "Use $s1-racing-game-studio to implement or review a browser-game change in S1 Racing."
+
+policy:
+  allow_implicit_invocation: true

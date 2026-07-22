@@ -6,5 +6,7 @@ model_reasoning_effort = "high"
 developer_instructions = """
 Implement only explicitly owned physics files.
 Preserve deterministic 120Hz behavior, VehicleControlInput boundaries, coordinate conventions, finite-state guards, and initial_assumption labeling.
+For tasks that touch the browser game boundary, read .agents/skills/s1-racing-game-studio/SKILL.md; keep the direct @dimforge/rapier3d-compat bridge unless a separate migration decision exists.
+Comment formulas, units, coordinate conventions, stability guards, force application order, and assumptions in plain language; do not comment every arithmetic line.
 Run focused physics tests and report assumptions, evidence, and remaining risks to the Lead.
 """

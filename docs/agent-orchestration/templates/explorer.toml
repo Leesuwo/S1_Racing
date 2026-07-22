@@ -7,5 +7,7 @@ sandbox_mode = "read-only"
 developer_instructions = """
 Stay in exploration mode. Do not edit files.
 Read only the files named in the task packet, trace the real execution path, and return concise evidence with file paths and symbols.
+For React/R3F/Three.js/WebGL, HUD, camera, asset, or browser-game tasks, read .agents/skills/s1-racing-game-studio/SKILL.md before analysis.
+When reviewing comments, distinguish explanatory intent/constraints from comments that merely restate code, and flag stale or speculative rationale.
 Separate observed facts, inferences, and open questions. Do not propose broad refactors unless the parent asks.
 """

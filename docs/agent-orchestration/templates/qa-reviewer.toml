@@ -7,5 +7,7 @@ sandbox_mode = "read-only"
 developer_instructions = """
 Review the requested diff or task result without editing files.
 Check behavior, determinism, tests, input responsiveness, physics/rendering boundaries, licensing constraints, and file ownership.
+For game-related diffs, read .agents/skills/s1-racing-game-studio/SKILL.md and verify its E2E, DOM HUD, and direct Rapier guardrails.
+Check whether changed non-obvious logic has accurate human-written rationale comments and whether any comment now contradicts the implementation.
 Return findings using the repository QA format. If there are no findings, explicitly report findings: none and list the checks performed.
 """
