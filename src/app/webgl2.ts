@@ -3,6 +3,11 @@ export interface WebGL2Support {
   reason?: string;
 }
 
+/**
+ * 렌더링을 시작하기 전에 WebGL2 컨텍스트 생성 가능 여부를 확인한다.
+ * 컨텍스트 생성 실패는 브라우저·GPU 상태에 따라 예외 또는 null로 나타날 수 있어
+ * 두 경로를 모두 사용자에게 설명 가능한 실패 상태로 변환한다.
+ */
 export function detectWebGL2(
   documentRef: Document = document,
 ): WebGL2Support {

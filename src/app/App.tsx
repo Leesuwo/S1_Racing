@@ -8,6 +8,10 @@ import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { detectWebGL2, type WebGL2Support } from "./webgl2";
 import { DrivingScene } from "./DrivingScene";
 
+/**
+ * Rapier가 비동기로 준비되거나 WebGL 검사가 끝나기 전에도 HUD가 안정적으로 렌더되도록
+ * 사용하는 표시용 초기 스냅샷이다. 물리 계층의 실제 초기 상태를 소유하지 않는다.
+ */
 const INITIAL_TELEMETRY: VehicleTelemetry = {
   speedKmh: 0,
   rpm: 900,
@@ -32,6 +36,7 @@ const INITIAL_TELEMETRY: VehicleTelemetry = {
   distanceToBoundaryM: 4,
 };
 
+/** 숫자 텔레메트리를 한국어 로케일과 고정 소수 자릿수로 표시한다. */
 function formatNumber(value: number, digits = 0): string {
   return value.toLocaleString("ko-KR", {
     maximumFractionDigits: digits,
@@ -39,6 +44,10 @@ function formatNumber(value: number, digits = 0): string {
   });
 }
 
+/**
+ * 렌더링 계층에서 읽은 차량 상태를 DOM HUD로 표시한다.
+ * 값 계산은 `VehicleSimulation`이 소유하고 이 컴포넌트는 표시·단위 변환만 담당한다.
+ */
 function AppTelemetry({
   telemetry,
   suspensionTelemetry,
@@ -46,6 +55,7 @@ function AppTelemetry({
   telemetry: VehicleTelemetry;
   suspensionTelemetry: RapierSuspensionTelemetry | null;
 }) {
+  // 바 폭은 엔진 redline을 기준으로 제한해 비정상 RPM이 HUD 레이아웃을 넘지 않게 한다.
   const rpmRatio = Math.min(1, telemetry.rpm / telemetry.redlineRpm);
 
   return (
@@ -104,6 +114,10 @@ function AppTelemetry({
   );
 }
 
+/**
+ * WebGL 장면, 입력 프리셋 선택, 일시정지 표시, 저주기 텔레메트리 HUD를 조합한다.
+ * 브라우저 입력 객체는 컴포넌트 생명주기 동안 하나만 유지하고 effect 정리에서 리스너를 제거한다.
+ */
 export function App() {
   const [webgl, setWebgl] = useState<WebGL2Support | null>(null);
   const [paused, setPaused] = useState(() => document.hidden);
@@ -113,10 +127,12 @@ export function App() {
   const [inputPreset, setInputPreset] = useState<VehicleInputPresetId>(() => input.getPreset());
 
   useEffect(() => {
+    // `BrowserVehicleInput.connect`는 중복 호출에 안전하지만, 여기서 실제 소유 생명주기를 명시한다.
     input.connect();
     setWebgl(detectWebGL2());
 
     const handleVisibilityChange = () => {
+      // 렌더 프레임이 계속 들어와도 탭을 벗어난 동안 물리 입력이 진행되지 않게 한다.
       setPaused(document.hidden);
     };
 
@@ -146,6 +162,7 @@ export function App() {
             camera={{ position: [4, 4, 6], fov: 55 }}
             dpr={[1, 1.5]}
             shadows
+            // Pointer Lock은 실제 Canvas DOM 요소에만 요청할 수 있으므로 생성 시 연결한다.
             onCreated={({ gl }) => input.attach(gl.domElement)}
           >
           <DrivingScene
@@ -175,6 +192,7 @@ export function App() {
                   aria-label="입력 프리셋"
                   value={inputPreset}
                   onChange={(event) => {
+                    // 입력 어댑터와 controlled select를 함께 갱신해 UI와 실제 장치 모드를 일치시킨다.
                     const preset = event.target.value as VehicleInputPresetId;
                     input.setPreset(preset);
                     setInputPreset(preset);

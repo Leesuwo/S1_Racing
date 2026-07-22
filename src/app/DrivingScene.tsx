@@ -19,6 +19,10 @@ interface DrivingSceneProps {
   onSuspensionTelemetry: (telemetry: RapierSuspensionTelemetry | null) => void;
 }
 
+/**
+ * 물리 상태를 소유하지 않는 임시 차량 시각화다. `groupRef`만 외부 프레임 루프가 갱신하고,
+ * 하위 mesh는 장면의 렌더링 구조를 표현한다.
+ */
 function VehicleModel({ groupRef }: { groupRef: RefObject<THREE.Group | null> }) {
   return (
     <group ref={groupRef}>
@@ -53,6 +57,7 @@ function VehicleModel({ groupRef }: { groupRef: RefObject<THREE.Group | null> })
   );
 }
 
+/** Rapier quaternion의 Y 회전을 S1 물리 yaw(+Y 회전 부호)로 변환한다. */
 function rapierRotationToPhysicsYaw(rotation: { x: number; y: number; z: number; w: number }): number {
   const rapierYawRad = Math.atan2(
     2 * (rotation.w * rotation.y + rotation.x * rotation.z),
@@ -62,6 +67,11 @@ function rapierRotationToPhysicsYaw(rotation: { x: number; y: number; z: number;
   return -rapierYawRad;
 }
 
+/**
+ * 고정 120Hz 물리, Rapier 차체, 렌더 스냅샷 보간, 추적 카메라를 연결한다.
+ * 입력은 `VehicleControlInput` 경계를 통해서만 물리에 들어가며, Rapier는 외부 평면 포즈로
+ * `VehicleSimulation`에 동기화되어 HUD와 렌더러가 같은 차량 상태를 읽는다.
+ */
 export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry }: DrivingSceneProps) {
   const { camera } = useThree();
   const simulation = useMemo(() => new VehicleSimulation(), []);
@@ -74,10 +84,12 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
   const suspensionRig = useRef<RapierChassisSuspension | null>(null);
 
   useEffect(() => {
+    // Rapier 초기화는 비동기이므로 완료 전 장면은 평면 프로토타입 상태로 렌더한다.
     let disposed = false;
 
     void RapierChassisSuspension.create().then((rig) => {
       if (disposed) {
+        // effect가 먼저 정리된 경우 새로 만든 native world를 누수시키지 않는다.
         rig.dispose();
         return;
       }
@@ -97,6 +109,7 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
     });
 
     return () => {
+      // StrictMode 재실행과 장면 언마운트 모두 동일한 정리 경로를 사용한다.
       disposed = true;
       suspensionRig.current?.dispose();
       suspensionRig.current = null;
@@ -122,6 +135,7 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
     if (!paused) {
       const frameInput = input.sample(deltaSeconds);
       let stepIndex = 0;
+      // 한 렌더 프레임의 입력은 모든 고정 스텝에 공유하되, 변속 에지는 첫 스텝에서만 소비한다.
       const result = accumulator.advance(deltaSeconds, (dt) => {
         simulation.step(
           {
@@ -133,6 +147,8 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
         );
         const rig = suspensionRig.current;
         if (rig) {
+          // 평면 명령을 먼저 계산한 뒤 같은 dt에 Rapier 접지·타이어·공력을 적용한다.
+          // 순서를 바꾸면 구동 토크와 실제 접지력의 한 스텝 지연이 생긴다.
           const rapierSnapshot = rig.getSnapshot();
           const surface = sampleTestTrackSurface({
             x: rapierSnapshot.position.x,
@@ -148,6 +164,7 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
           });
           const updatedRapierSnapshot = rig.getSnapshot();
           const tireStates = rig.getWheelTireStates();
+          // 구동계 RPM 피드백은 두 후륜의 평균 각속도를 사용해 좌우 미세 차이를 제거한다.
           const drivenWheelAngularSpeedRadS = (
             tireStates.rearLeft.wheelAngularSpeedRadS
             + tireStates.rearRight.wheelAngularSpeedRadS
@@ -173,6 +190,7 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
 
     const snapshot = simulation.getRenderSnapshot(alpha);
     if (vehicleRef.current) {
+      // Rapier의 절대 높이 대신 기준 ride height 대비 변화만 시각 모델에 적용한다.
       const rapierTelemetry = suspensionRig.current?.getTelemetry();
       const visualHeight = rapierTelemetry
         ? rapierTelemetry.chassisHeightM - rapierTelemetry.referenceRideHeightM
@@ -181,6 +199,7 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
       vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
     }
 
+    // 카메라 위치와 시선은 보간된 렌더 스냅샷을 사용해 고정 스텝 경계에서 튀지 않게 한다.
     forward.set(Math.sin(snapshot.yawRad), 0, -Math.cos(snapshot.yawRad));
     desiredCamera.set(
       snapshot.position.x - forward.x * 7,
@@ -197,6 +216,7 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
 
     telemetryClock.current += deltaSeconds;
     if (telemetryClock.current >= 0.1) {
+      // React 상태 갱신은 120Hz 물리와 분리해 HUD가 입력 반응성을 저해하지 않게 한다.
       telemetryClock.current = 0;
       onTelemetry(simulation.getTelemetry());
       onSuspensionTelemetry(suspensionRig.current?.getTelemetry() ?? null);
