@@ -7,6 +7,7 @@ import {
 } from "./TestTrack";
 
 describe("TestTrack data", () => {
+  // 마커·체크포인트·레이싱 라인의 순서와 단위 데이터는 AI와 경계 판정의 결정적 원본이다.
   it("keeps marker and checkpoint order stable for repeatable runs", () => {
     expect(TEST_TRACK_DATA.markers.map((marker) => marker.id)).toEqual([
       "start-finish",
@@ -26,6 +27,18 @@ describe("TestTrack data", () => {
       "off-track",
     ]);
     expect(route[1].onTrack).toBe(false);
+  });
+
+  // 두 차량의 시작 포즈가 분리되어도 같은 트랙 경계 안에서 리셋되어야 한다.
+  it("keeps the AI racing line ordered with explicit speed and brake data", () => {
+    expect(TEST_TRACK_DATA.racingLine.length).toBeGreaterThan(8);
+    expect(TEST_TRACK_DATA.racingLine.every((point) => point.targetSpeedMps > 0)).toBe(true);
+    expect(TEST_TRACK_DATA.racingLine.filter((point) => point.brakePoint).map((point) => point.id)).toEqual([
+      "right-brake-100",
+      "right-brake-50",
+      "left-brake-100",
+    ]);
+    expect(TEST_TRACK_DATA.opponentStartPose.position).not.toEqual(TEST_TRACK_DATA.startPose.position);
   });
 
   it("uses the outer bounds for reset and boundary decisions", () => {

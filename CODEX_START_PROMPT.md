@@ -2,7 +2,7 @@
 
 여러 에이전트를 사용하거나 작업을 위임할 때는 `docs/agent-orchestration/README.md`, 해당 역할 파일, `PROJECT_STATUS.md`, `TASKS.md`를 함께 읽어라. 작업 시작 전에 소유 파일과 합격 기준을 확정하고, 구현 에이전트와 QA 에이전트의 책임을 분리하라.
 
-현재 저장소 문서상 **Milestone 1F — Input presets and test track**이 완료되었고, 다음 작업은 **Milestone 2A — Single AI opponent**다. 새 작업은 `PROJECT_STATUS.md`, `TASKS.md`, `docs/ROADMAP.md`, `docs/MILESTONE_1F.md`를 기준으로 범위를 정한다.
+현재 저장소 문서상 **Milestone 2A — Single AI opponent**가 완료되었고, 다음 작업은 **Milestone 2B — Multi-car race session**이다. 새 작업은 `PROJECT_STATUS.md`, `TASKS.md`, `docs/ROADMAP.md`, `docs/MILESTONE_2A.md`를 기준으로 범위를 정한다.
 
 먼저 현재 파일 구조와 package scripts를 확인하고, 다음을 실행하라.
 
@@ -22,4 +22,4 @@ npm run test:e2e
 3. 현재 마일스톤 완료 기준
 4. 문서와 코드의 불일치
 5. 남은 위험
-6. 다음 단일 작업으로 권장하는 Milestone 2A
+6. 다음 단일 작업으로 권장하는 Milestone 2B

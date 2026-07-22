@@ -57,6 +57,19 @@ export interface TestTrackStartPose {
   yawRad: number;
 }
 
+/** 레이싱 라인 한 점의 위치·방향·목표 속도와 선택적 제동 진입점을 정의한다. */
+export interface TestTrackRacingLinePoint {
+  id: string;
+  position: TrackPoint;
+  yawRad: number;
+  targetSpeedMps: number;
+  brakePoint?: boolean;
+}
+
+/**
+ * 물리 표면, 경계, 체크포인트와 AI 경로가 공유하는 테스트 트랙 단일 원본이다.
+ * 렌더링·물리·AI가 각각 같은 지오메트리를 재구성하지 않도록 유지한다.
+ */
 export interface TestTrackDefinition {
   id: string;
   name: string;
@@ -67,6 +80,8 @@ export interface TestTrackDefinition {
   markers: readonly TestTrackMarker[];
   checkpoints: readonly TestTrackCheckpoint[];
   startPose: TestTrackStartPose;
+  opponentStartPose: TestTrackStartPose;
+  racingLine: readonly TestTrackRacingLinePoint[];
 }
 
 export interface TestTrackLocation {
@@ -84,6 +99,11 @@ const TEST_TRACK_SECTION_BOUNDS = {
   leftCorner: { minX: -22, maxX: -13, minZ: -6, maxZ: 6 },
 } as const;
 
+/**
+ * 외부 자산 없이 반복 검증하기 위한 테스트 트랙이다.
+ * racingLine의 좌표는 m, targetSpeedMps는 m/s이며 실제 트랙 재현값이 아닌
+ * initial_assumption이다. AI 주행 감각과 제동 지점은 simulation_required로 검증한다.
+ */
 export const TEST_TRACK_DATA: TestTrackDefinition = {
   id: "s1-test-loop-v1",
   name: "S1 반복 검증 루프",
@@ -160,6 +180,44 @@ export const TEST_TRACK_DATA: TestTrackDefinition = {
     position: { x: -10, z: 10 },
     yawRad: Math.PI / 2,
   },
+  opponentStartPose: {
+    position: { x: -12, z: 12 },
+    yawRad: Math.PI / 2,
+  },
+  racingLine: [
+    { id: "start", position: { x: -10, z: 10 }, yawRad: Math.PI / 2, targetSpeedMps: 46 },
+    { id: "start-run", position: { x: 0, z: 10 }, yawRad: Math.PI / 2, targetSpeedMps: 48 },
+    {
+      id: "right-brake-100",
+      position: { x: 8, z: 10 },
+      yawRad: Math.PI / 2,
+      targetSpeedMps: 44,
+      brakePoint: true,
+    },
+    {
+      id: "right-brake-50",
+      position: { x: 12.5, z: 8 },
+      yawRad: 1.1,
+      targetSpeedMps: 32,
+      brakePoint: true,
+    },
+    { id: "right-entry", position: { x: 16, z: 5.5 }, yawRad: 0.35, targetSpeedMps: 26 },
+    { id: "right-apex", position: { x: 18, z: 0 }, yawRad: 0, targetSpeedMps: 22 },
+    { id: "right-exit", position: { x: 18, z: -5.5 }, yawRad: 0, targetSpeedMps: 24 },
+    { id: "back-entry", position: { x: 16, z: -8 }, yawRad: -2.3, targetSpeedMps: 34 },
+    { id: "back-run", position: { x: 0, z: -10 }, yawRad: -Math.PI / 2, targetSpeedMps: 50 },
+    {
+      id: "left-brake-100",
+      position: { x: -12.5, z: -8 },
+      yawRad: -2.15,
+      targetSpeedMps: 42,
+      brakePoint: true,
+    },
+    { id: "left-entry", position: { x: -16, z: -5.5 }, yawRad: -2.8, targetSpeedMps: 26 },
+    { id: "left-apex", position: { x: -18, z: 0 }, yawRad: Math.PI, targetSpeedMps: 22 },
+    { id: "left-exit", position: { x: -18, z: 5.5 }, yawRad: Math.PI, targetSpeedMps: 24 },
+    { id: "finish-entry", position: { x: -16, z: 8 }, yawRad: 2.2, targetSpeedMps: 34 },
+  ],
 };
 
 function contains(bounds: TrackBounds, point: TrackPoint): boolean {

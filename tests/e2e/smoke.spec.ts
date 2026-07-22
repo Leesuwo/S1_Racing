@@ -5,8 +5,8 @@ test("loads the S1 Racing physics prototype", async ({ page }) => {
 
   await expect(page).toHaveTitle("S1 Racing");
   await expect(page.getByRole("heading", { name: "S1 Racing" })).toBeVisible();
-  await expect(page.getByText("S1 RACING / MILESTONE 1F · 입력·트랙 검증")).toBeVisible();
-  await expect(page.getByText("반복 가능한 120Hz 차량 물리 테스트 트랙")).toBeVisible();
+  await expect(page.getByText("S1 RACING / MILESTONE 2A · 단일 AI 상대")).toBeVisible();
+  await expect(page.getByText("공유 VehicleControlInput과 120Hz 물리로 주행하는 AI 상대")).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1);
   await expect(page.getByText("W/S 가속·브레이크 · A/D 키보드 조향")).toBeVisible();
   await expect(page.getByText("휠 하중 / N", { exact: true })).toBeVisible();
@@ -23,6 +23,18 @@ test("loads the S1 Racing physics prototype", async ({ page }) => {
   await expect(page.getByText("트랙 구간", { exact: true })).toBeVisible();
   await expect(page.getByText("트랙 경계", { exact: true })).toBeVisible();
   await expect(page.getByText("유효 · 4.0 m")).toBeVisible();
+  await expect(page.getByText("AI 상대", { exact: true })).toBeVisible();
+});
+
+test("runs the single AI opponent through the shared physics path", async ({ page }) => {
+  await page.goto("/");
+
+  const aiReadout = page.locator(".ai-readout strong");
+  await expect(aiReadout).toBeVisible();
+  await page.waitForTimeout(1_200);
+
+  await expect(aiReadout).not.toHaveText(/^0 km\/h/);
+  await expect(page.getByText("AI 상대", { exact: true })).toBeVisible();
 });
 
 test("moves the vehicle when throttle is held", async ({ page }) => {

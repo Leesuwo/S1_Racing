@@ -4,8 +4,8 @@
 
 - 제품: S1 Racing
 - 작업 기준일: 2026-07-22
-- 저장소 문서상 완료 상태: Milestone 1F — Input presets and test track
-- 다음 기능 마일스톤: Milestone 2A — Single AI opponent
+- 저장소 문서상 완료 상태: Milestone 2A — Single AI opponent
+- 다음 기능 마일스톤: Milestone 2B — Multi-car race session
 - 현재 오케스트레이션 상태: 대기 중인 기능 작업 없음
 
 ## 완료된 기반
@@ -17,16 +17,17 @@
 - 단위 테스트, 결정적 물리 검증, 아키텍처 검증, 프로덕션 빌드, 브라우저 E2E
 - 키보드·마우스·게임패드·휠 입력 프리셋과 시작 포즈 리셋
 - 데이터 기반 테스트 트랙 구간·노면·브레이크 마커·체크포인트·외곽 경계 판정
+- 데이터 기반 AI 레이싱 라인·목표 속도·제동점과 단일 AI Rapier 차량
 
 ## 현재 제한
 
-- AI, 다차량 세션, 퀄리파잉, 레이스 운영은 아직 구현하지 않는다.
+- 다차량 세션, 충돌 회피, 추월·방어, 퀄리파잉, 레이스 운영은 아직 구현하지 않는다.
 - 실제 차량 재현을 주장하지 않는 `initial_assumption` 물리 수치를 사용한다.
 - 실제 트랙 복제, 공식 브랜드·팀·드라이버·리버리 자산을 사용하지 않는다.
 
 ## 알려진 문서 정합성 위험
 
-`AGENTS.md`와 `CODEX_START_PROMPT.md`의 현재 단계 문구를 Milestone 1F 완료·Milestone 2A 다음 단계로 정합화했다.
+`AGENTS.md`, `README.md`, `CODEX_START_PROMPT.md`, `TASKS.md`의 현재 단계 문구를 Milestone 2A 완료·Milestone 2B 다음 단계로 정합화했다.
 
 ## 검증 기준
 

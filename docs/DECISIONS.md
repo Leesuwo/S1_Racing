@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-07-22 — D-017
+
+**결정:** Milestone 2A의 단일 AI는 `TEST_TRACK_DATA.racingLine`을 읽고 `VehicleControlInput`만 생성한다. 플레이어와 AI는 각각 `VehicleSimulation`과 Rapier 접지 리그를 통과하며, AI는 위치·속도·그립을 직접 변경하지 않는다.
+
+**이유:** 플레이어·AI·입력 장치가 같은 입력 경계를 공유해야 물리 검증과 리플레이 결정성이 유지된다. 레이싱 라인과 제동 지점을 트랙 데이터에 두면 범용 AI 컨트롤러에 트랙별 분기가 누적되지 않는다.
+
+**검증:** AI 입력 결정성, 직선·코너 목표 속도 차이, 제동 출력, one-shot 변속, 별도 시작 포즈 리셋을 Vitest로 검증하고, 두 번째 Rapier 차량 이동과 기존 플레이어 흐름을 Playwright로 검증한다. AI 튜닝값은 `initial_assumption`이며 실제 주행감은 `simulation_required`다.
+
 ## 2026-07-22 — D-015
 
 **결정:** Milestone 1F의 입력 프리셋과 테스트 트랙은 각각 `BrowserVehicleInput`과 `src/tracks/TestTrack.ts`를 단일 브라우저·데이터 경계로 사용한다. 입력 장치는 `VehicleControlInput`만 출력하고, 물리 표면 샘플러와 R3F 월드 시각화는 같은 트랙 정의를 읽는다.

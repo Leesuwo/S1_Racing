@@ -41,9 +41,11 @@ function formatNumber(value: number, digits = 0): string {
 
 function AppTelemetry({
   telemetry,
+  opponentTelemetry,
   suspensionTelemetry,
 }: {
   telemetry: VehicleTelemetry;
+  opponentTelemetry: VehicleTelemetry;
   suspensionTelemetry: RapierSuspensionTelemetry | null;
 }) {
   const rpmRatio = Math.min(1, telemetry.rpm / telemetry.redlineRpm);
@@ -83,6 +85,10 @@ function AppTelemetry({
             : "이탈 · 리셋 권장"}
         </strong>
       </div>
+      <div className="surface-readout ai-readout">
+        <span>AI 상대</span>
+        <strong>{formatNumber(opponentTelemetry.speedKmh)} km/h · {opponentTelemetry.trackSectionLabel}</strong>
+      </div>
       <div className="wheel-load-readout">
         <span>휠 하중 / N</span>
         <div>
@@ -104,10 +110,12 @@ function AppTelemetry({
   );
 }
 
+/** WebGL 지원 상태, 플레이어 HUD와 단일 AI 상대 상태를 조합하는 앱 셸이다. */
 export function App() {
   const [webgl, setWebgl] = useState<WebGL2Support | null>(null);
   const [paused, setPaused] = useState(() => document.hidden);
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
+  const [opponentTelemetry, setOpponentTelemetry] = useState(INITIAL_TELEMETRY);
   const [suspensionTelemetry, setSuspensionTelemetry] = useState<RapierSuspensionTelemetry | null>(null);
   const input = useMemo(() => new BrowserVehicleInput(window), []);
   const [inputPreset, setInputPreset] = useState<VehicleInputPresetId>(() => input.getPreset());
@@ -131,9 +139,9 @@ export function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">S1 RACING / MILESTONE 1F · 입력·트랙 검증</p>
+          <p className="eyebrow">S1 RACING / MILESTONE 2A · 단일 AI 상대</p>
           <h1>S1 Racing</h1>
-          <p className="subtitle">반복 가능한 120Hz 차량 물리 테스트 트랙</p>
+          <p className="subtitle">공유 VehicleControlInput과 120Hz 물리로 주행하는 AI 상대</p>
         </div>
         <span className={`status-chip ${paused ? "status-chip--paused" : ""}`}>
           {paused ? "일시정지" : "주행 준비"}
@@ -152,6 +160,7 @@ export function App() {
             input={input}
             paused={paused}
             onTelemetry={setTelemetry}
+            onOpponentTelemetry={setOpponentTelemetry}
             onSuspensionTelemetry={setSuspensionTelemetry}
           />
           </Canvas>
@@ -167,7 +176,11 @@ export function App() {
 
         {webgl?.supported && (
           <>
-            <AppTelemetry telemetry={telemetry} suspensionTelemetry={suspensionTelemetry} />
+            <AppTelemetry
+              telemetry={telemetry}
+              opponentTelemetry={opponentTelemetry}
+              suspensionTelemetry={suspensionTelemetry}
+            />
             <div className="simulation-toolbar">
               <label className="input-preset-control">
                 <span>입력 프리셋</span>

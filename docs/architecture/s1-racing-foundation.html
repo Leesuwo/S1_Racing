@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="archify 2.10.0">
-  <title>S1 Racing — Milestone 1F Diagram</title>
+  <title>S1 Racing — Milestone 2A Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
     // see a dark flash. The toolbar script below re-applies with UI state.
@@ -525,14 +525,14 @@
     <div class="header">
       <div class="header-row">
         <div class="pulse-dot"></div>
-        <h1>S1 Racing — Milestone 1F</h1>
+        <h1>S1 Racing — Milestone 2A</h1>
       </div>
-      <p class="subtitle">입력 프리셋·반복 가능한 테스트 트랙·경계 검증</p>
+      <p class="subtitle">공유 입력 경계·단일 AI 상대·결정적 제어 검증</p>
     </div>
 
     <!-- Main Diagram -->
     <div class="diagram-container">
-      <svg viewBox="0 0 1580 632" role="img" aria-label="S1 Racing — Milestone 1F — 입력 프리셋·반복 가능한 테스트 트랙·경계 검증 (architecture diagram)">
+      <svg viewBox="0 0 1580 632" role="img" aria-label="S1 Racing — Milestone 2A — 공유 입력 경계·단일 AI 상대·결정적 제어 검증 (architecture diagram)">
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -559,14 +559,16 @@
         <rect x="10" y="90" width="1530" height="274" rx="12" class="c-region" stroke-width="1"/>
         <text x="18" y="108" class="t-cloud" font-size="9" font-weight="600">브라우저 런타임</text>
 
-        <rect x="440" y="90" width="1100" height="414" rx="8" class="c-security-group" stroke-width="1"/>
-        <text x="448" y="108" class="t-security" font-size="9" font-weight="600">순수 도메인 경계</text>
+        <rect x="220" y="90" width="1320" height="414" rx="8" class="c-security-group" stroke-width="1"/>
+        <text x="228" y="108" class="t-security" font-size="9" font-weight="600">순수 도메인 경계</text>
 
         <!-- Connection paths (before components for correct z-order) -->
         <path d="M 200 312 L 250 312" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path d="M 420 312 L 470 312" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path d="M 210 152 L 250 152" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 400 152 L 470 152" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 565 420 L 463 420 Q 455 420 455 412 L 455 272 Q 455 264 447 264 L 345 264" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 440 232 L 447.5 232 Q 455 232 455 224.5 L 455 159.5 Q 455 152 462.5 152 L 470 152" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path d="M 565 420 L 769.5 420 Q 777.5 420 777.5 412 L 777.5 352 Q 777.5 344 785.5 344 L 990 344" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path d="M 660 452 L 708.25 452 Q 716.25 452 716.25 444 L 716.25 192 Q 716.25 184 724.25 184 L 772.5 184" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 772.5 184 L 670.5 184 Q 662.5 184 662.5 192 L 662.5 272 Q 662.5 280 654.5 280 L 552.5 280" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
@@ -588,6 +590,7 @@
         <path d="M 1300 232 L 1307.5 232 Q 1315 232 1315 239.5 L 1315 304.5 Q 1315 312 1322.5 312 L 1330 312" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 772.5 500 L 772.5 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 772.5 500 L 676.75 500 Q 668.75 500 668.75 492 L 668.75 492 Q 668.75 484 660.75 484 L 565 484" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 772.5 500 L 566.75 500 Q 558.75 500 558.75 492 L 558.75 272 Q 558.75 264 550.75 264 L 345 264" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 980 500 L 982.5 500 Q 985 500 985 497.5 L 985 346.5 Q 985 344 987.5 344 L 990 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Components -->
@@ -624,6 +627,12 @@
         <text x="560" y="166" class="t-muted" font-size="9" text-anchor="middle">VehicleControlInput 계약</text>
         <text x="560" y="176" class="t-messagebus" font-size="7" text-anchor="middle">공유 경계</text>
 
+        <rect x="250" y="200" width="190" height="64" rx="6" class="c-mask"/>
+        <rect x="250" y="200" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+        <text x="345" y="230" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">단일 AI 제어기</text>
+        <text x="345" y="246" class="t-muted" font-size="9" text-anchor="middle">레이싱 라인·목표 속도·Pure Pursuit</text>
+        <text x="345" y="256" class="t-backend" font-size="7" text-anchor="middle">M2A</text>
+
         <rect x="690" y="280" width="165" height="64" rx="6" class="c-mask"/>
         <rect x="690" y="280" width="165" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
         <text x="772.5" y="310" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">고정 타임스텝</text>
@@ -633,14 +642,14 @@
         <rect x="900" y="280" width="180" height="64" rx="6" class="c-mask"/>
         <rect x="900" y="280" width="180" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
         <text x="990" y="310" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">차량 물리 도메인</text>
-        <text x="990" y="326" class="t-muted" font-size="9" text-anchor="middle">VehiclePhysics + Simulation</text>
-        <text x="990" y="336" class="t-backend" font-size="7" text-anchor="middle">M1D/M1E</text>
+        <text x="990" y="326" class="t-muted" font-size="9" text-anchor="middle">플레이어·AI VehicleSimulation</text>
+        <text x="990" y="336" class="t-backend" font-size="7" text-anchor="middle">M2A</text>
 
         <rect x="900" y="120" width="180" height="64" rx="6" class="c-mask"/>
         <rect x="900" y="120" width="180" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
-        <text x="990" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Rapier 접지 리그</text>
+        <text x="990" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">차량별 Rapier 접지 리그</text>
         <text x="990" y="166" class="t-muted" font-size="9" text-anchor="middle">양의 밀도 차체 + 접지·공력 힘</text>
-        <text x="990" y="176" class="t-backend" font-size="7" text-anchor="middle">M1D/M1E</text>
+        <text x="990" y="176" class="t-backend" font-size="7" text-anchor="middle">M2A</text>
 
         <rect x="1120" y="120" width="180" height="64" rx="6" class="c-mask"/>
         <rect x="1120" y="120" width="180" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
@@ -669,12 +678,12 @@
         <rect x="1340" y="120" width="170" height="64" rx="6" class="c-mask"/>
         <rect x="1340" y="120" width="170" height="64" rx="6" class="c-messagebus" stroke-width="1.5"/>
         <text x="1425" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">렌더링 스냅샷</text>
-        <text x="1425" y="166" class="t-muted" font-size="9" text-anchor="middle">Rapier pose + 차체 높이</text>
+        <text x="1425" y="166" class="t-muted" font-size="9" text-anchor="middle">플레이어·AI Rapier pose + 높이</text>
 
         <rect x="1330" y="280" width="170" height="64" rx="6" class="c-mask"/>
         <rect x="1330" y="280" width="170" height="64" rx="6" class="c-database" stroke-width="1.5"/>
         <text x="1415" y="310" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">텔레메트리 HUD</text>
-        <text x="1415" y="326" class="t-muted" font-size="9" text-anchor="middle">속도·RPM·G값·조향</text>
+        <text x="1415" y="326" class="t-muted" font-size="9" text-anchor="middle">플레이어·AI 속도·구간·G값</text>
 
         <rect x="470" y="420" width="190" height="64" rx="6" class="c-mask"/>
         <rect x="470" y="420" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
@@ -685,8 +694,8 @@
         <rect x="690" y="120" width="165" height="64" rx="6" class="c-mask"/>
         <rect x="690" y="120" width="165" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
         <text x="772.5" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">트랙 월드 표시</text>
-        <text x="772.5" y="166" class="t-muted" font-size="9" text-anchor="middle">TestTrackVisual</text>
-        <text x="772.5" y="176" class="t-frontend" font-size="7" text-anchor="middle">M1F</text>
+        <text x="772.5" y="166" class="t-muted" font-size="9" text-anchor="middle">TestTrackVisual + 두 차량</text>
+        <text x="772.5" y="176" class="t-frontend" font-size="7" text-anchor="middle">M2A</text>
 
         <rect x="690" y="500" width="165" height="64" rx="6" class="c-mask"/>
         <rect x="690" y="500" width="165" height="64" rx="6" class="c-cloud" stroke-width="1.5"/>
@@ -708,6 +717,10 @@
         <text x="225" y="198" class="t-messagebus" font-size="8" text-anchor="middle">장치별 프리셋</text>
         <rect x="403.6" y="188" width="62.8" height="14" rx="3" class="c-mask"/>
         <text x="435" y="198" class="t-security" font-size="8" text-anchor="middle">입력 정규화</text>
+        <rect x="497.6" y="406" width="134.8" height="14" rx="3" class="c-mask"/>
+        <text x="565" y="416" class="t-security" font-size="8" text-anchor="middle">레이싱 라인·목표 속도·제동</text>
+        <rect x="421.2" y="188" width="67.6" height="14" rx="3" class="c-mask"/>
+        <text x="455" y="198" class="t-security" font-size="8" text-anchor="middle">AI 입력 생성</text>
         <rect x="744.4" y="415" width="101.2" height="14" rx="3" class="c-mask"/>
         <text x="795" y="425" class="t-security" font-size="8" text-anchor="middle">노면·구간·리셋 포즈</text>
         <rect x="631.6" y="348" width="86.8" height="14" rx="3" class="c-mask"/>
@@ -750,6 +763,8 @@
         <text x="765" y="578" class="t-messagebus" font-size="8" text-anchor="middle">결정적 검사</text>
         <rect x="721.4" y="465" width="77.2" height="14" rx="3" class="c-mask"/>
         <text x="760" y="475" class="t-messagebus" font-size="8" text-anchor="middle">반복·경계 검사</text>
+        <rect x="459.6" y="488" width="110.8" height="14" rx="3" class="c-mask"/>
+        <text x="515" y="498" class="t-messagebus" font-size="8" text-anchor="middle">결정성·제동·변속 검사</text>
         <rect x="948.4" y="568" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
         <text x="975" y="578" class="t-messagebus" font-size="8" text-anchor="middle">계약 적용</text>
 
@@ -775,12 +790,12 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Milestone 1F</h3>
+          <h3>Milestone 2A</h3>
         </div>
         <ul>
-          <li>&bull; 네 입력 프리셋·공통 VehicleControlInput</li>
-          <li>&bull; 데이터 기반 구간·노면·브레이크 마커</li>
-          <li>&bull; 리셋·외곽 경계·반복 실행 검증</li>
+          <li>&bull; 데이터 기반 레이싱 라인·목표 속도</li>
+          <li>&bull; Pure Pursuit 조향·제동점·one-shot 변속</li>
+          <li>&bull; 플레이어와 AI의 차량별 Rapier 리그</li>
         </ul>
       </div>
 
@@ -790,9 +805,9 @@
           <h3>아키텍처 규칙</h3>
         </div>
         <ul>
-          <li>&bull; 물리는 React와 R3F에서 독립</li>
-          <li>&bull; 플레이어와 AI가 VehicleControlInput 공유</li>
-          <li>&bull; 렌더링은 읽기 전용 스냅샷 사용</li>
+          <li>&bull; AI는 VehicleControlInput만 생성</li>
+          <li>&bull; AI 위치·그립·출력 직접 변경 금지</li>
+          <li>&bull; 렌더링은 두 차량의 읽기 전용 스냅샷 사용</li>
         </ul>
       </div>
 
@@ -802,9 +817,9 @@
           <h3>다음 경계</h3>
         </div>
         <ul>
-          <li>&bull; 단일 AI와 공유 VehicleControlInput</li>
-          <li>&bull; 다차량·퀄리파잉·레이스 전략</li>
-          <li>&bull; 트랙 리밋·접촉 모델</li>
+          <li>&bull; 다차량 스폰·그리드·순위</li>
+          <li>&bull; 세션 리셋·고정 스텝 비용 측정</li>
+          <li>&bull; 충돌 회피·레이스 운영</li>
         </ul>
       </div>
     </div>

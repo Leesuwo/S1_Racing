@@ -13,7 +13,7 @@
 
 ## Current implementation stage
 
-Milestone 1F — Input presets and test track을 완료했고, 현재 다음은 `Milestone 2A — Single AI opponent`다.
+Milestone 2A — Single AI opponent을 완료했고, 현재 다음은 `Milestone 2B — Multi-car race session`이다.
 
 현재 프로토타입에는 다음이 포함된다:
 
@@ -47,6 +47,10 @@ Milestone 0은 Project Foundation이다. 이번 단계에는 차량 물리, AI, 
 
 Milestone 1F에서는 공통 `VehicleControlInput` 경계를 유지하면서 입력 프리셋과 반복 가능한 테스트 트랙 콘텐츠를 추가했다. AI·다차량·퀄리파잉·레이스 운영은 다음 기능 단계의 범위다.
 
+## Milestone 2A scope (completed)
+
+Milestone 2A에서는 데이터 기반 레이싱 라인과 목표 속도를 읽는 단일 AI를 추가하고, 플레이어와 AI를 차량별 Rapier 리그에 연결했다. 다차량 세션·충돌 회피·퀄리파잉·레이스 운영은 다음 기능 단계의 범위다.
+
 ## Architecture
 
 - 물리 계층은 React, React Three Fiber, Zustand에 의존하지 않는다.
@@ -56,6 +60,16 @@ Milestone 1F에서는 공통 `VehicleControlInput` 경계를 유지하면서 입
 - AI가 차량을 순간이동하거나 숨겨진 그립·출력 보너스를 받게 하지 않는다.
 - 튜닝 가능한 값은 타입이 있는 설정 파일에 둔다.
 - 트랙별 예외를 범용 AI 컨트롤러에 하드코딩하지 않는다.
+
+## Commenting policy
+
+- 새 소스 파일에는 파일의 목적과 모듈 경계를 설명하는 주석을 둔다.
+- 모든 `export` 타입·함수·클래스에는 TSDoc 또는 동등한 설명을 작성한다.
+- 물리 공식, 좌표계 변환, 상태 전이, 비자명한 예외 처리와 방어 로직에는 반드시 이유 중심의 주석을 작성한다.
+- 튜닝 수치는 단위와 함께 기록하고, 검증되지 않은 값은 `initial_assumption` 또는 `simulation_required`와 근거를 주석에 남긴다.
+- 테스트에는 검증하는 사용자 동작·물리 불변식·경계 조건을 설명한다.
+- 단순한 대입·반환·명백한 조건문처럼 코드 자체가 의도를 충분히 표현하는 부분에는 반복 주석을 작성하지 않는다.
+- 코드 동작이나 수치가 변경되면 관련 주석도 함께 갱신한다.
 
 ## Project-local Codex skill
 

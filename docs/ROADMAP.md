@@ -34,11 +34,11 @@ Rapier 동적 차체, 정적 지면, 4개 휠 레이캐스트, 스프링·댐퍼
 
 상세 범위와 검증 결과는 [Milestone 1F 상세 문서](./MILESTONE_1F.md)에 기록했다.
 
-## Milestone 2A — Single AI opponent (다음)
+## Milestone 2A — Single AI opponent (완료)
 
-플레이어와 동일한 입력 경계를 사용하는 AI 한 대를 추가한다. AI가 물리를 우회하지 않는지, 결정적 목표 속도·레이싱 라인·브레이크 지점을 단위·시나리오 테스트로 검증한다.
+플레이어와 동일한 입력 경계를 사용하는 AI 한 대를 추가했다. 상세 범위와 검증 결과는 [Milestone 2A 상세 문서](./MILESTONE_2A.md)에 기록했다.
 
-## Milestone 2B — Multi-car race session (예정)
+## Milestone 2B — Multi-car race session (다음)
 
 여러 차량의 스폰·그리드·충돌 없는 기본 순위·세션 리셋을 추가한다. 차량 수 증가에 따른 고정 스텝 시간과 텔레메트리 수집 비용을 측정한다.
 

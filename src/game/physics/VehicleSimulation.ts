@@ -14,6 +14,7 @@ import type { WheelValues } from "./Suspension";
 import {
   sampleTestTrackLocation,
   TEST_TRACK_DATA,
+  type TestTrackStartPose,
   type TestTrackDefinition,
 } from "../../tracks/TestTrack";
 
@@ -68,19 +69,30 @@ function rightVector(yawRad: number): { x: number; z: number } {
   return { x: Math.cos(yawRad), z: Math.sin(yawRad) };
 }
 
+/**
+ * 입력·기어·RPM·텔레메트리를 소유하고, 외부 Rapier 포즈를 읽기 전용 스냅샷으로 연결하는 차량 브리지다.
+ * AI도 이 클래스에 동일한 VehicleControlInput을 전달하므로 위치 직접 조작 경계가 생기지 않는다.
+ */
 export class VehicleSimulation {
   readonly config: VehiclePhysicsConfig;
   readonly current: VehicleState;
   readonly track: TestTrackDefinition;
+  /** 리셋 시 복원할 플레이어 또는 AI의 데이터 정의 시작 포즈다. */
+  readonly startPose: TestTrackStartPose;
   private previous: VehicleState;
 
   constructor(
     config: VehiclePhysicsConfig = DEFAULT_VEHICLE_CONFIG,
     track: TestTrackDefinition = TEST_TRACK_DATA,
+    startPose: TestTrackStartPose = track.startPose,
   ) {
     this.config = config;
     this.track = track;
-    this.current = createInitialVehicleState(track.startPose.position, track.startPose.yawRad);
+    this.startPose = {
+      position: { ...startPose.position },
+      yawRad: startPose.yawRad,
+    };
+    this.current = createInitialVehicleState(this.startPose.position, this.startPose.yawRad);
     this.previous = cloneVehicleState(this.current);
   }
 
@@ -99,7 +111,8 @@ export class VehicleSimulation {
   }
 
   reset(): void {
-    resetVehicleState(this.current, this.track.startPose.position, this.track.startPose.yawRad);
+    // AI 차량은 플레이어와 다른 그리드 포즈를 사용할 수 있으므로 track.startPose를 다시 읽지 않는다.
+    resetVehicleState(this.current, this.startPose.position, this.startPose.yawRad);
     this.previous = cloneVehicleState(this.current);
   }
 

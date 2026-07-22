@@ -57,6 +57,7 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 6vw, 4.5rem); line-height: 0.95; l
 .rpm-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #35d7a2, #ffcf5b 72%, #ff667f); }
 .surface-readout { display: flex; align-items: baseline; gap: 8px; }
 .surface-readout strong { color: #35d7a2; font-size: 0.76rem; }
+.ai-readout strong { color: #27b8d6; }
 .track-status--valid { color: #35d7a2 !important; }
 .track-status--off { color: #ff748c !important; }
 .wheel-load-readout { grid-column: 1 / -1; }

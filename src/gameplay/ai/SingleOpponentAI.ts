@@ -1,0 +1,235 @@
+/**
+ * 플레이어와 같은 VehicleControlInput 경계만 출력하는 결정적 단일 AI 제어기다.
+ * 위치·속도·기어 상태를 직접 변경하지 않고, 트랙 데이터의 레이싱 라인과 목표 속도를
+ * Pure Pursuit 및 속도 오차 제어로 입력 명령으로 변환한다.
+ */
+import type { VehicleControlInput } from "../../game/input/VehicleControlInput";
+import {
+  TEST_TRACK_DATA,
+  type TestTrackDefinition,
+  type TestTrackRacingLinePoint,
+  type TrackPoint,
+} from "../../tracks/TestTrack";
+
+/** AI가 읽을 수 있는 차량 상태 스냅샷이다. 물리 상태를 직접 소유하지 않는다. */
+export interface SingleOpponentAIState {
+  position: TrackPoint;
+  velocity: TrackPoint;
+  yawRad: number;
+  speedMps: number;
+  forwardSpeedMps: number;
+  rpm: number;
+  gear: number;
+  maxGear: number;
+}
+
+/** AI 조향·속도·변속 제어기의 단위가 명시된 튜닝 경계다. */
+export interface SingleOpponentAIConfig {
+  lookaheadM: number;
+  lookaheadSpeedScale: number;
+  brakeLookaheadM: number;
+  headingGain: number;
+  lateralGain: number;
+  throttleGain: number;
+  brakeGain: number;
+  brakeDeadbandMps: number;
+  upshiftRpm: number;
+  downshiftRpm: number;
+  shiftCooldownSeconds: number;
+}
+
+/** 현재 차량 상태에서 선택한 레이싱 라인 목표와 제동 미리보기다. */
+export interface SingleOpponentAITarget {
+  closestIndex: number;
+  lookaheadIndex: number;
+  brakeLookaheadIndex: number;
+  targetPoint: TestTrackRacingLinePoint;
+  targetSpeedMps: number;
+  previewSpeedMps: number;
+  brakePoint: boolean;
+}
+
+/**
+ * M2A 초기 가정(initial_assumption) 튜닝값이다.
+ * 거리 값은 m, 속도는 m/s, 회전 이득과 입력 이득은 무차원, RPM과 변속 쿨다운은 각각
+ * engine rpm 및 s 단위다. 실제 차량 재현값이 아니며 simulation_required 상태다.
+ */
+export const DEFAULT_SINGLE_OPPONENT_AI_CONFIG: SingleOpponentAIConfig = {
+  lookaheadM: 4.5,
+  lookaheadSpeedScale: 0.18,
+  brakeLookaheadM: 13,
+  headingGain: 1.4,
+  lateralGain: 1.8,
+  throttleGain: 0.12,
+  brakeGain: 0.16,
+  brakeDeadbandMps: 1.5,
+  upshiftRpm: 7_200,
+  downshiftRpm: 2_000,
+  shiftCooldownSeconds: 0.25,
+};
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+
+function normalizeAngle(angleRad: number): number {
+  let normalized = angleRad;
+  while (normalized > Math.PI) normalized -= Math.PI * 2;
+  while (normalized < -Math.PI) normalized += Math.PI * 2;
+  return normalized;
+}
+
+function distanceBetween(a: TrackPoint, b: TrackPoint): number {
+  return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+function finiteOr(value: number, fallback: number): number {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+/**
+ * 데이터 정의 레이싱 라인을 따라 조향·가감속·변속 입력을 생성하는 순수 AI 컨트롤러다.
+ * 반환값 외에는 차량 위치, 속도, 접지 상태를 변경하지 않는다.
+ */
+export class SingleOpponentAI {
+  private readonly segmentLengths: readonly number[];
+  private shiftCooldownSeconds = 0;
+
+  constructor(
+    private readonly track: TestTrackDefinition = TEST_TRACK_DATA,
+    private readonly config: SingleOpponentAIConfig = DEFAULT_SINGLE_OPPONENT_AI_CONFIG,
+  ) {
+    this.segmentLengths = track.racingLine.map((point, index) => (
+      distanceBetween(point.position, track.racingLine[(index + 1) % track.racingLine.length].position)
+    ));
+  }
+
+  /** 변속 쿨다운을 초기화하여 리셋 후 동일한 입력 시퀀스를 재현한다. */
+  reset(): void {
+    this.shiftCooldownSeconds = 0;
+  }
+
+  /** 현재 상태에서 조향 목표와 코너 진입 전 속도 미리보기를 계산한다. */
+  getTarget(state: SingleOpponentAIState): SingleOpponentAITarget {
+    const line = this.track.racingLine;
+    if (line.length === 0) {
+      throw new Error("SingleOpponentAI requires at least one racing-line point");
+    }
+
+    // 가장 가까운 라인 점은 현재 구간을 결정하고, 더 앞의 점은 코너 진입 전 속도 예측에만 사용한다.
+    // 이렇게 하면 AI가 현재 점의 속도만 따라가며 제동을 늦추는 상태를 피할 수 있다.
+    const closestIndex = this.findClosestPointIndex(state.position);
+    const lookaheadDistanceM = Math.max(
+      0,
+      this.config.lookaheadM + Math.max(0, finiteOr(state.speedMps, 0)) * this.config.lookaheadSpeedScale,
+    );
+    const lookaheadIndex = this.advanceIndex(closestIndex, lookaheadDistanceM);
+    const brakeLookaheadIndex = this.advanceIndex(closestIndex, Math.max(0, this.config.brakeLookaheadM));
+    const targetPoint = line[lookaheadIndex];
+    const closestPoint = line[closestIndex];
+    const previewPoint = line[brakeLookaheadIndex];
+
+    return {
+      closestIndex,
+      lookaheadIndex,
+      brakeLookaheadIndex,
+      targetPoint,
+      targetSpeedMps: Math.max(0, Math.min(closestPoint.targetSpeedMps, previewPoint.targetSpeedMps)),
+      previewSpeedMps: Math.max(0, previewPoint.targetSpeedMps),
+      brakePoint: Boolean(closestPoint.brakePoint || previewPoint.brakePoint),
+    };
+  }
+
+  /** 한 fixed step에 적용할 VehicleControlInput을 결정한다. */
+  update(state: SingleOpponentAIState, dtSeconds: number): VehicleControlInput {
+    const safeDtSeconds = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : 1 / 120;
+    this.shiftCooldownSeconds = Math.max(0, this.shiftCooldownSeconds - safeDtSeconds);
+    const target = this.getTarget(state);
+    const dx = target.targetPoint.position.x - state.position.x;
+    const dz = target.targetPoint.position.z - state.position.z;
+    // 프로젝트 좌표계의 right 벡터(+X 오른쪽, +Y 위, -Z 전방)를 사용해 라인 횡오차의 부호를 유지한다.
+    const right = { x: Math.cos(state.yawRad), z: Math.sin(state.yawRad) };
+    const lookaheadDistanceM = Math.max(1, Math.hypot(dx, dz));
+    const lateralErrorM = dx * right.x + dz * right.z;
+    const headingErrorRad = normalizeAngle(target.targetPoint.yawRad - state.yawRad);
+    const steering = clamp(
+      headingErrorRad * this.config.headingGain
+        + Math.atan2(lateralErrorM, lookaheadDistanceM) * this.config.lateralGain,
+      -1,
+      1,
+    );
+
+    const forwardSpeedMps = Math.max(0, finiteOr(state.forwardSpeedMps, finiteOr(state.speedMps, 0)));
+    const speedErrorMps = target.targetSpeedMps - forwardSpeedMps;
+    const overspeedMps = forwardSpeedMps - target.targetSpeedMps - this.config.brakeDeadbandMps;
+    // 목표 속도보다 빠른 경우에는 스로틀과 브레이크를 동시에 요청하지 않는다.
+    // brakeDeadbandMps는 타깃 속도 주변의 입력 채터링을 막는 초기 가정이다.
+    const brake = clamp(
+      overspeedMps > 0
+        ? overspeedMps * this.config.brakeGain + (target.brakePoint ? 0.08 : 0)
+        : 0,
+      0,
+      1,
+    );
+    const throttle = brake > 0
+      ? 0
+      : clamp(speedErrorMps * this.config.throttleGain, 0, 1);
+    const shiftUp = this.shiftCooldownSeconds <= 0
+      && state.rpm >= this.config.upshiftRpm
+      && state.gear < state.maxGear;
+    const shiftDown = this.shiftCooldownSeconds <= 0
+      && state.rpm <= this.config.downshiftRpm
+      && state.gear > 1
+      && target.targetSpeedMps > forwardSpeedMps + 4;
+
+    if (shiftUp || shiftDown) {
+      this.shiftCooldownSeconds = Math.max(0, this.config.shiftCooldownSeconds);
+    }
+
+    return {
+      steering: Number.isFinite(steering) ? steering : 0,
+      throttle: Number.isFinite(throttle) ? throttle : 0,
+      brake: Number.isFinite(brake) ? brake : 0,
+      clutch: 0,
+      shiftUp,
+      shiftDown,
+      overtakeMode: false,
+      activeAero: true,
+    };
+  }
+
+  private findClosestPointIndex(position: TrackPoint): number {
+    let closestIndex = 0;
+    let closestDistanceSquared = Number.POSITIVE_INFINITY;
+
+    this.track.racingLine.forEach((point, index) => {
+      const distanceSquared = (point.position.x - position.x) ** 2
+        + (point.position.z - position.z) ** 2;
+      if (distanceSquared < closestDistanceSquared) {
+        closestDistanceSquared = distanceSquared;
+        closestIndex = index;
+      }
+    });
+
+    return closestIndex;
+  }
+
+  private advanceIndex(startIndex: number, distanceM: number): number {
+    if (this.track.racingLine.length <= 1 || distanceM <= 0) {
+      return startIndex;
+    }
+
+    // 레이싱 라인은 폐곡선이므로 마지막 점 이후 첫 점으로 순환한다. 유한한 guard는
+    // 잘못된 0 길이 데이터가 들어와도 고정 스텝에서 무한 루프가 되지 않게 한다.
+    let index = startIndex;
+    let remainingM = distanceM;
+    let guard = 0;
+    while (remainingM > 0 && guard < this.track.racingLine.length * 2) {
+      remainingM -= this.segmentLengths[index] ?? 0;
+      index = (index + 1) % this.track.racingLine.length;
+      guard += 1;
+    }
+
+    return index;
+  }
+}

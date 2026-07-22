@@ -2,6 +2,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
+import type { VehicleControlInput } from "../game/input/VehicleControlInput";
+import { SingleOpponentAI } from "../gameplay/ai/SingleOpponentAI";
 import { FixedTimestepAccumulator } from "../game/loop/FixedTimestep";
 import {
   RapierChassisSuspension,
@@ -16,15 +18,22 @@ interface DrivingSceneProps {
   input: BrowserVehicleInput;
   paused: boolean;
   onTelemetry: (telemetry: VehicleTelemetry) => void;
+  onOpponentTelemetry: (telemetry: VehicleTelemetry) => void;
   onSuspensionTelemetry: (telemetry: RapierSuspensionTelemetry | null) => void;
 }
 
-function VehicleModel({ groupRef }: { groupRef: RefObject<THREE.Group | null> }) {
+function VehicleModel({
+  groupRef,
+  color,
+}: {
+  groupRef: RefObject<THREE.Group | null>;
+  color: string;
+}) {
   return (
     <group ref={groupRef}>
       <mesh position={[0, 0.32, 0]} castShadow>
         <boxGeometry args={[1.8, 0.34, 3.2]} />
-        <meshStandardMaterial color="#d92f4f" metalness={0.35} roughness={0.42} />
+        <meshStandardMaterial color={color} metalness={0.35} roughness={0.42} />
       </mesh>
       <mesh position={[0, 0.54, -0.15]} castShadow>
         <boxGeometry args={[0.72, 0.25, 1.2]} />
@@ -53,6 +62,84 @@ function VehicleModel({ groupRef }: { groupRef: RefObject<THREE.Group | null> })
   );
 }
 
+function syncRigFromSimulation(
+  rig: RapierChassisSuspension,
+  simulation: VehicleSimulation,
+): void {
+  const snapshot = simulation.getRenderSnapshot(1);
+  rig.syncPlanarPose({
+    position: snapshot.position,
+    velocity: snapshot.velocity,
+    yawRad: snapshot.yawRad,
+    yawRateRadS: snapshot.yawRateRadS,
+  });
+}
+
+// 두 차량 모두 동일한 순서로 Simulation 명령을 만든 뒤 Rapier에 힘을 적용한다.
+// 이 순서를 지켜야 AI가 위치를 덮어쓰지 않고 플레이어와 같은 120Hz 물리 경계를 통과한다.
+function stepSimulationWithRig(
+  simulation: VehicleSimulation,
+  rig: RapierChassisSuspension | null,
+  input: VehicleControlInput,
+  dtSeconds: number,
+): void {
+  simulation.step(input, dtSeconds);
+  if (!rig) {
+    return;
+  }
+
+  const rapierSnapshot = rig.getSnapshot();
+  const surface = sampleTestTrackSurface({
+    x: rapierSnapshot.position.x,
+    z: rapierSnapshot.position.z,
+  });
+  rig.step(dtSeconds, {
+    steeringInput: input.steering,
+    rearDriveTorqueNm: simulation.current.driveTorqueNm,
+    engineBrakeTorqueNm: simulation.current.engineBrakeTorqueNm,
+    brakeForceN: simulation.current.brake * simulation.config.maxBrakeForceN,
+    surfaceGripMultiplier: surface.gripMultiplier,
+    surfaceDragMultiplier: surface.dragMultiplier,
+  });
+  const updatedRapierSnapshot = rig.getSnapshot();
+  const tireStates = rig.getWheelTireStates();
+  const drivenWheelAngularSpeedRadS = (
+    tireStates.rearLeft.wheelAngularSpeedRadS
+    + tireStates.rearRight.wheelAngularSpeedRadS
+  ) * 0.5;
+  simulation.synchronizeFromExternalPose({
+    position: {
+      x: updatedRapierSnapshot.position.x,
+      z: updatedRapierSnapshot.position.z,
+    },
+    velocity: {
+      x: updatedRapierSnapshot.linearVelocity.x,
+      z: updatedRapierSnapshot.linearVelocity.z,
+    },
+    yawRad: rapierRotationToPhysicsYaw(updatedRapierSnapshot.rotation),
+    yawRateRadS: -updatedRapierSnapshot.angularVelocity.y,
+    drivenWheelAngularSpeedRadS,
+  }, dtSeconds);
+}
+
+function updateVehicleModel(
+  vehicleRef: RefObject<THREE.Group | null>,
+  snapshot: ReturnType<VehicleSimulation["getRenderSnapshot"]>,
+  rig: RapierChassisSuspension | null,
+): void {
+  if (!vehicleRef.current) {
+    return;
+  }
+
+  const rapierTelemetry = rig?.getTelemetry();
+  const visualHeight = rapierTelemetry
+    ? rapierTelemetry.chassisHeightM - rapierTelemetry.referenceRideHeightM
+    : 0;
+  vehicleRef.current.position.set(snapshot.position.x, visualHeight, snapshot.position.z);
+  vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
+}
+
+// Rapier quaternion은 물리 yaw의 부호와 반대 방향으로 저장되므로 시각화 전에 반전한다.
 function rapierRotationToPhysicsYaw(rotation: { x: number; y: number; z: number; w: number }): number {
   const rapierYawRad = Math.atan2(
     2 * (rotation.w * rotation.y + rotation.x * rotation.z),
@@ -62,34 +149,48 @@ function rapierRotationToPhysicsYaw(rotation: { x: number; y: number; z: number;
   return -rapierYawRad;
 }
 
-export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry }: DrivingSceneProps) {
+/** 플레이어와 단일 AI를 각각 고정 스텝·Rapier 리그에 연결하는 R3F 장면이다. */
+export function DrivingScene({
+  input,
+  paused,
+  onTelemetry,
+  onOpponentTelemetry,
+  onSuspensionTelemetry,
+}: DrivingSceneProps) {
   const { camera } = useThree();
   const simulation = useMemo(() => new VehicleSimulation(), []);
+  const opponentSimulation = useMemo(
+    () => new VehicleSimulation(undefined, undefined, simulation.track.opponentStartPose),
+    [simulation],
+  );
+  const opponentAI = useMemo(() => new SingleOpponentAI(opponentSimulation.track), [opponentSimulation]);
   const accumulator = useMemo(() => new FixedTimestepAccumulator(), []);
   const vehicleRef = useRef<THREE.Group>(null);
+  const opponentVehicleRef = useRef<THREE.Group>(null);
   const target = useMemo(() => new THREE.Vector3(), []);
   const desiredCamera = useMemo(() => new THREE.Vector3(), []);
   const forward = useMemo(() => new THREE.Vector3(), []);
   const telemetryClock = useRef(0);
   const suspensionRig = useRef<RapierChassisSuspension | null>(null);
+  const opponentSuspensionRig = useRef<RapierChassisSuspension | null>(null);
 
   useEffect(() => {
     let disposed = false;
 
-    void RapierChassisSuspension.create().then((rig) => {
+    void Promise.all([
+      RapierChassisSuspension.create(),
+      RapierChassisSuspension.create(),
+    ]).then(([playerRig, opponentRig]) => {
       if (disposed) {
-        rig.dispose();
+        playerRig.dispose();
+        opponentRig.dispose();
         return;
       }
 
-      const initialSnapshot = simulation.getRenderSnapshot(1);
-      rig.syncPlanarPose({
-        position: initialSnapshot.position,
-        velocity: initialSnapshot.velocity,
-        yawRad: initialSnapshot.yawRad,
-        yawRateRadS: initialSnapshot.yawRateRadS,
-      });
-      suspensionRig.current = rig;
+      syncRigFromSimulation(playerRig, simulation);
+      syncRigFromSimulation(opponentRig, opponentSimulation);
+      suspensionRig.current = playerRig;
+      opponentSuspensionRig.current = opponentRig;
     }).catch(() => {
       if (!disposed) {
         onSuspensionTelemetry(null);
@@ -99,23 +200,24 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
     return () => {
       disposed = true;
       suspensionRig.current?.dispose();
+      opponentSuspensionRig.current?.dispose();
       suspensionRig.current = null;
+      opponentSuspensionRig.current = null;
     };
-  }, [onSuspensionTelemetry]);
+  }, [onOpponentTelemetry, onSuspensionTelemetry, opponentSimulation, simulation]);
 
   useFrame((_, deltaSeconds) => {
     if (input.consumeReset()) {
       simulation.reset();
+      opponentSimulation.reset();
+      opponentAI.reset();
       input.resetSteering();
       const rig = suspensionRig.current;
+      const opponentRig = opponentSuspensionRig.current;
       rig?.reset();
-      const resetSnapshot = simulation.getRenderSnapshot(1);
-      rig?.syncPlanarPose({
-        position: resetSnapshot.position,
-        velocity: resetSnapshot.velocity,
-        yawRad: resetSnapshot.yawRad,
-        yawRateRadS: resetSnapshot.yawRateRadS,
-      });
+      opponentRig?.reset();
+      if (rig) syncRigFromSimulation(rig, simulation);
+      if (opponentRig) syncRigFromSimulation(opponentRig, opponentSimulation);
     }
 
     let alpha = 0;
@@ -123,63 +225,26 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
       const frameInput = input.sample(deltaSeconds);
       let stepIndex = 0;
       const result = accumulator.advance(deltaSeconds, (dt) => {
-        simulation.step(
-          {
-            ...frameInput,
-            shiftUp: stepIndex === 0 && frameInput.shiftUp,
-            shiftDown: stepIndex === 0 && frameInput.shiftDown,
-          },
-          dt,
-        );
-        const rig = suspensionRig.current;
-        if (rig) {
-          const rapierSnapshot = rig.getSnapshot();
-          const surface = sampleTestTrackSurface({
-            x: rapierSnapshot.position.x,
-            z: rapierSnapshot.position.z,
-          });
-          rig.step(dt, {
-            steeringInput: frameInput.steering,
-            rearDriveTorqueNm: simulation.current.driveTorqueNm,
-            engineBrakeTorqueNm: simulation.current.engineBrakeTorqueNm,
-            brakeForceN: simulation.current.brake * simulation.config.maxBrakeForceN,
-            surfaceGripMultiplier: surface.gripMultiplier,
-            surfaceDragMultiplier: surface.dragMultiplier,
-          });
-          const updatedRapierSnapshot = rig.getSnapshot();
-          const tireStates = rig.getWheelTireStates();
-          const drivenWheelAngularSpeedRadS = (
-            tireStates.rearLeft.wheelAngularSpeedRadS
-            + tireStates.rearRight.wheelAngularSpeedRadS
-          ) * 0.5;
-          simulation.synchronizeFromExternalPose({
-            position: {
-              x: updatedRapierSnapshot.position.x,
-              z: updatedRapierSnapshot.position.z,
-            },
-            velocity: {
-              x: updatedRapierSnapshot.linearVelocity.x,
-              z: updatedRapierSnapshot.linearVelocity.z,
-            },
-            yawRad: rapierRotationToPhysicsYaw(updatedRapierSnapshot.rotation),
-            yawRateRadS: -updatedRapierSnapshot.angularVelocity.y,
-            drivenWheelAngularSpeedRadS,
-          }, dt);
-        }
+        const playerInput = {
+          ...frameInput,
+          shiftUp: stepIndex === 0 && frameInput.shiftUp,
+          shiftDown: stepIndex === 0 && frameInput.shiftDown,
+        };
+        const aiInput = opponentAI.update({
+          ...opponentSimulation.current,
+          maxGear: opponentSimulation.config.gearRatios.length,
+        }, dt);
+        stepSimulationWithRig(simulation, suspensionRig.current, playerInput, dt);
+        stepSimulationWithRig(opponentSimulation, opponentSuspensionRig.current, aiInput, dt);
         stepIndex += 1;
       });
       alpha = result.alpha;
     }
 
     const snapshot = simulation.getRenderSnapshot(alpha);
-    if (vehicleRef.current) {
-      const rapierTelemetry = suspensionRig.current?.getTelemetry();
-      const visualHeight = rapierTelemetry
-        ? rapierTelemetry.chassisHeightM - rapierTelemetry.referenceRideHeightM
-        : 0;
-      vehicleRef.current.position.set(snapshot.position.x, visualHeight, snapshot.position.z);
-      vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
-    }
+    const opponentSnapshot = opponentSimulation.getRenderSnapshot(alpha);
+    updateVehicleModel(vehicleRef, snapshot, suspensionRig.current);
+    updateVehicleModel(opponentVehicleRef, opponentSnapshot, opponentSuspensionRig.current);
 
     forward.set(Math.sin(snapshot.yawRad), 0, -Math.cos(snapshot.yawRad));
     desiredCamera.set(
@@ -199,6 +264,7 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
     if (telemetryClock.current >= 0.1) {
       telemetryClock.current = 0;
       onTelemetry(simulation.getTelemetry());
+      onOpponentTelemetry(opponentSimulation.getTelemetry());
       onSuspensionTelemetry(suspensionRig.current?.getTelemetry() ?? null);
     }
   });
@@ -210,7 +276,8 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
       <ambientLight intensity={1.1} />
       <directionalLight position={[-12, 18, 10]} intensity={2.2} castShadow />
       <TestTrackVisual />
-      <VehicleModel groupRef={vehicleRef} />
+      <VehicleModel groupRef={vehicleRef} color="#d92f4f" />
+      <VehicleModel groupRef={opponentVehicleRef} color="#27b8d6" />
     </>
   );
 }
