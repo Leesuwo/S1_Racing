@@ -2,15 +2,16 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S1 Racing — Milestone 1E",
-    "subtitle": "120Hz 구동계·공력·결정적 물리 검증",
+    "title": "S1 Racing — Milestone 1F",
+    "subtitle": "입력 프리셋·반복 가능한 테스트 트랙·경계 검증",
     "output": "s1-racing-foundation.html"
   },
   "components": [
     { "id": "browser", "type": "external", "label": "플레이어 브라우저", "sublabel": "Chrome / Safari", "pos": [40, 280], "size": [160, 64] },
     { "id": "app_shell", "type": "frontend", "label": "React 앱 셸", "sublabel": "Vite 진입점 + 상태 UI", "pos": [250, 280], "size": [170, 64] },
     { "id": "renderer", "type": "frontend", "label": "R3F 캔버스", "sublabel": "Three.js 렌더링 셸", "pos": [470, 280], "size": [165, 64] },
-    { "id": "input_boundary", "type": "frontend", "label": "입력 경계", "sublabel": "BrowserVehicleInput", "pos": [250, 120], "size": [150, 64] },
+    { "id": "input_boundary", "type": "frontend", "label": "입력 경계", "sublabel": "BrowserVehicleInput", "pos": [250, 120], "size": [150, 64], "tag": "M1F" },
+    { "id": "input_presets", "type": "frontend", "label": "입력 프리셋", "sublabel": "키보드·마우스·패드·휠", "pos": [40, 120], "size": [170, 64], "tag": "M1F" },
     { "id": "vehicle_input", "type": "messagebus", "label": "차량 제어 입력", "sublabel": "VehicleControlInput 계약", "pos": [470, 120], "size": [180, 64], "tag": "공유 경계" },
     { "id": "fixed_loop", "type": "backend", "label": "고정 타임스텝", "sublabel": "120Hz 누적기", "pos": [690, 280], "size": [165, 64], "tag": "120Hz 실행" },
     { "id": "physics_domain", "type": "backend", "label": "차량 물리 도메인", "sublabel": "VehiclePhysics + Simulation", "pos": [900, 280], "size": [180, 64], "tag": "M1D/M1E" },
@@ -21,18 +22,24 @@
     { "id": "aero_model", "type": "backend", "label": "공력 모델", "sublabel": "전후 다운포스·속도 반대 드래그", "pos": [1340, 200], "size": [170, 64], "tag": "M1E 완료" },
     { "id": "render_snapshot", "type": "messagebus", "label": "렌더링 스냅샷", "sublabel": "Rapier pose + 차체 높이", "pos": [1340, 120], "size": [170, 64] },
     { "id": "telemetry", "type": "database", "label": "텔레메트리 HUD", "sublabel": "속도·RPM·G값·조향", "pos": [1330, 280], "size": [170, 64] },
-    { "id": "test_harness", "type": "cloud", "label": "테스트 하네스", "sublabel": "PhysicsValidation + Vitest + Playwright", "pos": [690, 500], "size": [165, 64], "tag": "M1E" },
+    { "id": "track_data", "type": "backend", "label": "테스트 트랙 데이터", "sublabel": "구간·노면·마커·체크포인트", "pos": [470, 420], "size": [190, 64], "tag": "M1F" },
+    { "id": "track_world", "type": "frontend", "label": "트랙 월드 표시", "sublabel": "TestTrackVisual", "pos": [690, 120], "size": [165, 64], "tag": "M1F" },
+    { "id": "test_harness", "type": "cloud", "label": "테스트 하네스", "sublabel": "PhysicsValidation + Vitest + Playwright", "pos": [690, 500], "size": [165, 64], "tag": "M1F" },
     { "id": "project_docs", "type": "cloud", "label": "프로젝트 계약", "sublabel": "AGENTS.md + docs/", "pos": [900, 500], "size": [160, 64] }
   ],
   "boundaries": [
-    { "kind": "region", "label": "브라우저 런타임", "wraps": ["browser", "app_shell", "renderer", "input_boundary", "vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "aero_model", "render_snapshot", "telemetry"] },
-    { "kind": "security-group", "label": "순수 도메인 경계", "wraps": ["vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "aero_model", "render_snapshot", "telemetry"] }
+    { "kind": "region", "label": "브라우저 런타임", "wraps": ["browser", "app_shell", "renderer", "input_boundary", "input_presets", "vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "aero_model", "render_snapshot", "telemetry", "track_world"] },
+    { "kind": "security-group", "label": "순수 도메인 경계", "wraps": ["vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "aero_model", "render_snapshot", "telemetry", "track_data"] }
   ],
   "connections": [
     { "from": "browser", "to": "app_shell", "label": "페이지 로드", "variant": "emphasis", "labelDy": -26 },
     { "from": "app_shell", "to": "renderer", "label": "캔버스 셸" },
+    { "from": "input_presets", "to": "input_boundary", "label": "장치별 프리셋", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [225, 198] },
     { "from": "input_boundary", "to": "vehicle_input", "label": "입력 정규화", "variant": "security", "labelDy": 56 },
-    { "from": "vehicle_input", "to": "fixed_loop", "label": "고정 스텝 입력", "fromSide": "right", "toSide": "top", "labelDy": -42 },
+    { "from": "track_data", "to": "physics_domain", "label": "노면·구간·리셋 포즈", "variant": "security", "fromSide": "top", "toSide": "bottom", "labelAt": [795, 425] },
+    { "from": "track_data", "to": "track_world", "label": "마커·경계 시각화", "variant": "dashed", "fromSide": "right", "toSide": "bottom", "labelAt": [675, 358] },
+    { "from": "track_world", "to": "renderer", "label": "월드 표시", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [735, 198] },
+    { "from": "vehicle_input", "to": "fixed_loop", "label": "고정 스텝 입력", "fromSide": "right", "toSide": "top", "labelAt": [711, 198] },
     { "from": "fixed_loop", "to": "physics_domain", "label": "120Hz 스텝", "variant": "emphasis", "labelDy": -26 },
     { "from": "fixed_loop", "to": "rapier_suspension", "label": "120Hz 접지 스텝", "variant": "emphasis", "fromSide": "top", "toSide": "bottom", "labelAt": [881, 198] },
     { "from": "physics_domain", "to": "drivetrain", "label": "기어·RPM·토크 명령", "variant": "emphasis", "fromSide": "right", "toSide": "left", "labelAt": [1100, 278] },
@@ -49,11 +56,12 @@
     { "from": "tire_model", "to": "telemetry", "label": "슬립·그립 사용률", "variant": "dashed", "labelDy": 56 },
     { "from": "drivetrain", "to": "telemetry", "label": "RPM·구동력", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [1280, 278] },
     { "from": "test_harness", "to": "fixed_loop", "label": "결정적 검사", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [765, 578] },
+    { "from": "test_harness", "to": "track_data", "label": "반복·경계 검사", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [760, 475] },
     { "from": "project_docs", "to": "physics_domain", "label": "계약 적용", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [975, 578] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "Milestone 1E", "items": ["M1D 구동계 토크·엔진 브레이크", "전후 다운포스·속도 반대 드래그", "결정적 물리 검증·Rapier yaw 회귀"] },
+    { "dot": "cyan", "title": "Milestone 1F", "items": ["네 입력 프리셋·공통 VehicleControlInput", "데이터 기반 구간·노면·브레이크 마커", "리셋·외곽 경계·반복 실행 검증"] },
     { "dot": "emerald", "title": "아키텍처 규칙", "items": ["물리는 React와 R3F에서 독립", "플레이어와 AI가 VehicleControlInput 공유", "렌더링은 읽기 전용 스냅샷 사용"] },
-    { "dot": "rose", "title": "다음 경계", "items": ["입력 프리셋·반복 가능한 테스트 트랙", "단일 AI와 공유 VehicleControlInput", "다차량·퀄리파잉·레이스 전략"] }
+    { "dot": "rose", "title": "다음 경계", "items": ["단일 AI와 공유 VehicleControlInput", "다차량·퀄리파잉·레이스 전략", "트랙 리밋·접촉 모델"] }
   ]
 }

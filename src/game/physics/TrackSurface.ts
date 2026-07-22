@@ -4,6 +4,11 @@ import {
   type Vec2,
   type VehicleSurface,
 } from "./VehiclePhysics";
+import {
+  sampleTestTrackLocation as sampleTrackLocationData,
+  TEST_TRACK_DATA,
+  type TestTrackLocation,
+} from "../../tracks/TestTrack";
 
 export interface TrackDimensions {
   outerHalfWidthM: number;
@@ -13,10 +18,7 @@ export interface TrackDimensions {
 }
 
 export const TEST_TRACK_DIMENSIONS: TrackDimensions = {
-  outerHalfWidthM: 22,
-  outerHalfLengthM: 14,
-  innerHalfWidthM: 13,
-  innerHalfLengthM: 6,
+  ...TEST_TRACK_DATA.surfaceLayout,
 };
 
 export function isOnTestTrackAsphalt(
@@ -38,4 +40,21 @@ export function sampleTestTrackSurface(
   dimensions: TrackDimensions = TEST_TRACK_DIMENSIONS,
 ): VehicleSurface {
   return isOnTestTrackAsphalt(position, dimensions) ? ASPHALT_SURFACE : GRASS_SURFACE;
+}
+
+export function sampleTrackSurface(
+  position: Vec2,
+  track = TEST_TRACK_DATA,
+): VehicleSurface {
+  return sampleTrackLocationData(position, track).surface === "asphalt"
+    ? ASPHALT_SURFACE
+    : GRASS_SURFACE;
+}
+
+export function sampleTestTrackLocation(position: Vec2): TestTrackLocation {
+  return sampleTestTrackLocationData(position);
+}
+
+function sampleTestTrackLocationData(position: Vec2, track = TEST_TRACK_DATA): TestTrackLocation {
+  return sampleTrackLocationData(position, track);
 }

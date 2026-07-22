@@ -13,7 +13,7 @@
 
 ## Current implementation stage
 
-Milestone 0 — Project Foundation을 완료했고, 현재는 `Physics Prototype v0.1`을 구현한다.
+Milestone 1F — Input presets and test track을 완료했고, 현재 다음은 `Milestone 2A — Single AI opponent`다.
 
 현재 프로토타입에는 다음이 포함된다:
 
@@ -22,7 +22,8 @@ Milestone 0 — Project Foundation을 완료했고, 현재는 `Physics Prototype
 - 가속·제동·조향·8단 기어·RPM
 - 아스팔트·잔디 표면 그립 차이
 - 테스트 트랙·추적 카메라·텔레메트리 HUD
-- 키보드와 Pointer Lock 기반 마우스 입력
+- 키보드·Pointer Lock 마우스·게임패드·휠 입력 프리셋
+- 데이터 기반 테스트 트랙 구간·노면·브레이크 마커·체크포인트·경계 판정
 
 이 프로토타입의 수치는 `initial_assumption`이며 실제 특정 차량을 재현하는 값으로 표현하지 않는다.
 
@@ -42,6 +43,10 @@ Milestone 0은 Project Foundation이다. 이번 단계에는 차량 물리, AI, 
 - 단위 테스트, 프로덕션 빌드, 브라우저 smoke test
 - 구현 명세와 검증 계획 문서
 
+## Milestone 1F scope (completed)
+
+Milestone 1F에서는 공통 `VehicleControlInput` 경계를 유지하면서 입력 프리셋과 반복 가능한 테스트 트랙 콘텐츠를 추가했다. AI·다차량·퀄리파잉·레이스 운영은 다음 기능 단계의 범위다.
+
 ## Architecture
 
 - 물리 계층은 React, React Three Fiber, Zustand에 의존하지 않는다.
@@ -52,10 +57,17 @@ Milestone 0은 Project Foundation이다. 이번 단계에는 차량 물리, AI, 
 - 튜닝 가능한 값은 타입이 있는 설정 파일에 둔다.
 - 트랙별 예외를 범용 AI 컨트롤러에 하드코딩하지 않는다.
 
+## Project-local Codex skill
+
+- 프로젝트 전용 게임 스킬은 `.agents/skills/s1-racing-game-studio/SKILL.md`에 둔다.
+- React/R3F/Three.js/WebGL, HUD, 카메라, 자산 로딩, 브라우저 플레이테스트, 게임 라이브러리 의사결정에는 이 스킬을 사용한다.
+- 이 스킬은 공식 `game-studio` 전문 스킬을 라우팅하지만, S1 Racing의 직접 Rapier 브리지와 `npm run verify` 완료 게이트를 우선한다.
+- `.agents/`에는 프로젝트 지침만 두며 글로벌 인증 정보, 영구 훅, 개인별 설정을 복사하지 않는다.
+
 ## Workflow
 
 - 작은 검토 가능한 마일스톤으로 작업한다.
-- 여러 에이전트를 사용할 때는 `docs/agent-orchestration/README.md`와 `docs/agent-orchestration/roles/*.md`의 작업 패킷, 파일 소유권, QA 보고 형식을 따른다. 프로젝트 custom agent 설정은 `.codex/agents/*.toml`을 목표 위치로 하며, 현재 실행 환경에서는 템플릿만 검토한다.
+- 여러 에이전트를 사용할 때는 `docs/agent-orchestration/README.md`와 `docs/agent-orchestration/roles/*.md`의 작업 패킷, 파일 소유권, QA 보고 형식을 따른다. 프로젝트 custom agent 설정은 `.codex/agents/*.toml`을 목표 위치로 하며, 현재 실행 환경에서는 템플릿만 검토한다. 게임 관련 작업은 `.agents/skills/s1-racing-game-studio/SKILL.md`의 스택·검증 규칙도 적용한다.
 - 기본 병렬 배치는 구현 에이전트 1개와 읽기 전용 QA 1개다. 파일 소유권이 겹치지 않는 독립 작업만 최대 3개까지 병렬 실행한다.
 - `src/app/**`, `package.json`, 공통 입력 경계, 물리 스냅샷, `docs/architecture/**`는 Lead가 명시적으로 예약하지 않으면 병렬 수정하지 않는다.
 - 모든 코드·문서 변경 후 `npm run verify`를 실행한다. 이 명령은 타입 검사, 단위 테스트, 아키텍처 검증, 프로덕션 빌드, 브라우저 E2E를 순서대로 실행한다.

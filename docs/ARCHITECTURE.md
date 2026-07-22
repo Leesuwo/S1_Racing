@@ -10,6 +10,8 @@ src/
 │  ├─ input/  차량 입력 경계
 │  ├─ physics/ 순수 차량 물리·표면·시뮬레이션
 │  └─ vehicle/ 향후 차량 도메인 코드
+├─ tracks/     데이터 기반 구간·노면·마커·체크포인트
+├─ world/      트랙 데이터 기반 R3F 월드 표시
 ├─ rendering/ 향후 Three.js/R3F 표시 계층
 ├─ state/     메뉴·세션 상태
 ├─ telemetry/ 향후 수치 기록
@@ -29,7 +31,7 @@ rendering → read-only snapshots
 
 ```text
 input devices
-→ BrowserVehicleInput
+→ BrowserVehicleInput / InputPreset
 → VehicleControlInput
 → FixedTimestepAccumulator
 → VehicleSimulation / VehiclePhysics
@@ -37,6 +39,8 @@ input devices
 → RapierChassisSuspension (차체·접지·공력 적분)
 → immutable/read-only render snapshot
 → R3F canvas + telemetry HUD
+
+`TestTrack.ts`는 트랙 판정 데이터의 단일 원본이며 `TrackSurface`와 `TestTrackVisual`이 함께 읽는다. 리셋은 데이터의 시작 포즈를 사용하고, 외곽 경계 판정은 HUD 텔레메트리에 전달한다.
 ```
 
 ## 테스트 경계
@@ -44,5 +48,5 @@ input devices
 - 단위 테스트: 순수 시간·입력·수학 함수
 - 통합 테스트: Rapier 접지점 타이어 힘, 구동 토크·엔진 브레이크, 공력, 차량 상태
 - 자동 물리 검증: 직선 가속·코스트다운·공력 스케일·유한 상태
-- E2E: 앱 부팅, 캔버스, W 입력 가속, 조향·타이어 슬립 HUD
+- E2E: 앱 부팅, 입력 프리셋, 즉시 W 입력, 리셋, 트랙 경계·조향·타이어 슬립 HUD
 - 성능 테스트: 20대 레이스와 최악 환경에서 별도 실행

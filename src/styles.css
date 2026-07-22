@@ -57,6 +57,8 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 6vw, 4.5rem); line-height: 0.95; l
 .rpm-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #35d7a2, #ffcf5b 72%, #ff667f); }
 .surface-readout { display: flex; align-items: baseline; gap: 8px; }
 .surface-readout strong { color: #35d7a2; font-size: 0.76rem; }
+.track-status--valid { color: #35d7a2 !important; }
+.track-status--off { color: #ff748c !important; }
 .wheel-load-readout { grid-column: 1 / -1; }
 .wheel-load-readout > span { display: block; margin-bottom: 6px; color: #8e9bad; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.1em; }
 .wheel-load-readout > div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; color: #c8d0dc; font-size: 0.68rem; }
@@ -64,6 +66,9 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 6vw, 4.5rem); line-height: 0.95; l
 
 .simulation-toolbar { position: absolute; right: 20px; bottom: 18px; display: flex; align-items: center; gap: 12px; color: #9aa6b8; font-size: 0.72rem; }
 .simulation-toolbar button { color: #bcefe0; border-color: #2d8a71; background: #12342e; }
+.input-preset-control { display: flex; align-items: center; gap: 8px; }
+.input-preset-control span { color: #9aa6b8; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; }
+.input-preset-control select { border: 1px solid #49566b; border-radius: 999px; padding: 8px 28px 8px 11px; color: #f4f6fb; background: #161d28; }
 
 .telemetry-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
 .telemetry-grid article, .control-panel { border: 1px solid #1e2837; border-radius: 12px; background: #0d1119; }

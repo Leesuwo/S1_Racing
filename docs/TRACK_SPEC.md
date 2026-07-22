@@ -22,3 +22,19 @@ track_data.json
 ## Milestone 0
 
 트랙 자산과 지오메트리는 제외한다. 트랙 데이터 인터페이스는 실제 물리 계층이 필요해지는 시점에 추가한다.
+
+## Milestone 1F — 반복 가능한 테스트 트랙
+
+현재 프로토타입은 외부 자산 없이 `src/tracks/TestTrack.ts`의 `TEST_TRACK_DATA`를 트랙 원본으로 사용한다. 물리 표면 샘플러와 `src/world/TestTrackVisual.tsx`는 이 정의를 공유한다.
+
+데이터에는 다음 항목이 포함된다.
+
+- 외곽 경계와 인필드 잔디 경계
+- 스타트 직선·우측 코너·백 스트레이트·좌측 코너
+- 스타트/피니시, 100m·50m 브레이크 마커
+- 순서가 고정된 네 개 체크포인트
+- 시작 위치와 yaw
+
+`sampleTestTrackLocation()`은 `asphalt`, `grass`, `off-track` 상태를 결정한다. 인필드 잔디와 외곽 경계 바깥은 주행 표면 이탈로 판정하며, 외곽 경계 바깥은 `off-track`으로 구분한다. `distanceToBoundaryM`은 경계 안에서는 가장 가까운 외곽 경계까지의 양수 거리, 바깥에서는 이탈 거리의 음수 값이다.
+
+현재 사각 루프의 좌표와 수치는 콘텐츠 검증을 위한 `initial_assumption`이며 실제 특정 서킷을 복제하지 않는다.

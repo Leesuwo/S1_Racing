@@ -28,18 +28,19 @@ VehicleControlInput
 
 ## 현재 상태
 
-`Physics Prototype v0.1`의 평면 기준 모델과 Milestone 1E의 Rapier 강체 경로를 함께 구현했다. `Drivetrain`과 `AeroModel`은 순수 TypeScript로 토크·RPM·엔진 브레이크·전후 다운포스·드래그를 계산하고, `RapierChassisSuspension`이 접지점과 차체에 적용한다.
+`Physics Prototype v0.1`의 평면 기준 모델과 Milestone 1F의 Rapier 강체 경로를 함께 구현했다. `Drivetrain`과 `AeroModel`은 순수 TypeScript로 토크·RPM·엔진 브레이크·전후 다운포스·드래그를 계산하고, `RapierChassisSuspension`이 접지점과 차체에 적용한다. 트랙 노면과 경계는 `TEST_TRACK_DATA`에서 샘플링한다.
 
 현재 프로토타입은 실제 특정 차량을 재현하지 않으며, 검증 가능한 주행 감각을 확보하기 위한 `initial_assumption`이다. 실제 트랙 충돌·연석·벽 접촉은 후속 단계에서 추가한다.
 
 검증 우선순위는 고정 스텝 → 차체 안정성 → 휠 운동학 → 서스펜션 → 타이어 힘 → 구동계 → 공력 순서다.
 
-## Milestone 1D/1E 검증 게이트
+## Milestone 1D/1E/1F 검증 게이트
 
 - 1단·8단 기어비가 동일 휠 속도의 RPM·토크를 다르게 만든다.
 - 주행 중 스로틀 해제는 엔진 브레이크를 만들고 정지 상태에서는 만들지 않는다.
 - 속도 2배에서 전후 다운포스·드래그가 약 4배가 된다.
 - 자동 직선 가속·코스트다운·공력 스케일·유한 상태 검증이 통과한다.
+- 입력 프리셋의 공통 입력 변환, 데이터 기반 시작 포즈·구간·경계 판정, 리셋 E2E가 통과한다.
 
 ## 다음 확장
 

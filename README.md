@@ -4,9 +4,9 @@
 
 ## 현재 단계
 
-**Milestone 1E — Aero and validation**
+**Milestone 1F — Input presets and test track**
 
-Milestone 0 기반 위에 120Hz 고정 스텝 차량 물리, 테스트 트랙, 키보드·마우스 입력, 추적 카메라, 텔레메트리 HUD를 구현했습니다. Rapier 4륜 접지 리그에 구동계 토크·엔진 브레이크·전후 다운포스·드래그와 휠별 타이어 종·횡력을 적용합니다. 입력 프리셋·AI·레이스 운영은 아직 구현하지 않습니다.
+Milestone 0 기반 위에 120Hz 고정 스텝 차량 물리, 데이터 기반 테스트 트랙, 키보드·마우스·게임패드·휠 입력 프리셋, 추적 카메라, 텔레메트리 HUD를 구현했습니다. Rapier 4륜 접지 리그에 구동계 토크·엔진 브레이크·전후 다운포스·드래그와 휠별 타이어 종·횡력을 적용합니다. AI·레이스 운영은 아직 구현하지 않습니다.
 
 ## 기술 스택
 
@@ -70,13 +70,13 @@ npx playwright install chromium
 - `docs/BROWSER_SUPPORT_MATRIX.md`: 브라우저·기기 지원 범위
 - `docs/ARCHITECTURE.md`: 코드 경계
 - `docs/ROADMAP.md`: 마일스톤 순서
-- `docs/MILESTONE_1D.md`, `docs/MILESTONE_1E.md`: 완료된 물리 마일스톤 계약과 검증 결과
+- `docs/MILESTONE_1D.md`, `docs/MILESTONE_1E.md`, `docs/MILESTONE_1F.md`: 완료된 마일스톤 계약과 검증 결과
 - `docs/DECISIONS.md`: 결정 이력
 - `docs/architecture/`: Archify 아키텍처 원본 JSON과 생성 HTML
 
 ## 다음 마일스톤
 
-Milestone 1F — 입력 프리셋과 반복 가능한 테스트 트랙 콘텐츠를 공통 `VehicleControlInput` 경계로 확장합니다. 이후 단일 AI, 다차량 세션, 퀄리파잉, 레이스 전략 순서로 진행합니다. 상세 순서는 [로드맵](./docs/ROADMAP.md)을 따릅니다.
+Milestone 2A — 플레이어와 동일한 `VehicleControlInput` 경계를 사용하는 단일 AI 상대를 추가합니다. 상세 순서는 [로드맵](./docs/ROADMAP.md)을 따릅니다.
 
 ## 아키텍처 다이어그램
 

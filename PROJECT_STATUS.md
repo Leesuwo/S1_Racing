@@ -3,9 +3,9 @@
 ## 기준선
 
 - 제품: S1 Racing
-- 작업 기준일: 2026-07-19
-- 저장소 문서상 완료 상태: Milestone 1E — Aero and validation
-- 다음 기능 마일스톤: Milestone 1F — Input presets and test track
+- 작업 기준일: 2026-07-22
+- 저장소 문서상 완료 상태: Milestone 1F — Input presets and test track
+- 다음 기능 마일스톤: Milestone 2A — Single AI opponent
 - 현재 오케스트레이션 상태: 대기 중인 기능 작업 없음
 
 ## 완료된 기반
@@ -15,17 +15,18 @@
 - Rapier 4륜 접지, 휠별 타이어 힘, 구동계, 공력
 - 키보드·Pointer Lock 입력, 추적 카메라, 텔레메트리 HUD
 - 단위 테스트, 결정적 물리 검증, 아키텍처 검증, 프로덕션 빌드, 브라우저 E2E
+- 키보드·마우스·게임패드·휠 입력 프리셋과 시작 포즈 리셋
+- 데이터 기반 테스트 트랙 구간·노면·브레이크 마커·체크포인트·외곽 경계 판정
 
 ## 현재 제한
 
-- 입력 프리셋과 반복 가능한 트랙 콘텐츠는 다음 마일스톤의 범위다.
 - AI, 다차량 세션, 퀄리파잉, 레이스 운영은 아직 구현하지 않는다.
 - 실제 차량 재현을 주장하지 않는 `initial_assumption` 물리 수치를 사용한다.
 - 실제 트랙 복제, 공식 브랜드·팀·드라이버·리버리 자산을 사용하지 않는다.
 
 ## 알려진 문서 정합성 위험
 
-`README.md`와 `docs/ROADMAP.md`는 Milestone 1E 완료를 현재 상태로 기록하지만, `AGENTS.md`와 `CODEX_START_PROMPT.md`에는 Milestone 0 기준 문구가 남아 있다. 오케스트레이터는 작업 범위를 정할 때 `AGENTS.md`의 제한을 우선 적용하고, 마일스톤 전환 시 이 문서들을 한 번에 정합화한다.
+`AGENTS.md`와 `CODEX_START_PROMPT.md`의 현재 단계 문구를 Milestone 1F 완료·Milestone 2A 다음 단계로 정합화했다.
 
 ## 검증 기준
 

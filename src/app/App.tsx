@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
+import { VEHICLE_INPUT_PRESETS, type VehicleInputPresetId } from "../game/input/InputPreset";
 import { zeroWheelValues } from "../game/physics/Suspension";
 import type { RapierSuspensionTelemetry } from "../game/physics/RapierChassisSuspension";
 import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
@@ -25,6 +26,10 @@ const INITIAL_TELEMETRY: VehicleTelemetry = {
   engineBrakeTorqueNm: 0,
   wheelLoadsN: zeroWheelValues(),
   wheelCompressionM: zeroWheelValues(),
+  trackSectionId: "start-straight",
+  trackSectionLabel: "스타트 직선",
+  onTrack: true,
+  distanceToBoundaryM: 4,
 };
 
 function formatNumber(value: number, digits = 0): string {
@@ -66,6 +71,18 @@ function AppTelemetry({
         <span>노면</span>
         <strong>{telemetry.surface === "asphalt" ? "아스팔트" : "잔디"}</strong>
       </div>
+      <div className="surface-readout">
+        <span>트랙 구간</span>
+        <strong>{telemetry.trackSectionLabel}</strong>
+      </div>
+      <div className="surface-readout">
+        <span>트랙 경계</span>
+        <strong className={telemetry.onTrack ? "track-status--valid" : "track-status--off"}>
+          {telemetry.onTrack
+            ? `유효 · ${formatNumber(telemetry.distanceToBoundaryM, 1)} m`
+            : "이탈 · 리셋 권장"}
+        </strong>
+      </div>
       <div className="wheel-load-readout">
         <span>휠 하중 / N</span>
         <div>
@@ -93,6 +110,7 @@ export function App() {
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
   const [suspensionTelemetry, setSuspensionTelemetry] = useState<RapierSuspensionTelemetry | null>(null);
   const input = useMemo(() => new BrowserVehicleInput(window), []);
+  const [inputPreset, setInputPreset] = useState<VehicleInputPresetId>(() => input.getPreset());
 
   useEffect(() => {
     input.connect();
@@ -113,9 +131,9 @@ export function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">S1 RACING / MILESTONE 1E · 공력 검증</p>
+          <p className="eyebrow">S1 RACING / MILESTONE 1F · 입력·트랙 검증</p>
           <h1>S1 Racing</h1>
-          <p className="subtitle">고정 120Hz 차량 물리 테스트 트랙</p>
+          <p className="subtitle">반복 가능한 120Hz 차량 물리 테스트 트랙</p>
         </div>
         <span className={`status-chip ${paused ? "status-chip--paused" : ""}`}>
           {paused ? "일시정지" : "주행 준비"}
@@ -151,10 +169,29 @@ export function App() {
           <>
             <AppTelemetry telemetry={telemetry} suspensionTelemetry={suspensionTelemetry} />
             <div className="simulation-toolbar">
+              <label className="input-preset-control">
+                <span>입력 프리셋</span>
+                <select
+                  aria-label="입력 프리셋"
+                  value={inputPreset}
+                  onChange={(event) => {
+                    const preset = event.target.value as VehicleInputPresetId;
+                    input.setPreset(preset);
+                    setInputPreset(preset);
+                  }}
+                >
+                  {VEHICLE_INPUT_PRESETS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>{preset.label}</option>
+                  ))}
+                </select>
+              </label>
               <button type="button" onClick={() => input.requestPointerLock()}>
                 마우스 조향 활성화
               </button>
-              <span>R 리셋 · 클릭 변속 · W/S 가속·브레이크</span>
+              <button type="button" onClick={() => input.requestReset()}>
+                트랙 시작점으로 리셋
+              </button>
+              <span>R 리셋 · 클릭/범퍼 변속 · W/S 또는 페달</span>
             </div>
           </>
         )}
@@ -235,7 +272,7 @@ export function App() {
       <section className="control-panel" aria-label="조작 안내">
         <div>
           <span>기본 조작</span>
-          <strong>W/S 가속·브레이크 · A/D 키보드 조향</strong>
+          <strong>프리셋 선택 · W/S 가속·브레이크 · A/D 키보드 조향</strong>
         </div>
         <div>
           <span>마우스 조향</span>
@@ -243,7 +280,7 @@ export function App() {
         </div>
         <div>
           <span>물리 상태</span>
-          <strong>Rapier 접지점 타이어 힘 + 4휠 레이캐스트 · 120Hz 고정 스텝</strong>
+          <strong>데이터 기반 구간·노면·브레이크 마커 · 120Hz 고정 스텝</strong>
         </div>
       </section>
     </main>

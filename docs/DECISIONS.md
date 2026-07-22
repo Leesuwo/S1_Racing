@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-07-22 — D-015
+
+**결정:** Milestone 1F의 입력 프리셋과 테스트 트랙은 각각 `BrowserVehicleInput`과 `src/tracks/TestTrack.ts`를 단일 브라우저·데이터 경계로 사용한다. 입력 장치는 `VehicleControlInput`만 출력하고, 물리 표면 샘플러와 R3F 월드 시각화는 같은 트랙 정의를 읽는다.
+
+**이유:** 입력 장치별 처리를 물리 계층에 분산하면 AI·게임패드·휠을 연결할 때 결정성과 검증 책임이 흐려진다. 트랙 형상과 노면 판정을 렌더링 코드와 물리 코드에 중복하면 경계·마커·리셋 위치가 어긋날 수 있다.
+
+**검증:** 게임패드 변속 상승 에지, 휠 축 캘리브레이션, 시작 포즈 리셋, 구간·체크포인트 순서, 외곽 경계 이탈 HUD를 Vitest와 Playwright로 검증한다.
+
+## 2026-07-22 — D-016
+
+**결정:** 공식 `game-studio`의 S1 Racing 적용 규칙을 프로젝트 로컬 스킬 `.agents/skills/s1-racing-game-studio/`로 설치하고, 현재 런타임 스택에는 `@react-three/drei`만 추가한다. React/R3F/Three.js와 직접 연결한 `@dimforge/rapier3d-compat` 브리지는 유지하며, Phaser·PixiJS·Babylon.js·PlayCanvas·Howler·Colyseus는 각 기능의 별도 마일스톤 전까지 추가하지 않는다.
+
+**이유:** 프로젝트 지침과 검증 게이트를 레포에 함께 보존해야 다른 작업 세션에서도 동일한 게임 개발 기준을 재현할 수 있다. `@react-three/drei`는 기존 R3F 구조에 선택적으로 결합되는 로더·카메라·환경 보조 라이브러리인 반면, 다른 엔진이나 멀티플레이·오디오 라이브러리는 현재 Physics Prototype의 범위를 넓히고 마이그레이션 위험을 만든다.
+
+**검증:** 스킬 메타데이터 quick validation, `npm install` 및 `npm ls --depth=0`, `git diff --check`는 통과했다. `npm run verify`는 타입 검사·단위 테스트 47개·아키텍처 검사·빌드까지 통과했지만, 현재 작업 중인 `tests/e2e/smoke.spec.ts`의 키보드 프리셋과 트랙 이탈 시나리오 2개가 실패했다. 이번 변경은 게임 모듈 경계를 바꾸지 않으므로 Archify 다이어그램은 갱신하지 않는다.
+
 ## 2026-07-19 — D-014
 
 **결정:** S1 Racing의 모델 라우팅은 Lead `gpt-5.6-terra/high`, Writer·Explorer `gpt-5.6-luna/medium`, Physics·QA `gpt-5.6-terra/high`로 구성한다.

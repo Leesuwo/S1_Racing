@@ -1,4 +1,4 @@
-# Physics Prototype v0.6 / Milestone 1E
+# Physics Prototype v0.7 / Milestone 1F
 
 ## 목적
 
@@ -26,8 +26,10 @@
 - 속도 제곱 기반 다운포스·항력
 - 아스팔트와 잔디의 그립·저항 차이
 - 키보드 W/S/A/D와 Pointer Lock 마우스 조향
+- 게임패드 표준 축·트리거·범퍼 입력
+- 휠 축 캘리브레이션 기반 best-effort 입력
 - 좌클릭 업시프트·우클릭 다운시프트
-- 테스트 트랙과 추적 카메라
+- `TEST_TRACK_DATA` 기반 반복 가능한 테스트 트랙과 추적 카메라
 - 속도·RPM·기어·G값·다운포스·4개 휠 하중 텔레메트리
 - 결정적 직선 가속·코스트다운·공력 스케일·유한 상태 검증
 
@@ -45,6 +47,8 @@ BrowserVehicleInput
 ```
 
 `VehiclePhysics.ts`, `Drivetrain.ts`, `AeroModel.ts`, `Suspension.ts`, `TrackSurface.ts`, `VehicleSimulation.ts`는 React, R3F, Zustand, DOM을 import하지 않는다. 브라우저 이벤트는 `BrowserVehicleInput.ts`에서만 처리한다.
+
+`TestTrack.ts`가 구간·노면·브레이크 마커·체크포인트·시작 포즈의 단일 원본이다. 물리 표면 샘플러와 월드 표시가 이 데이터를 공유하며, 입력 프리셋 선택은 `VehicleControlInput` 경계를 변경하지 않는다.
 
 `RapierChassisSuspension.ts`, `WheelKinematics.ts`, `TireModel.ts`도 React/R3F/DOM을 import하지 않는다. M1C부터는 휠 운동학이 접지점 속도와 조향 방향을 계산하고, `TireModel.ts`가 순수 함수로 슬립·하중 민감도·결합 그립을 계산한다. M1D의 `Drivetrain.ts`는 후륜 토크·엔진 브레이크를 만들고 M1E의 `AeroModel.ts`는 전후 다운포스·드래그를 계산한다. 계산된 힘은 Rapier 차체의 실제 접지점과 차축·차체 중심에 적용되고, Rapier가 X/Z 위치·속도·yaw를 소유한다. `VehicleSimulation`은 입력·기어·RPM·공력 상태를 산출하고 Rapier 결과를 읽기 전용 렌더링 스냅샷으로 동기화한다.
 

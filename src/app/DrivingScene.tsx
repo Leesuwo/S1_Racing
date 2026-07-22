@@ -10,64 +10,13 @@ import {
 import { sampleTestTrackSurface } from "../game/physics/TrackSurface";
 import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
+import { TestTrackVisual } from "../world/TestTrackVisual";
 
 interface DrivingSceneProps {
   input: BrowserVehicleInput;
   paused: boolean;
   onTelemetry: (telemetry: VehicleTelemetry) => void;
   onSuspensionTelemetry: (telemetry: RapierSuspensionTelemetry | null) => void;
-}
-
-function TrackSurface() {
-  return (
-    <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-        <planeGeometry args={[58, 40]} />
-        <meshStandardMaterial color="#17271f" roughness={1} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.48, 0]}>
-        <planeGeometry args={[44, 28]} />
-        <meshStandardMaterial color="#303844" roughness={0.95} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.46, 0]}>
-        <planeGeometry args={[26, 12]} />
-        <meshStandardMaterial color="#1c3a2b" roughness={1} />
-      </mesh>
-
-      <mesh position={[0, -0.39, 6]}>
-        <boxGeometry args={[26, 0.08, 0.3]} />
-        <meshStandardMaterial color="#d6dbe0" roughness={0.8} />
-      </mesh>
-      <mesh position={[0, -0.39, -6]}>
-        <boxGeometry args={[26, 0.08, 0.3]} />
-        <meshStandardMaterial color="#d6dbe0" roughness={0.8} />
-      </mesh>
-      <mesh position={[13, -0.39, 0]}>
-        <boxGeometry args={[0.3, 0.08, 12]} />
-        <meshStandardMaterial color="#d6dbe0" roughness={0.8} />
-      </mesh>
-      <mesh position={[-13, -0.39, 0]}>
-        <boxGeometry args={[0.3, 0.08, 12]} />
-        <meshStandardMaterial color="#d6dbe0" roughness={0.8} />
-      </mesh>
-
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-10, -0.4, 10]}>
-        <planeGeometry args={[0.7, 8]} />
-        <meshBasicMaterial color="#f7f8fa" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-9.1, -0.4, 10]}>
-        <planeGeometry args={[0.35, 8]} />
-        <meshBasicMaterial color="#c9314a" />
-      </mesh>
-
-      {[-5, 0, 5].map((x) => (
-        <mesh key={x} rotation={[-Math.PI / 2, 0, 0]} position={[x, -0.4, 10]}>
-          <planeGeometry args={[0.12, 3]} />
-          <meshBasicMaterial color="#9ea7b3" />
-        </mesh>
-      ))}
-    </group>
-  );
 }
 
 function VehicleModel({ groupRef }: { groupRef: RefObject<THREE.Group | null> }) {
@@ -260,7 +209,7 @@ export function DrivingScene({ input, paused, onTelemetry, onSuspensionTelemetry
       <fog attach="fog" args={["#080b10", 35, 90]} />
       <ambientLight intensity={1.1} />
       <directionalLight position={[-12, 18, 10]} intensity={2.2} castShadow />
-      <TrackSurface />
+      <TestTrackVisual />
       <VehicleModel groupRef={vehicleRef} />
     </>
   );

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="generator" content="archify 2.11.0">
-  <title>S1 Racing — Milestone 1E Diagram</title>
+  <meta name="generator" content="archify 2.10.0">
+  <title>S1 Racing — Milestone 1F Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
     // see a dark flash. The toolbar script below re-applies with UI state.
@@ -525,14 +525,14 @@
     <div class="header">
       <div class="header-row">
         <div class="pulse-dot"></div>
-        <h1>S1 Racing — Milestone 1E</h1>
+        <h1>S1 Racing — Milestone 1F</h1>
       </div>
-      <p class="subtitle">120Hz 구동계·공력·결정적 물리 검증</p>
+      <p class="subtitle">입력 프리셋·반복 가능한 테스트 트랙·경계 검증</p>
     </div>
 
     <!-- Main Diagram -->
     <div class="diagram-container">
-      <svg viewBox="0 0 1580 632" role="img" aria-label="S1 Racing — Milestone 1E — 120Hz 구동계·공력·결정적 물리 검증 (architecture diagram)">
+      <svg viewBox="0 0 1580 632" role="img" aria-label="S1 Racing — Milestone 1F — 입력 프리셋·반복 가능한 테스트 트랙·경계 검증 (architecture diagram)">
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -559,13 +559,17 @@
         <rect x="10" y="90" width="1530" height="274" rx="12" class="c-region" stroke-width="1"/>
         <text x="18" y="108" class="t-cloud" font-size="9" font-weight="600">브라우저 런타임</text>
 
-        <rect x="440" y="90" width="1100" height="274" rx="8" class="c-security-group" stroke-width="1"/>
+        <rect x="440" y="90" width="1100" height="414" rx="8" class="c-security-group" stroke-width="1"/>
         <text x="448" y="108" class="t-security" font-size="9" font-weight="600">순수 도메인 경계</text>
 
         <!-- Connection paths (before components for correct z-order) -->
         <path d="M 200 312 L 250 312" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path d="M 420 312 L 470 312" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 210 152 L 250 152" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 400 152 L 470 152" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 565 420 L 769.5 420 Q 777.5 420 777.5 412 L 777.5 352 Q 777.5 344 785.5 344 L 990 344" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 660 452 L 708.25 452 Q 716.25 452 716.25 444 L 716.25 192 Q 716.25 184 724.25 184 L 772.5 184" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 772.5 184 L 670.5 184 Q 662.5 184 662.5 192 L 662.5 272 Q 662.5 280 654.5 280 L 552.5 280" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 650 152 L 703.25 152 Q 711.25 152 711.25 160 L 711.25 272 Q 711.25 280 719.25 280 L 772.5 280" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path d="M 855 312 L 900 312" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path d="M 772.5 280 L 873.25 280 Q 881.25 280 881.25 272 L 881.25 192 Q 881.25 184 889.25 184 L 990 184" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
@@ -583,6 +587,7 @@
         <path d="M 1300 312 L 1330 312" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 1300 232 L 1307.5 232 Q 1315 232 1315 239.5 L 1315 304.5 Q 1315 312 1322.5 312 L 1330 312" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 772.5 500 L 772.5 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 772.5 500 L 676.75 500 Q 668.75 500 668.75 492 L 668.75 492 Q 668.75 484 660.75 484 L 565 484" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 980 500 L 982.5 500 Q 985 500 985 497.5 L 985 346.5 Q 985 344 987.5 344 L 990 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Components -->
@@ -605,6 +610,13 @@
         <rect x="250" y="120" width="150" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
         <text x="325" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">입력 경계</text>
         <text x="325" y="166" class="t-muted" font-size="9" text-anchor="middle">BrowserVehicleInput</text>
+        <text x="325" y="176" class="t-frontend" font-size="7" text-anchor="middle">M1F</text>
+
+        <rect x="40" y="120" width="170" height="64" rx="6" class="c-mask"/>
+        <rect x="40" y="120" width="170" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+        <text x="125" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">입력 프리셋</text>
+        <text x="125" y="166" class="t-muted" font-size="9" text-anchor="middle">키보드·마우스·패드·휠</text>
+        <text x="125" y="176" class="t-frontend" font-size="7" text-anchor="middle">M1F</text>
 
         <rect x="470" y="120" width="180" height="64" rx="6" class="c-mask"/>
         <rect x="470" y="120" width="180" height="64" rx="6" class="c-messagebus" stroke-width="1.5"/>
@@ -664,11 +676,23 @@
         <text x="1415" y="310" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">텔레메트리 HUD</text>
         <text x="1415" y="326" class="t-muted" font-size="9" text-anchor="middle">속도·RPM·G값·조향</text>
 
+        <rect x="470" y="420" width="190" height="64" rx="6" class="c-mask"/>
+        <rect x="470" y="420" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+        <text x="565" y="450" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">테스트 트랙 데이터</text>
+        <text x="565" y="466" class="t-muted" font-size="9" text-anchor="middle">구간·노면·마커·체크포인트</text>
+        <text x="565" y="476" class="t-backend" font-size="7" text-anchor="middle">M1F</text>
+
+        <rect x="690" y="120" width="165" height="64" rx="6" class="c-mask"/>
+        <rect x="690" y="120" width="165" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+        <text x="772.5" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">트랙 월드 표시</text>
+        <text x="772.5" y="166" class="t-muted" font-size="9" text-anchor="middle">TestTrackVisual</text>
+        <text x="772.5" y="176" class="t-frontend" font-size="7" text-anchor="middle">M1F</text>
+
         <rect x="690" y="500" width="165" height="64" rx="6" class="c-mask"/>
         <rect x="690" y="500" width="165" height="64" rx="6" class="c-cloud" stroke-width="1.5"/>
         <text x="772.5" y="530" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">테스트 하네스</text>
         <text x="772.5" y="546" class="t-muted" font-size="9" text-anchor="middle">PhysicsValidation + Vitest + Playwright</text>
-        <text x="772.5" y="556" class="t-cloud" font-size="7" text-anchor="middle">M1E</text>
+        <text x="772.5" y="556" class="t-cloud" font-size="7" text-anchor="middle">M1F</text>
 
         <rect x="900" y="500" width="160" height="64" rx="6" class="c-mask"/>
         <rect x="900" y="500" width="160" height="64" rx="6" class="c-cloud" stroke-width="1.5"/>
@@ -680,10 +704,18 @@
         <text x="225" y="276" class="t-backend" font-size="8" text-anchor="middle">페이지 로드</text>
         <rect x="418.4" y="292" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
         <text x="445" y="302" class="t-muted" font-size="8" text-anchor="middle">캔버스 셸</text>
+        <rect x="188.8" y="188" width="72.4" height="14" rx="3" class="c-mask"/>
+        <text x="225" y="198" class="t-messagebus" font-size="8" text-anchor="middle">장치별 프리셋</text>
         <rect x="403.6" y="188" width="62.8" height="14" rx="3" class="c-mask"/>
         <text x="435" y="198" class="t-security" font-size="8" text-anchor="middle">입력 정규화</text>
-        <rect x="672.65" y="154" width="77.2" height="14" rx="3" class="c-mask"/>
-        <text x="711.25" y="164" class="t-muted" font-size="8" text-anchor="middle">고정 스텝 입력</text>
+        <rect x="744.4" y="415" width="101.2" height="14" rx="3" class="c-mask"/>
+        <text x="795" y="425" class="t-security" font-size="8" text-anchor="middle">노면·구간·리셋 포즈</text>
+        <rect x="631.6" y="348" width="86.8" height="14" rx="3" class="c-mask"/>
+        <text x="675" y="358" class="t-messagebus" font-size="8" text-anchor="middle">마커·경계 시각화</text>
+        <rect x="708.4" y="188" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
+        <text x="735" y="198" class="t-messagebus" font-size="8" text-anchor="middle">월드 표시</text>
+        <rect x="672.4" y="188" width="77.2" height="14" rx="3" class="c-mask"/>
+        <text x="711" y="198" class="t-muted" font-size="8" text-anchor="middle">고정 스텝 입력</text>
         <rect x="848.5" y="266" width="58" height="14" rx="3" class="c-mask"/>
         <text x="877.5" y="276" class="t-backend" font-size="8" text-anchor="middle">120Hz 스텝</text>
         <rect x="840" y="188" width="82" height="14" rx="3" class="c-mask"/>
@@ -716,6 +748,8 @@
         <text x="1280" y="278" class="t-messagebus" font-size="8" text-anchor="middle">RPM·구동력</text>
         <rect x="733.6" y="568" width="62.8" height="14" rx="3" class="c-mask"/>
         <text x="765" y="578" class="t-messagebus" font-size="8" text-anchor="middle">결정적 검사</text>
+        <rect x="721.4" y="465" width="77.2" height="14" rx="3" class="c-mask"/>
+        <text x="760" y="475" class="t-messagebus" font-size="8" text-anchor="middle">반복·경계 검사</text>
         <rect x="948.4" y="568" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
         <text x="975" y="578" class="t-messagebus" font-size="8" text-anchor="middle">계약 적용</text>
 
@@ -741,12 +775,12 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Milestone 1E</h3>
+          <h3>Milestone 1F</h3>
         </div>
         <ul>
-          <li>&bull; M1D 구동계 토크·엔진 브레이크</li>
-          <li>&bull; 전후 다운포스·속도 반대 드래그</li>
-          <li>&bull; 결정적 물리 검증·Rapier yaw 회귀</li>
+          <li>&bull; 네 입력 프리셋·공통 VehicleControlInput</li>
+          <li>&bull; 데이터 기반 구간·노면·브레이크 마커</li>
+          <li>&bull; 리셋·외곽 경계·반복 실행 검증</li>
         </ul>
       </div>
 
@@ -768,9 +802,9 @@
           <h3>다음 경계</h3>
         </div>
         <ul>
-          <li>&bull; 입력 프리셋·반복 가능한 테스트 트랙</li>
           <li>&bull; 단일 AI와 공유 VehicleControlInput</li>
           <li>&bull; 다차량·퀄리파잉·레이스 전략</li>
+          <li>&bull; 트랙 리밋·접촉 모델</li>
         </ul>
       </div>
     </div>

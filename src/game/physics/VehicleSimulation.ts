@@ -1,5 +1,5 @@
 import type { VehicleControlInput } from "../input/VehicleControlInput";
-import { sampleTestTrackSurface } from "./TrackSurface";
+import { sampleTrackSurface } from "./TrackSurface";
 import {
   cloneVehicleState,
   createInitialVehicleState,
@@ -11,6 +11,11 @@ import {
   type VehicleState,
 } from "./VehiclePhysics";
 import type { WheelValues } from "./Suspension";
+import {
+  sampleTestTrackLocation,
+  TEST_TRACK_DATA,
+  type TestTrackDefinition,
+} from "../../tracks/TestTrack";
 
 export interface VehicleRenderSnapshot {
   position: { x: number; z: number };
@@ -41,6 +46,10 @@ export interface VehicleTelemetry {
   engineBrakeTorqueNm: number;
   wheelLoadsN: WheelValues;
   wheelCompressionM: WheelValues;
+  trackSectionId: string;
+  trackSectionLabel: string;
+  onTrack: boolean;
+  distanceToBoundaryM: number;
 }
 
 export interface ExternalPlanarVehiclePose {
@@ -62,11 +71,16 @@ function rightVector(yawRad: number): { x: number; z: number } {
 export class VehicleSimulation {
   readonly config: VehiclePhysicsConfig;
   readonly current: VehicleState;
+  readonly track: TestTrackDefinition;
   private previous: VehicleState;
 
-  constructor(config: VehiclePhysicsConfig = DEFAULT_VEHICLE_CONFIG) {
+  constructor(
+    config: VehiclePhysicsConfig = DEFAULT_VEHICLE_CONFIG,
+    track: TestTrackDefinition = TEST_TRACK_DATA,
+  ) {
     this.config = config;
-    this.current = createInitialVehicleState();
+    this.track = track;
+    this.current = createInitialVehicleState(track.startPose.position, track.startPose.yawRad);
     this.previous = cloneVehicleState(this.current);
   }
 
@@ -80,12 +94,12 @@ export class VehicleSimulation {
       shiftGear(this.current, -1, this.config.gearRatios.length);
     }
 
-    const surface = sampleTestTrackSurface(this.current.position);
+    const surface = sampleTrackSurface(this.current.position, this.track);
     stepVehicle(this.current, input, dt, this.config, surface);
   }
 
   reset(): void {
-    resetVehicleState(this.current);
+    resetVehicleState(this.current, this.track.startPose.position, this.track.startPose.yawRad);
     this.previous = cloneVehicleState(this.current);
   }
 
@@ -115,7 +129,7 @@ export class VehicleSimulation {
     if (pose.drivenWheelAngularSpeedRadS !== undefined && Number.isFinite(pose.drivenWheelAngularSpeedRadS)) {
       this.current.drivenWheelAngularSpeedRadS = pose.drivenWheelAngularSpeedRadS;
     }
-    this.current.surface = sampleTestTrackSurface(this.current.position).type;
+    this.current.surface = sampleTestTrackLocation(this.current.position, this.track).surface;
   }
 
   getRenderSnapshot(alpha: number): VehicleRenderSnapshot {
@@ -136,6 +150,8 @@ export class VehicleSimulation {
   }
 
   getTelemetry(): VehicleTelemetry {
+    const trackLocation = sampleTestTrackLocation(this.current.position, this.track);
+
     return {
       speedKmh: this.current.speedMps * 3.6,
       rpm: this.current.rpm,
@@ -154,6 +170,10 @@ export class VehicleSimulation {
       engineBrakeTorqueNm: this.current.engineBrakeTorqueNm,
       wheelLoadsN: { ...this.current.wheelLoadsN },
       wheelCompressionM: { ...this.current.wheelCompressionM },
+      trackSectionId: trackLocation.sectionId,
+      trackSectionLabel: trackLocation.sectionLabel,
+      onTrack: trackLocation.onTrack,
+      distanceToBoundaryM: trackLocation.distanceToBoundaryM,
     };
   }
 }
