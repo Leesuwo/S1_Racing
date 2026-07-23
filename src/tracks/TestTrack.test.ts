@@ -1,3 +1,4 @@
+/** 테스트 트랙 데이터의 순서·레이싱 라인·경계·체크포인트 계약을 검증한다. */
 import { describe, expect, it } from "vitest";
 import {
   isInsideCheckpoint,
@@ -16,6 +17,7 @@ describe("TestTrack data", () => {
     ]);
     expect(TEST_TRACK_DATA.checkpoints.map((checkpoint) => checkpoint.order)).toEqual([0, 1, 2, 3]);
 
+    // 시작·인필드·이탈을 한 번에 샘플링해 section 순서를 검증한다.
     const route = replayTestTrackLocations([
       TEST_TRACK_DATA.startPose.position,
       { x: 0, z: 0 },
@@ -42,6 +44,7 @@ describe("TestTrack data", () => {
   });
 
   it("uses the outer bounds for reset and boundary decisions", () => {
+    // 체크포인트 반경 검증에 사용하는 데이터 정의 첫 체크포인트다.
     const startCheckpoint = TEST_TRACK_DATA.checkpoints[0];
 
     expect(isInsideTestTrackBoundary(TEST_TRACK_DATA.startPose.position)).toBe(true);

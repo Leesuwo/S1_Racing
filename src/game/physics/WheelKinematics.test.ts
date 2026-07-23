@@ -1,3 +1,4 @@
+/** 휠 조향 방향·차체 yaw 속도 기여·임의 점 속도 계산을 검증한다. */
 import { describe, expect, it } from "vitest";
 import {
   calculateAllWheelKinematics,
@@ -5,6 +6,7 @@ import {
   type WheelKinematicsConfig,
 } from "./WheelKinematics";
 
+// 단위가 명시된 차축/트레드 픽스처다. 실제 차량 확정값이 아닌 initial_assumption이다.
 const config: WheelKinematicsConfig = {
   frontAxleDistanceM: 1.8,
   rearAxleDistanceM: 1.5,
@@ -15,7 +17,9 @@ const config: WheelKinematicsConfig = {
 };
 
 describe("WheelKinematics", () => {
+  // -Z 전방 좌표계에서 앞바퀴만 입력 조향각을 가져야 한다.
   it("applies steering only to the two front wheels in the -Z-forward convention", () => {
+    // 위치·속도·무회전 pose에 우측 조향 0.5를 적용하는 입력이다.
     const wheels = calculateAllWheelKinematics(config, {
       chassisPosition: { x: 10, y: 0.5, z: -4 },
       chassisRotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -34,7 +38,9 @@ describe("WheelKinematics", () => {
     expect(wheels.frontLeft.mountPoint.z).toBeCloseTo(-5.8, 8);
   });
 
+  // 접점 속도에는 차체 병진 속도뿐 아니라 yaw rate×오프셋도 포함되어야 한다.
   it("includes yaw-rate velocity at a wheel contact point", () => {
+    // 전진 병진속도와 음의 yaw rate를 결합한 강체 접점 입력이다.
     const wheels = calculateAllWheelKinematics(config, {
       chassisPosition: { x: 0, y: 0.5, z: 0 },
       chassisRotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -52,7 +58,9 @@ describe("WheelKinematics", () => {
     expect(wheels.frontLeft.wheelCenter.y).toBeCloseTo(0.36, 8);
   });
 
+  // 레이아웃과 무관한 점 속도 보조 함수가 올바른 강체 속도를 반환해야 한다.
   it("calculates point velocity without relying on the wheel layout", () => {
+    // 임의의 점에 대해 v + omega×r를 계산하는 독립 벡터 픽스처다.
     const velocity = calculateWheelPointVelocity(
       { x: 4, y: 0, z: -12 },
       { x: 0, y: -2, z: 0 },

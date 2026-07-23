@@ -135,10 +135,13 @@ export class SingleOpponentAI {
     );
     // 조향에 사용할 전방 목표점과 제동 판단용 미리보기 점의 인덱스다.
     const lookaheadIndex = this.advanceIndex(closestIndex, lookaheadDistanceM);
+    // 긴 제동 예측 거리만큼 앞선 레이싱 라인 점이다.
     const brakeLookaheadIndex = this.advanceIndex(closestIndex, Math.max(0, this.config.brakeLookaheadM));
     // 레이싱 라인에서 실제 조향 방향과 현재 목표 속도를 읽는 점들이다.
     const targetPoint = line[lookaheadIndex];
+    // 현재 속도 목표를 결정할 가장 가까운 라인 점이다.
     const closestPoint = line[closestIndex];
+    // 코너 진입 속도를 미리 읽는 라인 점이다.
     const previewPoint = line[brakeLookaheadIndex];
 
     return {
@@ -161,6 +164,7 @@ export class SingleOpponentAI {
     const target = this.getTarget(state);
     // 목표점까지의 평면 오차(m)이며 프로젝트 좌표계의 x/z 성분이다.
     const dx = target.targetPoint.position.x - state.position.x;
+    // 목표점까지의 z축 평면 오차(m)다.
     const dz = target.targetPoint.position.z - state.position.z;
     // 프로젝트 좌표계의 right 벡터(+X 오른쪽, +Y 위, -Z 전방)를 사용해 라인 횡오차의 부호를 유지한다.
     // 차량 기준 우측 방향 벡터로, 라인에서 벗어난 횡오차의 부호를 계산한다.
@@ -203,6 +207,7 @@ export class SingleOpponentAI {
     const shiftUp = this.shiftCooldownSeconds <= 0
       && state.rpm >= this.config.upshiftRpm
       && state.gear < state.maxGear;
+    // 저RPM·저속 상황에서만 한 단계 낮추는 one-shot 요청이다.
     const shiftDown = this.shiftCooldownSeconds <= 0
       && state.rpm <= this.config.downshiftRpm
       && state.gear > 1
@@ -228,6 +233,7 @@ export class SingleOpponentAI {
   private findClosestPointIndex(position: TrackPoint): number {
     // 현재까지 확인한 가장 가까운 점과 제곱거리(m²)를 저장한다.
     let closestIndex = 0;
+    // 아직 후보를 방문하지 않았음을 나타내는 초기 비교값이다.
     let closestDistanceSquared = Number.POSITIVE_INFINITY;
 
     this.track.racingLine.forEach((point, index) => {
@@ -253,7 +259,9 @@ export class SingleOpponentAI {
     // 잘못된 0 길이 데이터가 들어와도 고정 스텝에서 무한 루프가 되지 않게 한다.
     // 현재 탐색 중인 라인 점과 남은 전진 거리(m), 무한 루프 방지 횟수다.
     let index = startIndex;
+    // 세그먼트를 지날수록 감소하는 남은 전진 거리(m)다.
     let remainingM = distanceM;
+    // 잘못된 0 길이 라인 데이터에서 반복을 종료하기 위한 guard다.
     let guard = 0;
     while (remainingM > 0 && guard < this.track.racingLine.length * 2) {
       remainingM -= this.segmentLengths[index] ?? 0;

@@ -1,3 +1,8 @@
+/**
+ * WebGL 지원 확인, R3F 장면, 입력 프리셋, 차량·AI 텔레메트리 HUD를
+ * 연결하는 최상위 React 셸이다. 물리 상태는 장면이 소유하고 이 컴포넌트는
+ * 콜백으로 받은 읽기 전용 표시값만 관리한다.
+ */
 import { useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
@@ -8,6 +13,7 @@ import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { detectWebGL2, type WebGL2Support } from "./webgl2";
 import { DrivingScene } from "./DrivingScene";
 
+// WebGL 초기화 전후 HUD가 사용할 유한한 중립 텔레메트리다.
 const INITIAL_TELEMETRY: VehicleTelemetry = {
   speedKmh: 0,
   rpm: 900,
@@ -32,6 +38,7 @@ const INITIAL_TELEMETRY: VehicleTelemetry = {
   distanceToBoundaryM: 4,
 };
 
+/** 속도·RPM·힘처럼 단위가 있는 HUD 숫자를 한국어 로케일로 표시한다. */
 function formatNumber(value: number, digits = 0): string {
   return value.toLocaleString("ko-KR", {
     maximumFractionDigits: digits,
@@ -49,6 +56,7 @@ function AppTelemetry({
   opponentTelemetry: VehicleTelemetry;
   suspensionTelemetry: RapierSuspensionTelemetry | null;
 }) {
+  // redline 대비 현재 RPM을 0..1 바 너비로 변환한다.
   const rpmRatio = Math.min(1, telemetry.rpm / telemetry.redlineRpm);
 
   return (
@@ -113,19 +121,27 @@ function AppTelemetry({
 
 /** WebGL 지원 상태, 플레이어 HUD와 단일 AI 상대 상태를 조합하는 앱 셸이다. */
 export function App() {
+  // 브라우저 기능 감지가 끝나기 전에는 null로 두고 로딩 UI를 표시한다.
   const [webgl, setWebgl] = useState<WebGL2Support | null>(null);
+  // Page Visibility 상태는 시뮬레이션 pause와 status chip의 단일 원본이다.
   const [paused, setPaused] = useState(() => document.hidden);
+  // 플레이어 HUD에 표시할 마지막 텔레메트리 샘플이다.
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
   // AI 차량의 속도와 현재 트랙 구간을 표시하는 마지막 100 ms 샘플이다.
   const [opponentTelemetry, setOpponentTelemetry] = useState(INITIAL_TELEMETRY);
+  // Rapier 차체 높이·휠 접지·타이어 슬립의 마지막 HUD 샘플이다.
   const [suspensionTelemetry, setSuspensionTelemetry] = useState<RapierSuspensionTelemetry | null>(null);
+  // 브라우저 이벤트 수집기는 앱 수명 동안 하나만 유지한다.
   const input = useMemo(() => new BrowserVehicleInput(window), []);
+  // select의 현재 값과 입력 어댑터의 프리셋을 함께 갱신한다.
   const [inputPreset, setInputPreset] = useState<VehicleInputPresetId>(() => input.getPreset());
 
   useEffect(() => {
+    // 마운트 시 입력·WebGL 경계를 연결하고 visibility 리스너를 등록한다.
     input.connect();
     setWebgl(detectWebGL2());
 
+    // 실제 스텝 중단은 DrivingScene이 처리하고 이 콜백은 표시 상태만 갱신한다.
     const handleVisibilityChange = () => {
       setPaused(document.hidden);
     };
@@ -190,6 +206,7 @@ export function App() {
                   aria-label="입력 프리셋"
                   value={inputPreset}
                   onChange={(event) => {
+                    // DOM 문자열을 프로젝트가 허용한 프리셋 식별자로 변환한다.
                     const preset = event.target.value as VehicleInputPresetId;
                     input.setPreset(preset);
                     setInputPreset(preset);

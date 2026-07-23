@@ -1,3 +1,4 @@
+/** 단일 AI의 결정성·레이싱 라인 목표·제동·변속·공유 물리 경계를 검증한다. */
 import { describe, expect, it } from "vitest";
 import { VehicleSimulation } from "../../game/physics/VehicleSimulation";
 import { TEST_TRACK_DATA } from "../../tracks/TestTrack";
@@ -94,6 +95,7 @@ describe("SingleOpponentAI", () => {
     const secondAI = new SingleOpponentAI();
 
     // 120Hz fixed step 카운터로 짧은 결정성 시나리오를 실행한다.
+    // 두 시뮬레이션을 같은 120Hz 입력 순서로 진행해 결과가 완전히 일치하는지 확인한다.
     for (let step = 0; step < 240; step += 1) {
       // 첫 번째 물리 시뮬레이션에 전달할 AI 입력이다.
       const firstInput = firstAI.update({

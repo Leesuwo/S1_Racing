@@ -1,10 +1,18 @@
+/**
+ * 렌더링·물리·입력·AI가 공유하는 반복 검증용 트랙 데이터 모델과 샘플이다.
+ * 길이는 m, 방향은 rad, 목표 속도는 m/s이며 차량·실제 트랙 재현값이 아닌
+ * initial_assumption이다. 주행 감각과 제동 지점은 simulation_required다.
+ */
+/** 트랙 노면의 물리 분류다. */
 export type TestTrackSurfaceType = "asphalt" | "grass";
 
+/** 트랙 평면의 위치 좌표다. +X는 오른쪽, -Z는 차량 전방 기준이다. */
 export interface TrackPoint {
   x: number;
   z: number;
 }
 
+/** 축 정렬 직사각형의 포함 범위다. 단위는 m이다. */
 export interface TrackBounds {
   minX: number;
   maxX: number;
@@ -12,6 +20,7 @@ export interface TrackBounds {
   maxZ: number;
 }
 
+/** 외곽 아스팔트와 내부 인필드를 정의하는 반폭·반길이 설정이다. */
 export interface TestTrackSurfaceLayout {
   outerHalfWidthM: number;
   outerHalfLengthM: number;
@@ -19,6 +28,7 @@ export interface TestTrackSurfaceLayout {
   innerHalfLengthM: number;
 }
 
+/** HUD와 AI가 사용할 트랙 구간 식별자다. */
 export type TestTrackSectionId =
   | "start-straight"
   | "right-corner"
@@ -27,6 +37,7 @@ export type TestTrackSectionId =
   | "infield"
   | "off-track";
 
+/** 구간 표시명과 표면 판정 범위를 함께 정의한다. */
 export interface TestTrackSection {
   id: TestTrackSectionId;
   label: string;
@@ -34,6 +45,7 @@ export interface TestTrackSection {
   surface: TestTrackSurfaceType;
 }
 
+/** 시작/결승선과 제동 마커의 렌더링·검증 데이터다. */
 export interface TestTrackMarker {
   id: string;
   label: string;
@@ -44,6 +56,7 @@ export interface TestTrackMarker {
   lengthM: number;
 }
 
+/** 순서가 있는 체크포인트와 통과 반경(m)이다. */
 export interface TestTrackCheckpoint {
   id: string;
   order: number;
@@ -52,6 +65,7 @@ export interface TestTrackCheckpoint {
   radiusM: number;
 }
 
+/** 차량을 재현 가능한 위치·방향에 배치하는 시작 포즈다. */
 export interface TestTrackStartPose {
   position: TrackPoint;
   yawRad: number;
@@ -92,6 +106,7 @@ export interface TestTrackLocation {
   distanceToBoundaryM: number;
 }
 
+// 섹션별 축 정렬 범위는 샘플 트랙의 단일 지오메트리 원본이다.
 const TEST_TRACK_SECTION_BOUNDS = {
   startStraight: { minX: -13, maxX: 13, minZ: 6, maxZ: 14 },
   rightCorner: { minX: 13, maxX: 22, minZ: -6, maxZ: 6 },
@@ -237,6 +252,7 @@ function distanceToOuterBoundary(bounds: TrackBounds, point: TrackPoint): number
     );
   }
 
+  // 경계 밖으로 벗어난 최대 축 거리를 signed distance로 반환하기 위한 중간값이다.
   const distanceOutside = Math.max(
     bounds.minX - point.x,
     point.x - bounds.maxX,
@@ -251,9 +267,11 @@ export function isInsideTestTrackBoundary(
   point: TrackPoint,
   track: TestTrackDefinition = TEST_TRACK_DATA,
 ): boolean {
+  // 외곽 경계 포함 여부만 검사하며 인필드 제외는 위치·노면 샘플러의 책임이다.
   return contains(track.outerBounds, point);
 }
 
+/** 위치가 체크포인트의 원형 통과 반경 안에 있는지 판정한다. */
 export function isInsideCheckpoint(
   point: TrackPoint,
   checkpoint: TestTrackCheckpoint,
@@ -261,11 +279,14 @@ export function isInsideCheckpoint(
   return Math.hypot(point.x - checkpoint.position.x, point.z - checkpoint.position.z) <= checkpoint.radiusM;
 }
 
+/** 위치를 off-track, 인필드, 외곽 아스팔트 구간으로 결정론적으로 분류한다. */
 export function sampleTestTrackLocation(
   point: TrackPoint,
   track: TestTrackDefinition = TEST_TRACK_DATA,
 ): TestTrackLocation {
+  // 외곽 경계와의 signed distance는 이탈 시 음수가 되어 HUD에 경계 방향을 제공한다.
   const onTrack = isInsideTestTrackBoundary(point, track);
+  // 외곽 경계까지의 거리(m)는 트랙 안에서 양수, 이탈 시 음수다.
   const distanceToBoundaryM = distanceToOuterBoundary(track.outerBounds, point);
 
   if (!onTrack) {
@@ -288,6 +309,7 @@ export function sampleTestTrackLocation(
     };
   }
 
+  // 데이터에 명시된 첫 구간을 사용하고 겹침·누락 시 안전한 기본 구간을 사용한다.
   const section = track.sections.find((candidate) => contains(candidate.bounds, point));
   return {
     sectionId: section?.id ?? "start-straight",
@@ -298,6 +320,7 @@ export function sampleTestTrackLocation(
   };
 }
 
+/** 여러 좌표를 같은 트랙 정의로 순회 샘플링해 리플레이 검증 결과를 만든다. */
 export function replayTestTrackLocations(
   points: readonly TrackPoint[],
   track: TestTrackDefinition = TEST_TRACK_DATA,
