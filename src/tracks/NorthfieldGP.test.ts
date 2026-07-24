@@ -17,7 +17,7 @@ describe("Northfield GP track data", () => {
       "technical-link",
     ]);
     expect(NORTHFIELD_GP_DATA.sectors?.map((sector) => sector.order)).toEqual([0, 1, 2]);
-    expect(NORTHFIELD_GP_DATA.checkpoints.map((checkpoint) => checkpoint.order)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(NORTHFIELD_GP_DATA.checkpoints.map((checkpoint) => checkpoint.order)).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 
   it("samples asphalt, signed track edge distance, and grass from the same centerline", () => {
@@ -61,14 +61,22 @@ describe("Northfield GP track data", () => {
       .filter((point) => point.brakePoint)
       .map((point) => point.id);
     const targetSpeeds = NORTHFIELD_GP_DATA.racingLine.map((point) => point.targetSpeedMps);
+    const apexes = NORTHFIELD_GP_DATA.racingLine
+      .filter((point) => point.apex)
+      .map((point) => point.id);
 
     expect(brakePoints).toEqual([
       "northfield-heavy-brake",
-      "northfield-heavy-apex",
-      "northfield-heavy-exit",
       "northfield-low-brake",
-      "northfield-low-apex",
       "northfield-link-brake",
+    ]);
+    expect(apexes).toEqual([
+      "northfield-heavy-apex",
+      "northfield-fast-left",
+      "northfield-fast-right",
+      "northfield-low-apex",
+      "northfield-medium-apex",
+      "northfield-link-apex",
       "northfield-link-hairpin",
     ]);
     expect(Math.max(...targetSpeeds)).toBe(57);

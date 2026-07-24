@@ -38,6 +38,9 @@ export const DEFAULT_AI_TRAINING_SCORE_WEIGHTS: AITrainingScoreWeights = {
   incompleteEpisodePenalty: 100_000,
 };
 
+/** 차체가 레이싱 라인을 향해 약간 회전하는 상태와 시각적 드리프트를 구분하는 초기 상한(rad)이다. */
+export const MAXIMUM_TRAINING_BODY_SLIP_ANGLE_RAD = 0.06;
+
 /** 하나의 교육 시나리오에서 특정 AI 설정이 만든 평가 결과다. */
 export interface AITrainingScenarioEvaluation {
   scenarioId: AITrainingScenarioId;
@@ -79,6 +82,11 @@ export function scoreAITrainingSnapshot(
 ): number {
   // 완료되지 않은 후보는 우연히 빠른 중단으로 선택되지 않도록 큰 실패 비용을 받는다.
   const incompletePenalty = snapshot.status === "completed" ? 0 : weights.incompleteEpisodePenalty;
+  // 타이어 작동 슬립과 차체 드리프트를 구분한다. 이 상한을 넘긴 후보는 랩타임이 좋아도
+  // 안정적인 레이싱 라인 주행 설정으로 자동 적용되지 않도록 미완주와 같은 수준의 비용을 받는다.
+  const driftPenalty = snapshot.maximumBodySlipAngleRad > MAXIMUM_TRAINING_BODY_SLIP_ANGLE_RAD
+    ? weights.incompleteEpisodePenalty
+    : 0;
   return snapshot.offTrackCount * weights.offTrackPenalty
     + snapshot.lateralErrorRmsM * weights.lateralRmsPenalty
     + snapshot.lateralErrorP95M * weights.lateralP95Penalty
@@ -87,7 +95,8 @@ export function scoreAITrainingSnapshot(
     + snapshot.brakeOverspeedMps * weights.brakeOverspeedPenalty
     + snapshot.inputChatterCount * weights.inputChatterPenalty
     + snapshot.elapsedSeconds * weights.elapsedSecondsPenalty
-    + incompletePenalty;
+    + incompletePenalty
+    + driftPenalty;
 }
 
 /** 고정된 후보 순서로 설정을 생성해 같은 입력에서 같은 학습 결과를 재현한다. */

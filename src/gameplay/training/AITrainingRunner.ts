@@ -64,8 +64,9 @@ export const AI_TRAINING_SCENARIOS: readonly AITrainingScenario[] = [
   {
     id: "full-lap",
     label: "전체 랩",
-    description: "체크포인트·트랙 이탈·결정성 해시를 종합 평가한다.",
-    maxSteps: 1_920,
+    description: "결승선 재통과까지 체크포인트·트랙 이탈·결정성 해시를 종합 평가한다.",
+    // 대형 교육 트랙의 물리 시간 60 s 상한이다. 전체 랩은 이 시간보다 먼저 결승선을 통과해야 한다.
+    maxSteps: 7_200,
   },
 ];
 
@@ -81,6 +82,19 @@ export interface AITrainingInputSnapshot {
   shiftDown: boolean;
 }
 
+/** 맵 이탈처럼 에피소드를 즉시 끝내는 실패 원인과 다음 튜닝에 전달할 관찰값이다. */
+export interface AITrainingFailure {
+  reason: "off-track" | "non-finite" | "time-limit";
+  stepIndex: number;
+  elapsedSeconds: number;
+  position: TrackPoint;
+  speedMps: number;
+  lateralErrorM: number;
+  distanceToBoundaryM: number;
+  sectionLabel: string;
+  input: AITrainingInputSnapshot;
+}
+
 /** 한 교육 에피소드의 UI·검증 지표다. 모든 거리는 m, 속도는 m/s, 시간은 s다. */
 export interface AITrainingSnapshot {
   status: AITrainingStatus;
@@ -89,6 +103,10 @@ export interface AITrainingSnapshot {
   stepIndex: number;
   maxSteps: number;
   elapsedSeconds: number;
+  /** 출발선부터 현재 차량 위치까지 누적한 실제 레이싱 라인 진행 거리(m)다. */
+  lapProgressM: number;
+  /** 폐곡선 레이싱 라인의 전체 길이(m)다. */
+  trackLengthM: number;
   progressRatio: number;
   speedMps: number;
   targetSpeedMps: number;
@@ -99,6 +117,8 @@ export interface AITrainingSnapshot {
   lateralErrorRmsM: number;
   lateralErrorP95M: number;
   maximumLateralErrorM: number;
+  bodySlipAngleRad: number;
+  maximumBodySlipAngleRad: number;
   brakeOverspeedMps: number;
   offTrackCount: number;
   checkpointIndex: number;
@@ -109,6 +129,8 @@ export interface AITrainingSnapshot {
   targetPoint: TrackPoint;
   currentPosition: TrackPoint;
   input: AITrainingInputSnapshot;
+  /** 실패한 에피소드에서만 보존하는 문제 위치·상태 스냅샷이다. */
+  failure?: AITrainingFailure;
   determinismHash: string;
   message: string;
 }
@@ -125,6 +147,85 @@ const NEUTRAL_INPUT: AITrainingInputSnapshot = {
 /** 진행률·오차·입력을 화면 표시 범위로 제한한다. */
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
+}
+
+/** 월드 외곽 맵 경계까지의 signed 거리(m)로, 음수는 차량이 실제 맵 밖에 있음을 뜻한다. */
+function distanceToMapBoundaryM(position: TrackPoint, track: TestTrackDefinition): number {
+  const { minX, maxX, minZ, maxZ } = track.outerBounds;
+  const outsideX = Math.max(minX - position.x, 0, position.x - maxX);
+  const outsideZ = Math.max(minZ - position.z, 0, position.z - maxZ);
+  if (outsideX > 0 || outsideZ > 0) return -Math.hypot(outsideX, outsideZ);
+  return Math.min(position.x - minX, maxX - position.x, position.z - minZ, maxZ - position.z);
+}
+
+/** 레이싱 라인 폐곡선의 누적 길이·세그먼트 길이를 캐시하는 실제 진행률 계산 데이터다. */
+interface RacingLineDistanceMap {
+  segmentLengthsM: readonly number[];
+  cumulativeStartsM: readonly number[];
+  totalLengthM: number;
+}
+
+/** 두 평면 지점 사이의 거리를 계산한다. */
+function distanceM(first: TrackPoint, second: TrackPoint): number {
+  return Math.hypot(second.x - first.x, second.z - first.z);
+}
+
+/** 폐곡선 레이싱 라인을 거리 좌표로 바꿔 시각·체크포인트와 독립적인 연속 진행률을 만든다. */
+function createRacingLineDistanceMap(track: TestTrackDefinition): RacingLineDistanceMap {
+  const segmentLengthsM = track.racingLine.map((point, index) => (
+    distanceM(point.position, track.racingLine[(index + 1) % track.racingLine.length]?.position ?? point.position)
+  ));
+  const cumulativeStartsM: number[] = [];
+  let totalLengthM = 0;
+
+  segmentLengthsM.forEach((segmentLengthM) => {
+    cumulativeStartsM.push(totalLengthM);
+    totalLengthM += segmentLengthM;
+  });
+
+  return { segmentLengthsM, cumulativeStartsM, totalLengthM };
+}
+
+/** 차량 위치를 가장 가까운 레이싱 라인 선분에 투영해 출발선 기준 거리(m)를 계산한다. */
+function projectRacingLineDistanceM(
+  position: TrackPoint,
+  track: TestTrackDefinition,
+  distanceMap: RacingLineDistanceMap,
+): number {
+  const line = track.racingLine;
+  if (line.length < 2 || distanceMap.totalLengthM <= 0) return 0;
+
+  let closestDistanceSquared = Number.POSITIVE_INFINITY;
+  let closestDistanceM = 0;
+  line.forEach((start, index) => {
+    const end = line[(index + 1) % line.length] ?? start;
+    const deltaX = end.position.x - start.position.x;
+    const deltaZ = end.position.z - start.position.z;
+    const lengthSquared = deltaX * deltaX + deltaZ * deltaZ;
+    const ratio = lengthSquared > 0
+      ? clamp(((position.x - start.position.x) * deltaX + (position.z - start.position.z) * deltaZ) / lengthSquared, 0, 1)
+      : 0;
+    const projectedX = start.position.x + deltaX * ratio;
+    const projectedZ = start.position.z + deltaZ * ratio;
+    const distanceSquared = (position.x - projectedX) ** 2 + (position.z - projectedZ) ** 2;
+
+    if (distanceSquared < closestDistanceSquared) {
+      closestDistanceSquared = distanceSquared;
+      closestDistanceM = (distanceMap.cumulativeStartsM[index] ?? 0)
+        + (distanceMap.segmentLengthsM[index] ?? 0) * ratio;
+    }
+  });
+
+  return closestDistanceM;
+}
+
+/** 폐곡선의 0 m 경계를 지날 때도 전진·후진의 가장 짧은 실제 이동량(m)을 반환한다. */
+export function signedTrackDeltaM(previousDistanceM: number, nextDistanceM: number, trackLengthM: number): number {
+  if (trackLengthM <= 0) return 0;
+  let deltaM = nextDistanceM - previousDistanceM;
+  if (deltaM > trackLengthM * 0.5) deltaM -= trackLengthM;
+  if (deltaM < -trackLengthM * 0.5) deltaM += trackLengthM;
+  return deltaM;
 }
 
 /** 두 평면 위치 사이의 signed 횡오차를 계산한다. 차량 오른쪽이 양수다. */
@@ -189,12 +290,22 @@ export class AITrainingRunner {
   private lateralErrorsM: number[] = [];
   private speedErrorsMps: number[] = [];
   private maximumLateralErrorM = 0;
+  /** 차체 전방 대비 실제 속도 벡터의 최대 편차(rad)이며, AI 평가와 HUD가 공유한다. */
+  private maximumBodySlipAngleRad = 0;
   private brakeOverspeedMps = 0;
   private inputChatterCount = 0;
   private previousInput: AITrainingInputSnapshot = { ...NEUTRAL_INPUT };
   private lastInput: AITrainingInputSnapshot = { ...NEUTRAL_INPUT };
   private hash = 2_166_136_261;
   private lastTarget: SingleOpponentAITarget;
+  /** 레이싱 라인의 길이 좌표 캐시로 매 step에서 진행률만 위해 선분 길이를 다시 만들지 않는다. */
+  private readonly racingLineDistanceMap: RacingLineDistanceMap;
+  /** 출발선부터 현재 차량까지의 부호 있는 누적 주행 거리(m)다. 후진하면 감소한다. */
+  private lapProgressM = 0;
+  /** 직전 fixed step의 레이싱 라인 투영 거리(m)다. 폐곡선 경계에서 방향을 판별하는 기준이다. */
+  private previousProjectedDistanceM = 0;
+  /** 맵 이탈 등 종료 시점의 관찰값을 다음 자동 튜닝 결과에 전달하는 불변 스냅샷이다. */
+  private failure: AITrainingFailure | undefined;
   private message = "훈련 대기 · 시나리오를 선택하고 시작하십시오.";
 
   constructor(
@@ -204,11 +315,17 @@ export class AITrainingRunner {
   ) {
     // 트랙과 시나리오를 먼저 고정해 시뮬레이션·AI·평가기가 같은 데이터를 읽게 한다.
     this.track = track;
+    this.racingLineDistanceMap = createRacingLineDistanceMap(track);
     this.scenario = this.findScenario(scenarioId);
     this.aiConfig = { ...aiConfig };
     this.simulation = new VehicleSimulation(undefined, track, this.resolveScenarioStartPose(this.scenario));
     this.ai = new SingleOpponentAI(track, this.aiConfig);
     this.lastTarget = this.ai.getTarget(this.createAIState());
+    this.previousProjectedDistanceM = projectRacingLineDistanceM(
+      this.simulation.current.position,
+      this.track,
+      this.racingLineDistanceMap,
+    );
   }
 
   /** 현재 시나리오를 반환해 select와 실행 결과가 같은 값을 표시하게 한다. */
@@ -271,12 +388,20 @@ export class AITrainingRunner {
     this.lateralErrorsM = [];
     this.speedErrorsMps = [];
     this.maximumLateralErrorM = 0;
+    this.maximumBodySlipAngleRad = 0;
     this.brakeOverspeedMps = 0;
     this.inputChatterCount = 0;
     this.previousInput = { ...NEUTRAL_INPUT };
     this.lastInput = { ...NEUTRAL_INPUT };
     this.hash = 2_166_136_261;
     this.lastTarget = this.ai.getTarget(this.createAIState());
+    this.lapProgressM = 0;
+    this.failure = undefined;
+    this.previousProjectedDistanceM = projectRacingLineDistanceM(
+      this.simulation.current.position,
+      this.track,
+      this.racingLineDistanceMap,
+    );
     this.message = "훈련 대기 · 시나리오를 선택하고 시작하십시오.";
   }
 
@@ -315,7 +440,15 @@ export class AITrainingRunner {
     const current = this.simulation.current;
     const location = sampleTestTrackLocation(current.position, this.track);
     const targetSpeedMps = this.lastTarget.targetSpeedMps;
-    const progressRatio = clamp(this.stepIndex / this.scenario.maxSteps, 0, 1);
+    // 전체 랩의 퍼센트는 실제 위치를 레이싱 라인에 투영한 거리이며, 후진하면 누적 거리도 감소한다.
+    const progressRatio = this.scenario.id === "full-lap"
+      // 결승선 체크포인트 통과로 완주가 확정되면 반경 안 투영 위치와 무관하게 100%를 표시한다.
+      ? (this.status === "completed" ? 1 : clamp(
+        this.lapProgressM / Math.max(1, this.racingLineDistanceMap.totalLengthM),
+        0,
+        1,
+      ))
+      : clamp(this.stepIndex / this.scenario.maxSteps, 0, 1);
     // 완료·실패 결과는 트랙 위치 경고보다 우선해 HUD가 최종 상태를 숨기지 않게 한다.
     const displayMessage = this.status === "completed" || this.status === "failed"
       ? this.message
@@ -330,6 +463,8 @@ export class AITrainingRunner {
       stepIndex: this.stepIndex,
       maxSteps: this.scenario.maxSteps,
       elapsedSeconds: this.elapsedSeconds,
+      lapProgressM: this.lapProgressM,
+      trackLengthM: this.racingLineDistanceMap.totalLengthM,
       progressRatio,
       speedMps: current.speedMps,
       targetSpeedMps,
@@ -340,6 +475,8 @@ export class AITrainingRunner {
       lateralErrorRmsM: Math.sqrt(this.lateralErrorSquaredSum / Math.max(1, this.stepIndex)),
       lateralErrorP95M: percentile(this.lateralErrorsM, 0.95),
       maximumLateralErrorM: this.maximumLateralErrorM,
+      bodySlipAngleRad: this.currentBodySlipAngleRad(),
+      maximumBodySlipAngleRad: this.maximumBodySlipAngleRad,
       brakeOverspeedMps: this.brakeOverspeedMps,
       offTrackCount: this.offTrackCount,
       checkpointIndex: this.checkpointIndex,
@@ -350,6 +487,11 @@ export class AITrainingRunner {
       targetPoint: { ...this.lastTarget.targetPoint.position },
       currentPosition: { ...current.position },
       input: { ...this.lastInput },
+      failure: this.failure && {
+        ...this.failure,
+        position: { ...this.failure.position },
+        input: { ...this.failure.input },
+      },
       determinismHash: formatHash(this.hash),
       message: displayMessage,
     };
@@ -366,8 +508,7 @@ export class AITrainingRunner {
   /** 고정된 120Hz 간격으로 AI 입력·차량 물리·평가 지표를 한 번 갱신한다. */
   private stepFixed(): void {
     if (this.stepIndex >= this.scenario.maxSteps) {
-      this.status = "completed";
-      this.message = "시나리오 완료 · 결과 지표와 결정성 해시를 확인하십시오.";
+      this.finishAtStepLimit();
       return;
     }
 
@@ -383,6 +524,7 @@ export class AITrainingRunner {
     const current = this.simulation.current;
     const location = sampleTestTrackLocation(current.position, this.track);
     const lateralError = this.currentLateralErrorM();
+    const bodySlipAngleRad = this.currentBodySlipAngleRad();
     const speedError = current.speedMps - this.lastTarget.targetSpeedMps;
     const overspeedMps = Math.max(0, speedError);
 
@@ -393,8 +535,10 @@ export class AITrainingRunner {
     this.lateralErrorsM.push(Math.abs(lateralError));
     this.speedErrorsMps.push(Math.abs(speedError));
     this.maximumLateralErrorM = Math.max(this.maximumLateralErrorM, Math.abs(lateralError));
+    this.maximumBodySlipAngleRad = Math.max(this.maximumBodySlipAngleRad, Math.abs(bodySlipAngleRad));
     this.brakeOverspeedMps = Math.max(this.brakeOverspeedMps, overspeedMps);
     if (!location.onTrack) this.offTrackCount += 1;
+    this.updateLapProgress(current.position);
     this.advanceCheckpoint(current.position);
     this.hash = appendHash(this.hash, [
       current.position.x,
@@ -407,17 +551,96 @@ export class AITrainingRunner {
     ]);
 
     if (!Number.isFinite(current.speedMps) || !Number.isFinite(current.position.x)) {
-      this.status = "failed";
-      this.message = "실패 · 유한하지 않은 물리 상태가 감지되었습니다.";
-    } else if (this.stepIndex >= this.scenario.maxSteps) {
+      this.failEpisode("non-finite", current.position, lateralError, location.distanceToBoundaryM, "물리 상태");
+    } else if (distanceToMapBoundaryM(current.position, this.track) < 0) {
+      // 도로 리밋 경고와 달리 월드 맵 밖은 복구 가능한 주행 상태가 아니므로 즉시 실패 사례로 고정한다.
+      this.failEpisode("off-track", current.position, lateralError, distanceToMapBoundaryM(current.position, this.track), "맵 외곽");
+    } else if (this.isFullLapComplete()) {
       this.status = "completed";
-      this.message = "시나리오 완료 · 결과 지표와 결정성 해시를 확인하십시오.";
+      this.message = "전체 랩 완료 · 결승선 재통과와 모든 체크포인트를 확인했습니다.";
+    } else if (this.stepIndex >= this.scenario.maxSteps) {
+      this.finishAtStepLimit();
     }
+  }
+
+  /** 현재 투영 위치와 직전 투영 위치의 부호 있는 차이를 누적해 실제 트랙 진행률을 갱신한다. */
+  private updateLapProgress(position: TrackPoint): void {
+    if (this.scenario.id !== "full-lap") return;
+
+    const projectedDistanceM = projectRacingLineDistanceM(position, this.track, this.racingLineDistanceMap);
+    const deltaM = signedTrackDeltaM(
+      this.previousProjectedDistanceM,
+      projectedDistanceM,
+      this.racingLineDistanceMap.totalLengthM,
+    );
+    this.lapProgressM += deltaM;
+    this.previousProjectedDistanceM = projectedDistanceM;
+  }
+
+  /** 전체 랩은 마지막 결승선 체크포인트까지 순서대로 통과해야 완료된다. */
+  private isFullLapComplete(): boolean {
+    return this.scenario.id === "full-lap" && this.checkpointIndex >= this.track.checkpoints.length;
+  }
+
+  /** 시간 상한은 구간 시나리오의 완료 조건이지만 전체 랩에서는 미완주 실패 조건이다. */
+  private finishAtStepLimit(): void {
+    if (this.scenario.id === "full-lap") {
+      this.status = "failed";
+      this.message = "전체 랩 미완주 · 시간 상한 전에 결승선에 도달하지 못했습니다.";
+      this.failure = {
+        reason: "time-limit",
+        stepIndex: this.stepIndex,
+        elapsedSeconds: this.elapsedSeconds,
+        position: { ...this.simulation.current.position },
+        speedMps: this.simulation.current.speedMps,
+        lateralErrorM: this.currentLateralErrorM(),
+        distanceToBoundaryM: distanceToMapBoundaryM(this.simulation.current.position, this.track),
+        sectionLabel: "시간 상한",
+        input: { ...this.lastInput },
+      };
+      return;
+    }
+
+    this.status = "completed";
+    this.message = "시나리오 완료 · 결과 지표와 결정성 해시를 확인하십시오.";
+  }
+
+  /** 실패 시점의 관찰값을 복사해 자동 튜닝과 HUD가 이후 물리 변형 없이 같은 문제를 설명하게 한다. */
+  private failEpisode(
+    reason: AITrainingFailure["reason"],
+    position: TrackPoint,
+    lateralErrorM: number,
+    distanceToBoundaryM: number,
+    sectionLabel: string,
+  ): void {
+    this.status = "failed";
+    this.failure = {
+      reason,
+      stepIndex: this.stepIndex,
+      elapsedSeconds: this.elapsedSeconds,
+      position: { ...position },
+      speedMps: this.simulation.current.speedMps,
+      lateralErrorM,
+      distanceToBoundaryM,
+      sectionLabel,
+      input: { ...this.lastInput },
+    };
+    this.message = reason === "off-track"
+      ? "트랙 이탈 실패 · 맵 경계를 벗어나 에피소드를 즉시 종료하고 실패 사례를 저장했습니다."
+      : "실패 · 유한하지 않은 물리 상태가 감지되어 실패 사례를 저장했습니다.";
   }
 
   /** 레이싱 라인 목표점과 현재 pose에서 최신 횡오차를 계산한다. */
   private currentLateralErrorM(): number {
     return lateralErrorM(this.simulation.current.position, this.lastTarget, this.simulation.current.yawRad);
+  }
+
+  /** 차체 축 대비 실제 속도 벡터의 편차(rad)를 계산해 드리프트 판정과 HUD를 같은 값으로 유지한다. */
+  private currentBodySlipAngleRad(): number {
+    return Math.atan2(
+      this.simulation.current.lateralSpeedMps,
+      Math.max(0.5, Math.abs(this.simulation.current.forwardSpeedMps)),
+    );
   }
 
   /** 체크포인트가 순서대로 통과된 경우에만 평가 진행도를 증가시킨다. */

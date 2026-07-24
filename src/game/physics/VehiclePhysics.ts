@@ -99,7 +99,8 @@ export const DEFAULT_VEHICLE_CONFIG: VehiclePhysicsConfig = {
   redlineRpm: 8_000,
   tireGripCoefficient: 1.55,
   frontCorneringStiffness: 28_000,
-  rearCorneringStiffness: 32_000,
+  // 후륜의 초기 횡강성(N/rad)을 앞축보다 높게 두어 고속 복합 코너에서 과도한 후미 회전을 억제한다.
+  rearCorneringStiffness: 70_000,
   aeroDownforceCoefficient: 1.25,
   aeroBalanceFront: 0.43,
   dragCoefficient: 0.42,

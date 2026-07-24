@@ -3,7 +3,8 @@
  * 이 장면은 물리 상태를 소유하지 않고, 교육 실행기의 위치·목표점·상태만 읽는다.
  */
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type ReactElement, type RefObject } from "react";
+import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import {
   AITrainingRunner,
@@ -87,20 +88,24 @@ function TrainingVehicleModel({ groupRef }: { groupRef: RefObject<THREE.Group | 
   );
 }
 
-/** 레이싱 라인을 화면에서 cyan 선으로 표시해 AI가 따라가는 경로를 드러낸다. */
+/** 레이싱 라인을 화면에서 연속 cyan 곡선으로 표시해 AI가 따르는 진입·에이펙스·탈출 흐름을 드러낸다. */
 function TrainingRacingLine({ runner }: { runner: AITrainingRunner }) {
   const lineObject = useMemo(() => {
-    const points = runner.track.racingLine.map((point) => (
+    // 중심선 도로와 같은 centripetal 보간을 사용해 데이터 점 사이의 꺾임을 시각적 조향 목표로 오해하지 않게 한다.
+    const curve = new THREE.CatmullRomCurve3(runner.track.racingLine.map((point) => (
       new THREE.Vector3(point.position.x, -0.34, point.position.z)
-    ));
-    points.push(points[0]?.clone() ?? new THREE.Vector3());
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({
+    )), true, "centripetal", 0.2);
+    // 얇은 TubeGeometry는 원본 레이싱 라인 점을 바꾸지 않으면서도 폐곡선의 연속 경로를 바닥 위에서 분명히 보이게 한다.
+    const geometry = new THREE.TubeGeometry(curve, Math.max(192, runner.track.racingLine.length * 12), 0.1, 8, true);
+    const material = new THREE.MeshStandardMaterial({
       color: "#36d7ff",
+      emissive: "#0f7190",
+      emissiveIntensity: 0.75,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.9,
+      roughness: 0.36,
     });
-    return new THREE.Line(geometry, material);
+    return new THREE.Mesh(geometry, material);
   }, [runner]);
 
   useEffect(() => () => {
@@ -113,6 +118,49 @@ function TrainingRacingLine({ runner }: { runner: AITrainingRunner }) {
   }, [lineObject]);
 
   return <primitive object={lineObject} />;
+}
+
+/** 레이싱 라인 데이터의 제동 진입점과 에이펙스를 서로 다른 색·라벨로 표시한다. */
+function TrainingRacingReferenceMarkers({ runner }: { runner: AITrainingRunner }) {
+  return (
+    <group>
+      {runner.track.racingLine.flatMap((point, index) => {
+        // 제동점은 노란 세로 마커, 에이펙스는 보라색 링으로 분리해 차량의 현재 경로를 비교하게 한다.
+        const markers: ReactElement[] = [];
+        if (point.brakePoint) {
+          markers.push(
+            <group key={point.id + "-brake"} position={[point.position.x, -0.25, point.position.z]}>
+              <mesh position={[0, 0.52, 0]}>
+                <boxGeometry args={[0.22, 1.04, 0.22]} />
+                <meshBasicMaterial color="#ffbe55" />
+              </mesh>
+              <Text position={[0, 1.38, 0]} fontSize={1.25} color="#ffe3a0" anchorX="center" anchorY="middle">
+                BRAKE
+              </Text>
+            </group>,
+          );
+        }
+        if (point.apex) {
+          // 연속 에이펙스는 라벨을 좌우로 교차 배치해 추적 카메라 원근에서도 서로 가리지 않게 한다.
+          const labelSide = index % 2 === 0 ? 1 : -1;
+          const labelOffset = new THREE.Vector3(Math.cos(point.yawRad), 0, Math.sin(point.yawRad))
+            .multiplyScalar(labelSide * 1.5);
+          markers.push(
+            <group key={point.id + "-apex"} position={[point.position.x, -0.29, point.position.z]}>
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[0.34, 0.52, 24]} />
+                <meshBasicMaterial color="#d78dff" transparent opacity={0.95} />
+              </mesh>
+              <Text position={[labelOffset.x, 1.02, labelOffset.z]} fontSize={1.05} color="#e8b5ff" anchorX="center" anchorY="middle">
+                APEX
+              </Text>
+            </group>,
+          );
+        }
+        return markers;
+      })}
+    </group>
+  );
 }
 
 /** 현재 AI 목표점을 발광 링으로 표시해 제동·조향의 기준점을 관찰하게 한다. */
@@ -193,6 +241,7 @@ export function TrainingScene({ runner, paused, onSnapshot }: TrainingSceneProps
       <pointLight position={[0, 8, 0]} intensity={18} distance={45} color="#1caac6" />
       <TestTrackVisual track={runner.track} />
       <TrainingRacingLine runner={runner} />
+      <TrainingRacingReferenceMarkers runner={runner} />
       <TrainingTargetMarker snapshot={snapshotRef.current} />
       <TrainingVehicleModel groupRef={vehicleRef} />
     </>

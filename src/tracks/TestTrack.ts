@@ -80,13 +80,14 @@ export interface TestTrackStartPose {
   yawRad: number;
 }
 
-/** 레이싱 라인 한 점의 위치·방향·목표 속도와 선택적 제동 진입점을 정의한다. */
+/** 레이싱 라인 한 점의 위치·방향·목표 속도와 선택적 제동·에이펙스 참조점을 정의한다. */
 export interface TestTrackRacingLinePoint {
   id: string;
   position: TrackPoint;
   yawRad: number;
   targetSpeedMps: number;
   brakePoint?: boolean;
+  apex?: boolean;
 }
 
 /** 렌더링·물리·평가기의 공통 기준이 되는 중심선 샘플이다. */

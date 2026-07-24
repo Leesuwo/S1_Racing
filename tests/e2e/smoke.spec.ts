@@ -11,6 +11,7 @@ test("opens the AI Training Lab as the default visible screen", async ({ page })
   await expect(page.getByLabel("교육 시나리오")).toHaveValue("full-lap");
   await expect(page.getByRole("button", { name: "훈련 시작" })).toBeVisible();
   await expect(page.getByText("결정성 해시", { exact: true })).toBeVisible();
+  await expect(page.getByText("차체 슬립", { exact: true })).toBeVisible();
   await expect(page.getByText("AI는 입력만 생성하고 차량 위치·속도는 VehicleSimulation이 계산합니다.")).toBeVisible();
 });
 
@@ -25,6 +26,17 @@ test("runs an observable AI training episode and exposes its progress", async ({
   await expect(page.locator(".training-state")).toHaveText(/교육 중|교육 완료/);
 });
 
+test("keeps the full-lap percentage below completion before the finish checkpoint", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "훈련 시작" }).click();
+  await expect(page.locator(".training-metric--hash em")).toHaveText(/step [1-9]\d*\/7200/, { timeout: 5_000 });
+  await expect(page.locator(".training-state")).toHaveText("교육 중");
+  await expect(page.getByLabel(/실제 트랙 진행률 (?!100%)/)).toBeVisible();
+  await expect(page.getByLabel("실제 트랙 진행 거리")).toBeVisible();
+  await expect(page.getByLabel("출발선과 도착선")).toBeVisible();
+});
+
 test("runs the track-defined low-speed exit curriculum", async ({ page }) => {
   await page.goto("/");
 
@@ -35,6 +47,18 @@ test("runs the track-defined low-speed exit curriculum", async ({ page }) => {
 
   await expect(page.locator(".training-metric--hash em")).toHaveText(/step [1-9]\d*\/840/, { timeout: 5_000 });
   await expect(page.locator(".training-state")).toHaveText(/교육 중|교육 완료/);
+});
+
+test("keeps high-speed corner training within the visible body-slip envelope", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByLabel("교육 시나리오").selectOption("high-speed");
+  await expect(page.locator(".training-overlay strong")).toHaveText("고속 복합 코너");
+  await page.getByRole("button", { name: "훈련 시작" }).click();
+
+  await expect(page.locator(".training-metric--hash em")).toHaveText(/step [1-9]\d*\/1080/, { timeout: 5_000 });
+  await expect(page.getByText("차체 슬립", { exact: true })).toBeVisible();
+  await expect(page.getByText(/한계 3.4°/)).toBeVisible();
 });
 
 test("pauses, advances one fixed step, and resets the training episode", async ({ page }) => {
@@ -54,21 +78,19 @@ test("pauses, advances one fixed step, and resets the training episode", async (
   await expect(page.locator(".training-overlay p")).toHaveText(/훈련 대기/);
 });
 
-test("searches AI parameters and exposes the best deterministic configuration", async ({ page }) => {
+test("automatically tunes and conditionally applies AI configuration after training finishes", async ({ page }) => {
   await page.goto("/");
 
-  const learnButton = page.getByRole("button", { name: "AI 학습 실행" });
-  await expect(learnButton).toHaveCount(1);
-  await learnButton.click();
+  await expect(page.getByRole("button", { name: "AI 학습 실행" })).toHaveCount(0);
+  await page.getByLabel("교육 시나리오").selectOption("acceleration");
+  await page.getByRole("button", { name: "훈련 시작" }).click();
 
-  await expect(page.getByRole("heading", { name: "AI 설정 후보를 비교했습니다" })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole("heading", { name: /설정을 (자동 적용|유지)했습니다/ })).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText("기준 점수", { exact: true })).toBeVisible();
   await expect(page.getByText("최고 점수", { exact: true })).toBeVisible();
   await expect(page.getByText("탐색 후보", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "최고 설정 적용" })).toBeVisible();
-
-  await page.getByRole("button", { name: "최고 설정 적용" }).click();
-  await expect(page.locator(".training-overlay p")).toHaveText(/훈련 대기/);
+  await expect(page.getByRole("button", { name: "최고 설정 적용" })).toHaveCount(0);
+  await expect(page.locator(".training-overlay p")).toHaveText(/훈련 대기|시나리오 완료/);
 });
 
 test("keeps the M2A driving mode available from the training lab", async ({ page }) => {

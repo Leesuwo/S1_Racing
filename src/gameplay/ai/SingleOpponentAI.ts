@@ -34,6 +34,8 @@ export interface SingleOpponentAIConfig {
   brakeGain: number;
   brakeDeadbandMps: number;
   cornerSpeedScale: number;
+  slipRecoverySteeringGain: number;
+  slipThrottleCutAngleRad: number;
   upshiftRpm: number;
   downshiftRpm: number;
   shiftCooldownSeconds: number;
@@ -65,6 +67,11 @@ export const DEFAULT_SINGLE_OPPONENT_AI_CONFIG: SingleOpponentAIConfig = {
   brakeGain: 0.16,
   brakeDeadbandMps: 1.5,
   cornerSpeedScale: 0.75,
+  // 차체 슬립이 약 3.4°를 넘으면 고속 코너에서 먼저 구동을 끊어 타이어 횡력을 회복한다.
+  // 실제 F1 차량 계수가 아닌, 시각적 드리프트를 방지하기 위한 initial_assumption이다.
+  slipRecoverySteeringGain: 1.2,
+  // 0.05 rad(약 2.9°)부터 lift를 시작해 0.06 rad 평가 상한보다 먼저 횡그립을 회복한다.
+  slipThrottleCutAngleRad: 0.05,
   upshiftRpm: 7_200,
   downshiftRpm: 2_000,
   shiftCooldownSeconds: 0.25,
@@ -218,10 +225,17 @@ export class SingleOpponentAI {
     const lateralErrorM = dx * right.x + dz * right.z;
     // 현재 yaw에서 목표 yaw까지의 최단 헤딩 오차(rad)다.
     const headingErrorRad = normalizeAngle(target.targetPoint.yawRad - state.yawRad);
-    // 헤딩·횡오차를 합친 정규화 조향 입력이다.
+    // 차체 전방과 실제 속도 벡터의 각도(rad)다. 라인 오차만 보정하면 이미 발생한 후미 슬립을
+    // 같은 방향의 추가 조향으로 키울 수 있으므로, 속도 벡터를 차체 축으로 되돌리는 항을 분리한다.
+    const bodySlipAngleRad = Math.atan2(
+      state.velocity.x * right.x + state.velocity.z * right.z,
+      Math.max(0.5, Math.abs(finiteOr(state.forwardSpeedMps, state.speedMps))),
+    );
+    // 헤딩·횡오차와 슬립 복구를 합친 정규화 조향 입력이다.
     const steering = clamp(
       headingErrorRad * this.config.headingGain
-        + Math.atan2(lateralErrorM, lookaheadDistanceM) * this.config.lateralGain,
+        + Math.atan2(lateralErrorM, lookaheadDistanceM) * this.config.lateralGain
+        - bodySlipAngleRad * this.config.slipRecoverySteeringGain,
       -1,
       1,
     );
@@ -243,9 +257,17 @@ export class SingleOpponentAI {
       1,
     );
     // 제동 중에는 구동 입력을 제거하고, 그 외에는 목표 속도 오차로 스로틀을 계산한다.
-    const throttle = brake > 0
+    const requestedThrottle = brake > 0
       ? 0
       : clamp(speedErrorMps * this.config.throttleGain, 0, 1);
+    // 고속 코너에서 풀스로틀은 차체가 레이싱 라인에 정렬되고 타이어 횡력이 남아 있을 때만 허용한다.
+    // 한계를 넘으면 브레이크를 강제로 밟지 않고 lift로 하중·횡력을 회복해 드리프트 확대를 막는다.
+    const slipThrottleScale = clamp(
+      1 - Math.abs(bodySlipAngleRad) / Math.max(0.001, this.config.slipThrottleCutAngleRad),
+      0,
+      1,
+    );
+    const throttle = requestedThrottle * slipThrottleScale;
     // RPM과 현재 기어에 따른 one-shot 변속 상승·하강 요청이다.
     const shiftUp = this.shiftCooldownSeconds <= 0
       && state.rpm >= this.config.upshiftRpm

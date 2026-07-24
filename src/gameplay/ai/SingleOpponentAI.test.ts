@@ -73,6 +73,32 @@ describe("SingleOpponentAI", () => {
     expect(input).toMatchObject({ clutch: 0, overtakeMode: false, activeAero: true });
   });
 
+  // 고속 코너에서 이미 차체가 옆으로 흐르면 더 큰 스로틀을 유지하지 않고, 속도 벡터를 차체 축으로
+  // 되돌리는 입력을 내야 풀스로틀이 드리프트를 확대하는 상황을 막을 수 있다.
+  it("lifts and countersteers when body slip exceeds the stability envelope", () => {
+    const ai = new SingleOpponentAI();
+    const stableInput = ai.update({
+      ...BASE_STATE,
+      velocity: { x: 30, z: 0 },
+      speedMps: 30,
+      forwardSpeedMps: 30,
+      rpm: 5_500,
+      gear: 3,
+    }, 1 / 120);
+    const slippingInput = ai.update({
+      ...BASE_STATE,
+      velocity: { x: 30, z: 3 },
+      speedMps: Math.hypot(30, 3),
+      forwardSpeedMps: 30,
+      rpm: 5_500,
+      gear: 3,
+    }, 1 / 120);
+
+    expect(stableInput.throttle).toBeGreaterThan(0);
+    expect(slippingInput.throttle).toBe(0);
+    expect(slippingInput.steering).toBeLessThan(stableInput.steering);
+  });
+
   // 변속 명령은 한 fixed step만 발생해야 기어가 쿨다운 동안 반복 증가하지 않는다.
   it("emits one-shot upshift commands with a cooldown", () => {
     // 테스트 트랙을 읽는 변속 상태 보유 컨트롤러다.

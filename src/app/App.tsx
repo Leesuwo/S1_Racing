@@ -3,7 +3,7 @@
  * 물리·교육 상태는 각각 장면과 실행기가 소유하고, 이 컴포넌트는 읽기 전용 스냅샷과
  * 사용자 조작 명령만 연결한다.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
 import { VEHICLE_INPUT_PRESETS, type VehicleInputPresetId } from "../game/input/InputPreset";
@@ -11,6 +11,7 @@ import {
   AI_TRAINING_SCENARIOS,
   AITrainingRunner,
   type AITrainingScenarioId,
+  type AITrainingFailure,
   type AITrainingSnapshot,
 } from "../gameplay/training/AITrainingRunner";
 import {
@@ -157,13 +158,30 @@ function TrainingOverlay({ snapshot }: { snapshot: AITrainingSnapshot }) {
           {trainingStatusLabel(snapshot.status)}
         </b>
       </div>
-      <div className="training-progress" aria-label={"교육 진행률 " + Math.round(snapshot.progressRatio * 100) + "%"}>
+      <div
+        className="training-progress"
+        aria-label={(snapshot.scenario.id === "full-lap" ? "실제 트랙 진행률 " : "교육 진행률 ")
+          + Math.round(snapshot.progressRatio * 100) + "%"}
+      >
         <span style={{ width: String(snapshot.progressRatio * 100) + "%" }} />
       </div>
       <div className="training-overlay__row">
-        <span>{snapshot.trackName}</span>
+        <span>{snapshot.scenario.id === "full-lap" ? "실제 트랙 진행" : snapshot.trackName}</span>
         <b>{Math.round(snapshot.progressRatio * 100)}%</b>
       </div>
+      {snapshot.scenario.id === "full-lap" && (
+        <>
+          <div className="training-lap-distance" aria-label="실제 트랙 진행 거리">
+            <span>{formatNumber(Math.max(0, snapshot.lapProgressM), 1)} m / {formatNumber(snapshot.trackLengthM, 1)} m</span>
+            <span>역주행 시 진행률 감소</span>
+          </div>
+          <div className="training-start-finish" aria-label="출발선과 도착선">
+            <span><b>START</b> 출발선</span>
+            <i aria-hidden="true" />
+            <span><b>FINISH</b> 결승선 재통과</span>
+          </div>
+        </>
+      )}
       <p>{snapshot.message}</p>
     </div>
   );
@@ -197,6 +215,11 @@ function TrainingMetrics({ snapshot }: { snapshot: AITrainingSnapshot }) {
           <em>P95 {formatNumber(snapshot.lateralErrorP95M, 2)} · 최대 {formatNumber(snapshot.maximumLateralErrorM, 2)} m</em>
         </article>
         <article className="training-metric">
+          <span>차체 슬립</span>
+          <strong>{formatNumber(Math.abs(snapshot.bodySlipAngleRad) * 180 / Math.PI, 1)} <small>°</small></strong>
+          <em>최대 {formatNumber(snapshot.maximumBodySlipAngleRad * 180 / Math.PI, 1)}° · 한계 3.4°</em>
+        </article>
+        <article className="training-metric">
           <span>트랙 이탈</span>
           <strong>{formatNumber(snapshot.offTrackCount)} <small>회</small></strong>
           <em>{snapshot.checkpointIndex}/{snapshot.totalCheckpointCount} checkpoint · 통과 {snapshot.checkpointCount}</em>
@@ -216,13 +239,11 @@ function TrainingMetrics({ snapshot }: { snapshot: AITrainingSnapshot }) {
   );
 }
 
-/** 결정적 후보 탐색의 기준 점수·최고 점수·개선량을 학습 결과로 표시한다. */
+/** 완료된 에피소드 뒤에 결정적으로 비교한 후보 설정의 자동 적용 결과다. */
 function TrainingSearchSummary({
   result,
-  onApply,
 }: {
-  result: AITrainingSearchResult;
-  onApply: () => void;
+  result: AITrainingSearchResult & { applied: boolean; failure?: AITrainingFailure };
 }) {
   // 낮을수록 좋은 점수의 기준 대비 개선률을 0% 아래로 내려가지 않게 표시한다.
   const improvementRatio = result.baseline.totalScore > 0
@@ -233,12 +254,9 @@ function TrainingSearchSummary({
     <section className="training-search" aria-label="AI 파라미터 학습 결과">
       <div className="training-search__header">
         <div>
-          <span className="section-kicker">DETERMINISTIC SEARCH / CONFIG UPDATE</span>
-          <h2>AI 설정 후보를 비교했습니다</h2>
+          <span className="section-kicker">AUTOMATIC TUNING / CONFIG UPDATE</span>
+          <h2>{result.applied ? "개선 설정을 자동 적용했습니다" : "현재 설정을 유지했습니다"}</h2>
         </div>
-        <button type="button" className="training-button training-button--primary" onClick={onApply}>
-          최고 설정 적용
-        </button>
       </div>
       <div className="training-search__grid">
         <article>
@@ -258,26 +276,33 @@ function TrainingSearchSummary({
         </article>
       </div>
       <p className="training-search__note">
-        낮은 점수를 선택했지만, 검증 트랙 재실행 전에는 현재 주행에 자동 반영하지 않습니다.
+        {result.applied
+          ? "완료된 교육 뒤에 현재 설정보다 낮은 점수의 후보만 자동 적용했습니다. 다음 교육은 이 설정을 사용합니다."
+          : "완료된 교육 뒤에 현재 설정보다 낮은 점수의 후보가 없어 기존 설정을 유지했습니다."}
       </p>
       <p className="training-search__config">
         최고 설정 · lookahead {formatNumber(result.best.config.lookaheadM, 1)} m · heading {formatNumber(result.best.config.headingGain, 2)} · lateral {formatNumber(result.best.config.lateralGain, 2)} · corner {formatNumber(result.best.config.cornerSpeedScale, 2)}
       </p>
+      {result.failure?.reason === "off-track" && (
+        <p className="training-search__failure" aria-label="맵 이탈 학습 사례">
+          실패 사례 반영 · {result.failure.sectionLabel}에서 경계 {formatNumber(Math.abs(result.failure.distanceToBoundaryM), 2)} m 초과 · 속도 {formatNumber(result.failure.speedMps * 3.6, 1)} km/h · 횡오차 {formatNumber(Math.abs(result.failure.lateralErrorM), 2)} m
+        </p>
+      )}
     </section>
   );
 }
 
-/** 교육 시나리오·실행 상태·수동 스텝을 조작하는 Training Lab 컨트롤 바다. */
+/** 교육 시나리오·에피소드 시작·수동 관찰을 조작하는 Training Lab 컨트롤 바다. */
 function TrainingControls({
   runner,
   snapshot,
   onSnapshot,
-  onTrain,
+  onStart,
 }: {
   runner: AITrainingRunner;
   snapshot: AITrainingSnapshot;
   onSnapshot: (nextSnapshot: AITrainingSnapshot) => void;
-  onTrain: () => void;
+  onStart: () => void;
 }) {
   // 버튼 동작 뒤 장면의 다음 10Hz 샘플을 기다리지 않고 HUD를 즉시 동기화한다.
   const refresh = () => onSnapshot(runner.getSnapshot());
@@ -304,11 +329,7 @@ function TrainingControls({
         <button
           type="button"
           className="training-button training-button--primary"
-          onClick={() => {
-            if (isRunning) runner.pause();
-            else runner.start();
-            refresh();
-          }}
+          onClick={onStart}
         >
           {isRunning ? "훈련 일시정지" : "훈련 시작"}
         </button>
@@ -325,13 +346,10 @@ function TrainingControls({
         >
           훈련 리셋
         </button>
-        <button type="button" className="training-button training-button--learn" onClick={onTrain}>
-          AI 학습 실행
-        </button>
       </div>
       <div className="training-control-note">
         <span>관찰 포인트</span>
-        <strong>{snapshot.brakePoint ? "브레이크 마커 · amber target" : "레이싱 라인 · cyan target"}</strong>
+        <strong>{snapshot.brakePoint ? "BRAKE · amber / APEX · violet / target · cyan" : "APEX · violet / BRAKE · amber / target · cyan"}</strong>
       </div>
     </div>
   );
@@ -362,23 +380,55 @@ export function App() {
     () => trainingRunner.getSnapshot(),
   );
   // 후보 탐색이 끝난 뒤에도 기준·최고 설정 비교 결과를 화면에 보존한다.
-  const [trainingSearchResult, setTrainingSearchResult] = useState<AITrainingSearchResult | null>(null);
-  // R3F가 10Hz로 호출하는 교육 상태 콜백의 identity를 고정한다.
+  const [trainingSearchResult, setTrainingSearchResult] = useState<
+    (AITrainingSearchResult & { applied: boolean; failure?: AITrainingFailure }) | null
+  >(null);
+  // 새 에피소드가 끝난 뒤에만 한 번 자동 튜닝하도록 시작·일시정지·HUD 콜백 사이의 의도를 보존한다.
+  const automaticTuningPendingRef = useRef(false);
+
+  // 완료된 시나리오만 다시 평가해 사용자가 실제로 실행한 구간의 설정 개선 여부를 결정한다.
+  const completeAutomaticTuning = useCallback((completedSnapshot: AITrainingSnapshot) => {
+    const result = searchAITrainingConfig({
+      baseConfig: trainingRunner.getAIConfig(),
+      scenarioIds: [completedSnapshot.scenario.id],
+      maxCandidates: 14,
+    });
+    const applied = result.best.totalScore < result.baseline.totalScore;
+    if (applied) trainingRunner.setAIConfig(result.best.config);
+    setTrainingSearchResult({ ...result, applied, failure: completedSnapshot.failure });
+    setTrainingSnapshot(trainingRunner.getSnapshot());
+  }, [trainingRunner]);
+
+  // R3F가 10Hz로 전달한 종료 스냅샷을 감지해, 주행 완료 뒤에만 후보 평가를 실행한다.
   const handleTrainingSnapshot = useCallback((snapshot: AITrainingSnapshot) => {
     setTrainingSnapshot(snapshot);
-  }, []);
+    if (
+      automaticTuningPendingRef.current
+      && (snapshot.status === "completed" || snapshot.status === "failed")
+    ) {
+      automaticTuningPendingRef.current = false;
+      completeAutomaticTuning(snapshot);
+    }
+  }, [completeAutomaticTuning]);
 
-  // 동일한 트랙·시나리오·물리 경계에서 제한된 AI 설정 후보를 결정적으로 비교한다.
-  const runTrainingSearch = useCallback(() => {
-    setTrainingSearchResult(searchAITrainingConfig({ maxCandidates: 14 }));
-  }, []);
+  // 새 교육은 먼저 현재 설정으로 에피소드를 끝까지 실행하고, 종료 콜백에서만 자동 튜닝을 예약한다.
+  const startTraining = useCallback(() => {
+    const currentStatus = trainingRunner.getSnapshot().status;
+    if (currentStatus === "running") {
+      trainingRunner.pause();
+      setTrainingSnapshot(trainingRunner.getSnapshot());
+      return;
+    }
 
-  // 최고 설정을 실제 교육 실행기에 적용하되, 적용 전 결과는 비교 화면에 남긴다.
-  const applyTrainingSearchResult = useCallback(() => {
-    if (!trainingSearchResult) return;
-    trainingRunner.setAIConfig(trainingSearchResult.best.config);
+    // 일시정지 재개는 같은 에피소드의 연속이므로 튜닝 예약을 유지한 채 물리 실행만 이어간다.
+    if (currentStatus !== "paused") {
+      automaticTuningPendingRef.current = true;
+      setTrainingSearchResult(null);
+    }
+
+    trainingRunner.start();
     setTrainingSnapshot(trainingRunner.getSnapshot());
-  }, [trainingRunner, trainingSearchResult]);
+  }, [trainingRunner]);
 
   useEffect(() => {
     // 브라우저 입력과 WebGL 지원을 초기화하고 visibility 리스너를 등록한다.
@@ -483,7 +533,7 @@ export function App() {
               runner={trainingRunner}
               snapshot={trainingSnapshot}
               onSnapshot={handleTrainingSnapshot}
-              onTrain={runTrainingSearch}
+              onStart={startTraining}
             />
           </>
         )}
@@ -531,7 +581,7 @@ export function App() {
         <>
           <TrainingMetrics snapshot={trainingSnapshot} />
           {trainingSearchResult && (
-            <TrainingSearchSummary result={trainingSearchResult} onApply={applyTrainingSearchResult} />
+            <TrainingSearchSummary result={trainingSearchResult} />
           )}
         </>
       ) : (
