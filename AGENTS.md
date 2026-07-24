@@ -13,7 +13,7 @@
 
 ## Current implementation stage
 
-Milestone 1F — Input presets and test track을 완료했고, 현재 다음은 `Milestone 2A — Single AI opponent`다.
+Milestone 1F — Input presets and test track을 완료했고, 현재는 `Milestone 2A-0 — AI Training Circuit & Evaluator`를 진행 중이다. `Milestone 2A — Single AI opponent`는 M2A-0 인수 이후에 시작한다.
 
 현재 프로토타입에는 다음이 포함된다:
 
@@ -56,6 +56,18 @@ Milestone 1F에서는 공통 `VehicleControlInput` 경계를 유지하면서 입
 - AI가 차량을 순간이동하거나 숨겨진 그립·출력 보너스를 받게 하지 않는다.
 - 튜닝 가능한 값은 타입이 있는 설정 파일에 둔다.
 - 트랙별 예외를 범용 AI 컨트롤러에 하드코딩하지 않는다.
+
+## Commenting policy
+
+- 모든 소스 파일에는 파일의 목적과 모듈 경계를 설명하는 주석을 둔다.
+- 모든 코드 요소와 블록(상수·변수·필드, 타입·인터페이스, 함수·클래스, 조건·반복, 예외 처리, 외부 호출)에는 목적·역할·이유를 설명하는 주석을 작성한다.
+- 모든 `export` 타입·함수·클래스에는 TSDoc 또는 동등한 설명을 작성한다.
+- 변수·상태 필드에는 역할, 단위, 수명, 소유권 또는 유효 범위를 설명하는 주석을 작성한다.
+- 물리 공식, 좌표계 변환, 상태 전이, 방어 로직에는 결과가 아니라 설계 이유를 주석에 작성한다.
+- 튜닝 수치는 단위와 함께 기록하고, 검증되지 않은 값은 `initial_assumption` 또는 `simulation_required`와 근거를 주석에 남긴다.
+- 테스트 코드에도 검증하는 사용자 동작·물리 불변식·경계 조건과 주요 픽스처 변수의 목적을 주석으로 설명한다.
+- 단순 코드도 주석을 생략하지 않는다. 단, 같은 설명을 여러 줄에 반복하지 말고 가장 좁은 공통 선언·블록에 한 번 작성한다.
+- 코드 동작이나 수치가 변경되면 관련 주석도 함께 갱신한다.
 
 ## Project-local Codex skill
 

@@ -34,9 +34,15 @@ Rapier 동적 차체, 정적 지면, 4개 휠 레이캐스트, 스프링·댐퍼
 
 상세 범위와 검증 결과는 [Milestone 1F 상세 문서](./MILESTONE_1F.md)에 기록했다.
 
-## Milestone 2A — Single AI opponent (다음)
+## Milestone 2A-0 — AI Training Circuit & Evaluator (진행 중)
 
-플레이어와 동일한 입력 경계를 사용하는 AI 한 대를 추가한다. AI가 물리를 우회하지 않는지, 결정적 목표 속도·레이싱 라인·브레이크 지점을 단위·시나리오 테스트로 검증한다.
+단일 AI를 레이스 세션에 연결하기 전에 Silverstone의 주행 특성만 참고한 독창 교육 트랙과 120Hz 결정적 에피소드 평가기를 추가한다. 현재 Training Lab에서 중심선·도로 폭·곡률·섹터·체크포인트·레이싱 라인·저속 탈출 시나리오와 14개 후보의 결정적 설정 탐색을 검증했다. 튜닝 결과 파일 저장과 최종 인수 게이트가 남아 있다. 신경망·강화학습은 이 단계에 포함하지 않는다.
+
+상세 실행 항목은 [AI Training Circuit TODO](./AI_TRAINING_TRACK_TODO.md)를 따른다.
+
+## Milestone 2A — Single AI opponent (예정)
+
+M2A-0에서 검증한 교육 트랙과 AI 설정을 사용해 플레이어와 동일한 입력 경계를 사용하는 AI 한 대를 통합한다. AI가 물리를 우회하지 않는지, 결정적 목표 속도·레이싱 라인·브레이크 지점을 단위·시나리오 테스트로 검증한다.
 
 ## Milestone 2B — Multi-car race session (예정)
 

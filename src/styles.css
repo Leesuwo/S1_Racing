@@ -80,10 +80,87 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 6vw, 4.5rem); line-height: 0.95; l
 .control-panel > div { min-height: 76px; padding: 16px; background: #0d1119; }
 .control-panel strong { color: #c8d0dc; font-size: 0.82rem; font-weight: 500; line-height: 1.45; }
 
+/* AI Training Lab은 정비실 계기판처럼 cyan 데이터와 amber 제동 신호를 중심으로 구성한다. */
+.app-shell--training { background: radial-gradient(circle at 92% 4%, #0e2e39 0, transparent 28rem); }
+.app-shell--training .eyebrow { color: #41d9ee; }
+.topbar__actions { display: flex; align-items: flex-end; flex-direction: column; gap: 12px; }
+.mode-switch { display: flex; padding: 3px; border: 1px solid #263f4b; border-radius: 10px; background: #08161c; }
+.mode-switch__tab { border: 0; border-radius: 7px; padding: 8px 12px; color: #78909a; background: transparent; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; }
+.mode-switch__tab:hover { border-color: transparent; background: #102a34; }
+.mode-switch__tab--active { color: #e7fbff; background: #15586b; box-shadow: inset 0 0 0 1px #38c9e3; }
+.status-chip--training { border-color: #39c9e5; color: #52def3; }
+.simulation-panel--training { border-color: #1c5261; box-shadow: 0 24px 90px #041e2788, inset 0 0 60px #0c45531f; }
+.simulation-panel--training canvas { min-height: min(70vh, 720px); }
+.training-overlay { position: absolute; top: 22px; left: 22px; width: min(390px, calc(100% - 44px)); padding: 17px 18px; border: 1px solid #37bed83d; border-radius: 13px; background: #06141bdd; box-shadow: 0 16px 38px #0008; backdrop-filter: blur(14px); pointer-events: none; }
+.training-overlay__kicker, .section-kicker { color: #45d9ed; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.15em; }
+.training-overlay__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-top: 11px; }
+.training-overlay__heading span, .training-overlay__heading strong { display: block; }
+.training-overlay__heading span { color: #91aab4; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; }
+.training-overlay__heading strong { margin-top: 4px; color: #f4fbfd; font-size: 1.15rem; letter-spacing: -0.04em; }
+.training-state { padding: 5px 7px; border: 1px solid #52616b; border-radius: 6px; color: #afc1c7; font-size: 0.62rem; letter-spacing: 0.08em; white-space: nowrap; }
+.training-state--running { border-color: #39c9e5; color: #65e5f7; }
+.training-state--paused { border-color: #f5bd59; color: #ffd27c; }
+.training-state--completed { border-color: #39d7a4; color: #6ff0c0; }
+.training-state--failed { border-color: #ff6f8a; color: #ff9bad; }
+.training-progress { height: 6px; margin-top: 18px; overflow: hidden; border-radius: 99px; background: #1a343d; }
+.training-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #2cbcd8, #74e6ee); transition: width 160ms ease; }
+.training-overlay__row { display: flex; justify-content: space-between; gap: 14px; margin-top: 8px; color: #78929b; font-size: 0.68rem; }
+.training-overlay__row b { color: #bdf7ff; }
+.training-overlay p { margin: 14px 0 0; color: #a7bbc2; font-size: 0.75rem; line-height: 1.45; }
+.training-controls { position: absolute; right: 20px; bottom: 18px; display: flex; align-items: center; gap: 11px; padding: 10px; border: 1px solid #2c6570; border-radius: 11px; background: #06161cdd; box-shadow: 0 14px 32px #0008; backdrop-filter: blur(14px); }
+.training-scenario-control { display: flex; align-items: center; gap: 8px; }
+.training-scenario-control span, .training-control-note span { color: #7f9da7; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.1em; white-space: nowrap; }
+.training-scenario-control select { min-width: 130px; border: 1px solid #2f6b78; border-radius: 7px; padding: 8px 28px 8px 10px; color: #d9f7fb; background: #0a252e; }
+.training-button-group { display: flex; gap: 6px; }
+.training-button { border-color: #316a78; border-radius: 7px; padding: 8px 11px; color: #c5eaf0; background: #102f38; font-size: 0.7rem; font-weight: 800; }
+.training-button:hover { border-color: #58e0f2; background: #164754; }
+.training-button--primary { border-color: #45d9ed; color: #e9fdff; background: #145365; }
+.training-button--quiet { color: #8faab2; background: transparent; }
+.training-button--learn { border-color: #b77c36; color: #ffe1a3; background: #3b2917; }
+.training-button--learn:hover { border-color: #ffcf70; background: #5b3a1d; }
+.training-control-note { display: grid; gap: 3px; min-width: 170px; }
+.training-control-note strong { color: #c8eaf0; font-size: 0.7rem; font-weight: 600; }
+.training-dashboard { margin-top: 12px; padding: 22px; border: 1px solid #1e3f49; border-radius: 14px; background: linear-gradient(135deg, #0b1920, #0d1119 60%); }
+.training-dashboard__header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.training-dashboard__header h2 { margin: 7px 0 0; color: #e9fbfd; font-size: 1.25rem; letter-spacing: -0.04em; }
+.training-integrity { padding: 7px 9px; border: 1px solid #235966; border-radius: 6px; color: #8edbe8; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.65rem; }
+.training-metric-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; }
+.training-metric { min-height: 112px; padding: 13px; border: 1px solid #1e3440; border-radius: 9px; background: #08131a; }
+.training-metric span { display: block; margin-bottom: 12px; color: #72919a; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.1em; }
+.training-metric strong { display: block; color: #d8f8fb; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.18rem; letter-spacing: -0.04em; }
+.training-metric strong small { color: #7ca1aa; font-size: 0.62rem; letter-spacing: 0; }
+.training-metric em { display: block; margin-top: 9px; color: #76919a; font-size: 0.65rem; font-style: normal; line-height: 1.35; }
+.training-metric--primary { border-color: #25798a; background: linear-gradient(150deg, #103b47, #08131a); }
+.training-metric--primary strong { color: #79edfa; }
+.training-metric--hash strong { color: #f5c56c; font-size: 1rem; }
+.training-search { margin-top: 12px; padding: 22px; border: 1px solid #5a4527; border-radius: 14px; background: linear-gradient(135deg, #1e170e, #0d1119 62%); }
+.training-search__header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 17px; }
+.training-search__header h2 { margin: 7px 0 0; color: #fff1d2; font-size: 1.25rem; letter-spacing: -0.04em; }
+.training-search__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.training-search__grid article { min-height: 104px; padding: 13px; border: 1px solid #493720; border-radius: 9px; background: #17130e; }
+.training-search__grid article > span { display: block; margin-bottom: 12px; color: #a28a63; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.1em; }
+.training-search__grid article > strong { display: block; color: #f5d492; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.18rem; letter-spacing: -0.04em; }
+.training-search__grid article > strong small { color: #ad9365; font-size: 0.62rem; letter-spacing: 0; }
+.training-search__grid article > em { display: block; margin-top: 9px; color: #9b8765; font-size: 0.65rem; font-style: normal; line-height: 1.35; }
+.training-search__grid .training-search__best { border-color: #a97832; background: linear-gradient(150deg, #49341a, #17130e); }
+.training-search__best > strong { color: #ffe09a !important; }
+.training-search__note { margin: 14px 0 0; color: #9e8965; font-size: 0.72rem; line-height: 1.45; }
+.training-search__config { margin: 8px 0 0; color: #e9c982; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.68rem; letter-spacing: 0.01em; }
+.training-context { border-color: #1e3f49; background: #08161c; }
+.training-context > div { background: #08161c; }
+.training-context strong { color: #a9d8df; }
+
+@media (max-width: 1120px) {
+  .training-metric-grid { grid-template-columns: repeat(3, 1fr); }
+  .training-controls { left: 18px; right: 18px; flex-wrap: wrap; }
+  .training-control-note { flex: 1; }
+}
+
 @media (max-width: 860px) {
   .app-shell { padding: 18px; }
   .telemetry-grid, .control-panel { grid-template-columns: repeat(2, 1fr); }
   .simulation-toolbar { left: 18px; right: auto; flex-wrap: wrap; }
+  .topbar__actions { align-items: flex-start; }
 }
 
 @media (max-width: 560px) {
@@ -92,4 +169,16 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 6vw, 4.5rem); line-height: 0.95; l
   .simulation-panel, .simulation-panel canvas, .loading-panel, .error-panel { min-height: 70vh; }
   .telemetry-grid, .control-panel { grid-template-columns: 1fr; }
   .telemetry-hud { top: 12px; left: 12px; }
+  .training-overlay { top: 12px; left: 12px; width: calc(100% - 24px); }
+  .training-controls { bottom: 12px; left: 12px; right: 12px; display: grid; gap: 9px; }
+  .training-scenario-control, .training-button-group { width: 100%; }
+  .training-scenario-control select, .training-button { flex: 1; }
+  .training-control-note { display: none; }
+  .training-dashboard { padding: 16px; }
+  .training-dashboard__header { display: block; }
+  .training-integrity { display: inline-block; margin-top: 13px; }
+  .training-metric-grid { grid-template-columns: repeat(2, 1fr); }
+  .training-search__header { display: block; }
+  .training-search__header .training-button { margin-top: 14px; }
+  .training-search__grid { grid-template-columns: 1fr; }
 }
