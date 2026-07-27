@@ -10,6 +10,11 @@ import {
   type TireForceState,
   type TireModelConfig,
 } from "./TireModel";
+import {
+  type TestTrackCollisionSegment,
+  type TestTrackCurbSegment,
+  type TestTrackDefinition,
+} from "../../tracks/TestTrack";
 
 export type RaycastWheelId = "frontLeft" | "frontRight" | "rearLeft" | "rearRight";
 
@@ -50,6 +55,8 @@ export interface RapierSuspensionTelemetry {
   maximumFrictionUsage: number;
   downforceN: number;
   dragForceN: number;
+  wallContactCount: number;
+  curbContactCount: number;
 }
 
 export interface RapierTireControl {
@@ -254,6 +261,36 @@ function createWheelMounts(config: RapierChassisSuspensionConfig): Record<Raycas
   };
 }
 
+/** 트랙 데이터의 평면 선분을 Rapier 고정 박스 하나로 변환한다. */
+function createStaticSegmentCollider(
+  world: RAPIER.World,
+  segment: TestTrackCollisionSegment | TestTrackCurbSegment,
+): RAPIER.Collider | null {
+  const deltaX = segment.end.x - segment.start.x;
+  const deltaZ = segment.end.z - segment.start.z;
+  const lengthM = Math.hypot(deltaX, deltaZ);
+  if (lengthM <= 1e-6) return null;
+
+  const angleRad = Math.atan2(-deltaZ, deltaX);
+  const halfHeightM = Math.max(0.001, segment.heightM * 0.5);
+  const halfWidthM = "thicknessM" in segment ? segment.thicknessM * 0.5 : segment.widthM * 0.5;
+  const descriptor = RAPIER.ColliderDesc.cuboid(lengthM * 0.5, halfHeightM, Math.max(0.001, halfWidthM))
+    .setTranslation(
+      (segment.start.x + segment.end.x) * 0.5,
+      halfHeightM,
+      (segment.start.z + segment.end.z) * 0.5,
+    )
+    .setRotation({
+      x: 0,
+      y: Math.sin(angleRad * 0.5),
+      z: 0,
+      w: Math.cos(angleRad * 0.5),
+    })
+    .setFriction("thicknessM" in segment ? 0.82 : 1.05);
+  if ("restitution" in segment) descriptor.setRestitution(Math.max(0, Math.min(1, segment.restitution)));
+  return world.createCollider(descriptor);
+}
+
 /**
  * Rapier owns the dynamic chassis and four downward scene-query rays. M1D
  * supplies rear-drive and engine-brake torque, while M1C calculates each
@@ -263,22 +300,33 @@ function createWheelMounts(config: RapierChassisSuspensionConfig): Record<Raycas
 export class RapierChassisSuspension {
   private readonly world: RAPIER.World;
   private readonly chassis: RAPIER.RigidBody;
+  private readonly chassisCollider: RAPIER.Collider;
   private readonly wheelMounts: Record<RaycastWheelId, Vec3>;
+  private readonly wallColliders: ReadonlySet<RAPIER.Collider>;
+  private readonly curbColliders: ReadonlySet<RAPIER.Collider>;
   private readonly contacts = new Map<RaycastWheelId, RaycastWheelContact>();
   private readonly previousCompression = new Map<RaycastWheelId, number>();
   private readonly tireStates = new Map<RaycastWheelId, RapierWheelTireState>();
   private readonly wheelAngularSpeeds = new Map<RaycastWheelId, number>();
   private steeringInput = 0;
   private surfaceDragMultiplier = 1;
+  private wallContactCount = 0;
+  private curbContactCount = 0;
 
   private constructor(
     private readonly config: RapierChassisSuspensionConfig,
     world: RAPIER.World,
     chassis: RAPIER.RigidBody,
+    chassisCollider: RAPIER.Collider,
+    wallColliders: ReadonlySet<RAPIER.Collider>,
+    curbColliders: ReadonlySet<RAPIER.Collider>,
   ) {
     this.world = world;
     this.chassis = chassis;
+    this.chassisCollider = chassisCollider;
     this.wheelMounts = createWheelMounts(config);
+    this.wallColliders = wallColliders;
+    this.curbColliders = curbColliders;
 
     for (const id of FIXED_WHEEL_ORDER) {
       this.contacts.set(id, emptyContact(id));
@@ -290,6 +338,7 @@ export class RapierChassisSuspension {
 
   static async create(
     config: RapierChassisSuspensionConfig = DEFAULT_RAPIER_CHASSIS_SUSPENSION_CONFIG,
+    track?: TestTrackDefinition,
   ): Promise<RapierChassisSuspension> {
     await initializeRapier();
 
@@ -300,6 +349,17 @@ export class RapierChassisSuspension {
       .setTranslation(0, -0.2, 0)
       .setFriction(1);
     world.createCollider(ground);
+
+    const wallColliders = new Set<RAPIER.Collider>();
+    const curbColliders = new Set<RAPIER.Collider>();
+    track?.collisionWalls?.forEach((segment) => {
+      const collider = createStaticSegmentCollider(world, segment);
+      if (collider) wallColliders.add(collider);
+    });
+    track?.curbs?.forEach((segment) => {
+      const collider = createStaticSegmentCollider(world, segment);
+      if (collider) curbColliders.add(collider);
+    });
 
     const chassisBody = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(0, config.initialChassisHeightM, 0)
@@ -316,9 +376,16 @@ export class RapierChassisSuspension {
     )
       .setDensity(chassisDensityKgPerM3)
       .setFriction(0.9);
-    world.createCollider(chassisCollider, chassis);
+    const chassisColliderHandle = world.createCollider(chassisCollider, chassis);
 
-    return new RapierChassisSuspension(config, world, chassis);
+    return new RapierChassisSuspension(
+      config,
+      world,
+      chassis,
+      chassisColliderHandle,
+      wallColliders,
+      curbColliders,
+    );
   }
 
   step(dtSeconds: number, control: RapierTireControl | number = this.steeringInput): void {
@@ -334,6 +401,7 @@ export class RapierChassisSuspension {
     this.applyAeroForces(tireControl);
     this.applyTireForces(dtSeconds, tireControl);
     this.world.step();
+    this.updateCollisionTelemetry();
     this.chassis.resetForces(false);
     this.chassis.resetTorques(false);
   }
@@ -416,6 +484,8 @@ export class RapierChassisSuspension {
     this.chassis.resetForces(false);
     this.chassis.resetTorques(false);
     this.surfaceDragMultiplier = 1;
+    this.wallContactCount = 0;
+    this.curbContactCount = 0;
 
     for (const id of FIXED_WHEEL_ORDER) {
       this.contacts.set(id, emptyContact(id));
@@ -443,11 +513,23 @@ export class RapierChassisSuspension {
       maximumFrictionUsage: Math.max(...tires.map((tire) => tire.frictionUsage)),
       downforceN: aero.downforceN,
       dragForceN: aero.dragForceN,
+      wallContactCount: this.wallContactCount,
+      curbContactCount: this.curbContactCount,
     };
   }
 
   dispose(): void {
     this.world.free();
+  }
+
+  /** 마지막 Rapier step에서 차체가 접촉한 벽·연석 콜라이더 수를 읽는다. */
+  private updateCollisionTelemetry(): void {
+    this.wallContactCount = 0;
+    this.curbContactCount = 0;
+    this.world.contactPairsWith(this.chassisCollider, (collider) => {
+      if (this.wallColliders.has(collider)) this.wallContactCount += 1;
+      if (this.curbColliders.has(collider)) this.curbContactCount += 1;
+    });
   }
 
   private applySuspensionForces(dtSeconds: number): void {

@@ -47,16 +47,22 @@ AI는 플레이어와 같은 차량 물리를 사용하고 `VehicleControlInput`
 - Race Weekend UI는 단계·순위·타이어 선택·최소 피트 전략을 읽기 전용 스냅샷과 명령 콜백으로 연결한다.
 - 타이어 열·마모·공기압·실제 피트 물리와 접촉 손상은 후속 모델이며 AI의 물리 우회 수단으로 사용하지 않는다.
 
+## Milestone 3A — Track limits and contact
+
+AI 차량도 플레이어와 동일한 VehicleSimulation, TrackLimitsMonitor, VehicleContact 경계를 통과한다. AI 컨트롤러는 계속 레이싱 라인·목표 속도에서 VehicleControlInput만 생성하며, 트랙 이탈을 무시하거나 접촉 후 위치를 직접 보정하는 특례를 갖지 않는다. RaceSession이 fixed step 뒤 접촉 응답과 트랙 리밋 상태를 공통으로 계산한다.
+
+현재 접촉은 RaceSession의 2D 원형 근사이며 AI 회피·추월·방어 의사결정은 아직 추가하지 않는다. 정적 트랙 벽·연석은 테스트 트랙 데이터에서 생성되는 Rapier collider를 플레이어·단일 AI 주행 장면이 공유한다.
+
 ## 예정 계층
 
 1. 교육 트랙과 결정적 평가기 — M2A-0
 2. Racing line과 목표 속도 프로파일 — M2A
 3. Pure Pursuit 조향 — M2A
 4. PID 기반 가감속 정밀 튜닝 — 후속 작업
-5. 충돌 회피
-6. 추월·방어 상태 머신
-7. 타이어 열·마모 및 실제 피트 물리
-8. 퀄리파잉·레이스 전략 고도화
+5. 타이어 열·마모·공기압과 레이스 전략 — M3B
+6. 다차량 추월·방어·충돌 회피 — M3C
+7. 손상·플래그·실제 피트 물리 — M3D
+8. 온라인 멀티플레이 동기화 — 후속 검토
 
 ## Milestone 0
 

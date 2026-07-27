@@ -19,6 +19,7 @@ import {
 } from "../game/physics/RapierChassisSuspension";
 import { sampleTestTrackSurface } from "../game/physics/TrackSurface";
 import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/VehicleSimulation";
+import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "../gameplay/race/TrackLimits";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 
@@ -31,6 +32,7 @@ interface DrivingSceneProps {
   onTelemetry: (telemetry: VehicleTelemetry) => void;
   onOpponentTelemetry: (telemetry: VehicleTelemetry) => void;
   onSuspensionTelemetry: (telemetry: RapierSuspensionTelemetry | null) => void;
+  onTrackLimits: (player: TrackLimitsSnapshot, opponent: TrackLimitsSnapshot) => void;
 }
 
 /** 물리 스냅샷을 표시하는 단순 차량 모델이며 물리 상태를 소유하지 않는다. */
@@ -183,6 +185,7 @@ export function DrivingScene({
   onTelemetry,
   onOpponentTelemetry,
   onSuspensionTelemetry,
+  onTrackLimits,
 }: DrivingSceneProps) {
   // 현재 R3F 카메라를 차량 추적 위치로 갱신할 렌더링 소유 참조다.
   const { camera } = useThree();
@@ -198,6 +201,9 @@ export function DrivingScene({
     () => new SingleOpponentAI(opponentSimulation.track, opponentAIConfig),
     [opponentAIConfig, opponentSimulation],
   );
+  // 차량별 도로 이탈 이벤트와 랩 유효성을 물리 포즈와 같은 트랙 원본에서 계산한다.
+  const trackLimits = useMemo(() => new TrackLimitsMonitor(simulation.track), [simulation]);
+  const opponentTrackLimits = useMemo(() => new TrackLimitsMonitor(opponentSimulation.track), [opponentSimulation]);
   // 렌더 delta를 120Hz physics step으로 분해하는 누적기다.
   const accumulator = useMemo(() => new FixedTimestepAccumulator(), []);
   // 플레이어 차량의 표시 그룹 참조다.
@@ -222,8 +228,8 @@ export function DrivingScene({
     let disposed = false;
 
     void Promise.all([
-      RapierChassisSuspension.create(),
-      RapierChassisSuspension.create(),
+      RapierChassisSuspension.create(undefined, simulation.track),
+      RapierChassisSuspension.create(undefined, opponentSimulation.track),
     ]).then(([playerRig, opponentRig]) => {
       // 플레이어와 AI가 각각 소유하는 독립 Rapier 리그다.
       if (disposed) {
@@ -259,6 +265,8 @@ export function DrivingScene({
       simulation.reset();
       opponentSimulation.reset();
       opponentAI.reset();
+      trackLimits.reset();
+      opponentTrackLimits.reset();
       input.resetSteering();
       // 현재 리그 참조를 지역 변수로 고정해 한 번의 리셋이 동일 대상을 사용하게 한다.
       const rig = suspensionRig.current;
@@ -295,6 +303,8 @@ export function DrivingScene({
         }, dt);
         stepSimulationWithRig(simulation, suspensionRig.current, playerInput, dt);
         stepSimulationWithRig(opponentSimulation, opponentSuspensionRig.current, aiInput, dt);
+        trackLimits.update(simulation.current.position, dt);
+        opponentTrackLimits.update(opponentSimulation.current.position, dt);
         stepIndex += 1;
       });
       alpha = result.alpha;
@@ -330,6 +340,7 @@ export function DrivingScene({
       onTelemetry(simulation.getTelemetry());
       onOpponentTelemetry(opponentSimulation.getTelemetry());
       onSuspensionTelemetry(suspensionRig.current?.getTelemetry() ?? null);
+      onTrackLimits(trackLimits.getSnapshot(), opponentTrackLimits.getSnapshot());
     }
   });
 
@@ -339,7 +350,7 @@ export function DrivingScene({
       <fog attach="fog" args={["#080b10", 35, 90]} />
       <ambientLight intensity={1.1} />
       <directionalLight position={[-12, 18, 10]} intensity={2.2} castShadow />
-      <TestTrackVisual />
+      <TestTrackVisual track={simulation.track} />
       <VehicleModel groupRef={vehicleRef} color="#d92f4f" />
       <VehicleModel groupRef={opponentVehicleRef} color="#27b8d6" />
     </>

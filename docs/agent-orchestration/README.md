@@ -182,4 +182,4 @@ Validation required:
 
 ## 현재 배치
 
-M2B~M2D가 완료되었고, 현재 저장소는 `TASKS.md`의 M3A를 다음 기능 후보로 둔다. Gameplay Agent는 `VehicleControlInput`을 통해 다차량 세션과 퀄리파잉·주말 상태를 연결하며, QA는 순위·컷·전략 경계와 AI 물리 우회를 함께 검증한다. 추월·방어·접촉 역할은 M3A 이후에 활성화한다.
+M2B~M2D와 M3A가 완료되었고, 현재 저장소는 TASKS.md의 M3B 타이어 열·마모·공기압 모델을 다음 기능 후보로 둔다. Gameplay Agent는 TrackLimitsMonitor와 VehicleContact의 순수 규칙 경계를 유지하며, QA는 트랙 이탈·랩 무효화·패널티·접촉 응답과 AI 물리 우회를 함께 검증한다. 추월·방어·손상 역할은 후속 마일스톤에서 활성화한다.

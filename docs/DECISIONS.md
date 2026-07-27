@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-07-27 — D-028
+
+**결정:** M3A의 트랙 경계는 TestTrackDefinition의 정적 벽·연석 선분을 단일 원본으로 두고, 렌더링과 Rapier가 같은 선분을 각각 메시와 fixed collider로 변환한다. 트랙 리밋·랩 유효성은 순수 TrackLimitsMonitor가 소유하고, RaceSession의 다차량 접촉은 초기에는 순수 2D 원형 근사 응답으로 분리한다.
+
+**이유:** 트랙 화면, 노면 샘플러, 충돌 월드가 서로 다른 좌표를 가지면 이탈 판정과 벽 접촉을 재현할 수 없다. 반면 여러 차량을 Rapier 하나의 world에 즉시 넣으면 기존 단일 차량 물리의 소유권과 회귀 기준이 동시에 바뀐다. M3A에서는 규칙의 결정성과 차량 간 침투·반발 경계를 먼저 검증하고, 차체 형상·회전·손상은 이후 별도 마일스톤에서 확장한다.
+
+**검증:** TrackLimits.test.ts, VehicleContact.test.ts, RaceSession.test.ts, RapierChassisSuspension.test.ts와 M3A HUD·Race Weekend E2E를 사용한다. 벽·연석 치수와 패널티는 initial_assumption이며 실차 규정 또는 특정 차량 재현값으로 취급하지 않는다.
+
 ## 2026-07-27 — D-026
 
 **결정:** M2B~M2D는 `RaceSession`·`QualifyingSession`·`RaceWeekendSession`으로 분리한다. `RaceSession`은 차량별 `VehicleSimulation`과 fixed-step 순위만 소유하고, `QualifyingSession`은 유효 랩·Q 컷만 계산하며, `RaceWeekendSession`은 단계 전이와 최소 전략만 조정한다.

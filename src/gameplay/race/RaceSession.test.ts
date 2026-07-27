@@ -1,5 +1,5 @@
 /**
- * M2B 다차량 세션의 그리드·결정성·순위·리셋 경계를 검증한다.
+ * M3A 다차량 세션의 그리드·결정성·트랙 리밋 스냅샷·순위·리셋 경계를 검증한다.
  * Rapier 렌더링 장면과 분리된 VehicleSimulation fixed-step 계약만 검사한다.
  */
 import { describe, expect, it } from "vitest";
@@ -39,6 +39,8 @@ describe("RaceSession", () => {
     );
     expect(firstSnapshot.maximumFixedStepDurationMs).toBeGreaterThanOrEqual(0);
     expect(firstSnapshot.standings.every((participant) => Number.isFinite(participant.speedMps))).toBe(true);
+    expect(firstSnapshot.standings.every((participant) => participant.trackLimits.lapValid)).toBe(true);
+    expect(firstSnapshot.contactCount).toBe(0);
   });
 
   it("resets every vehicle to the same grid and clears the race clock", () => {

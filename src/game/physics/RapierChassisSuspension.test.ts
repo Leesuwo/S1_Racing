@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RapierChassisSuspension } from "./RapierChassisSuspension";
+import { TEST_TRACK_DATA } from "../../tracks/TestTrack";
 
 describe("RapierChassisSuspension", () => {
   it("settles a dynamic chassis on four raycast suspension contacts", async () => {
@@ -158,6 +159,28 @@ describe("RapierChassisSuspension", () => {
       engineBrakedSnapshot.linearVelocity.x,
       engineBrakedSnapshot.linearVelocity.z,
     )).toBeLessThan(speedBeforeEngineBrakeMps);
+    rig.dispose();
+  });
+
+  it("keeps a chassis inside the data-defined wall and reports the contact", async () => {
+    const rig = await RapierChassisSuspension.create(undefined, TEST_TRACK_DATA);
+    for (let step = 0; step < 720; step += 1) rig.step(1 / 120);
+
+    rig.syncPlanarPose({
+      position: { x: 0, z: -3.5 },
+      velocity: { x: 0, z: -20 },
+      yawRad: 0,
+      yawRateRadS: 0,
+    });
+
+    let maximumWallContacts = 0;
+    for (let step = 0; step < 120; step += 1) {
+      rig.step(1 / 120);
+      maximumWallContacts = Math.max(maximumWallContacts, rig.getTelemetry().wallContactCount);
+    }
+
+    expect(maximumWallContacts).toBeGreaterThan(0);
+    expect(rig.getSnapshot().position.z).toBeGreaterThan(-6.5);
     rig.dispose();
   });
 });

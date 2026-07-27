@@ -1,5 +1,5 @@
 /**
- * M2B~M2D 레이스 주말의 단계·퀄리파잉·전략·순위 UI다.
+ * M2B~M3A 레이스 주말의 단계·퀄리파잉·전략·트랙 리밋·순위 UI다.
  * 세션을 직접 변경하지 않고 앱 셸이 제공한 명령 콜백만 호출한다.
  */
 import type {
@@ -40,7 +40,7 @@ export interface RaceWeekendPanelProps {
   onStrategy: (strategy: RaceStrategy) => void;
 }
 
-/** M2B 다차량·M2C 퀄리파잉·M2D 주말 전략을 한 화면에 표시한다. */
+/** M2B 다차량·M2C 퀄리파잉·M2D 주말 전략·M3A 접촉 상태를 한 화면에 표시한다. */
 export function RaceWeekendPanel({
   snapshot,
   onRunQualifying,
@@ -78,6 +78,14 @@ export function RaceWeekendPanel({
           <span>레이스 전략</span>
           <strong>{snapshot.selectedCompound.toUpperCase()} 시작</strong>
           <em>Lap {snapshot.strategy.pitStopLap} · {snapshot.strategy.pitStopCompound.toUpperCase()} 피트 정지</em>
+        </article>
+        <article className="weekend-summary-card weekend-summary-card--m3a">
+          <span>M3A · 트랙 리밋·접촉</span>
+          <strong>{snapshot.race.contactCount}회 차량 접촉</strong>
+          <em>
+            PLAYER {snapshot.race.standings.find((participant) => participant.kind === "player")?.trackLimits.violationCount ?? 0}회 위반 ·
+            {" "}{snapshot.race.standings.find((participant) => participant.kind === "player")?.trackLimits.lapValid ? "현재 랩 유효" : "현재 랩 무효"}
+          </em>
         </article>
       </div>
 
@@ -153,7 +161,7 @@ export function RaceWeekendPanel({
         <section className="weekend-result-card" aria-label="레이스 순위">
           <div className="weekend-result-card__header">
             <div>
-              <span className="section-kicker">M2B / DETERMINISTIC STANDINGS</span>
+              <span className="section-kicker">M2B / M3A · DETERMINISTIC STANDINGS</span>
               <h3>현재 레이스 순위</h3>
             </div>
             <strong>{snapshot.race.elapsedSeconds.toFixed(2)} s</strong>

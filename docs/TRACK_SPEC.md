@@ -34,6 +34,14 @@ track_data.json
 - 스타트/피니시, 100m·50m 브레이크 마커
 - 순서가 고정된 네 개 체크포인트
 - 시작 위치와 yaw
+- 화면과 Rapier가 공유하는 외곽·내부 정적 벽 선분
+- 화면과 Rapier가 공유하는 낮은 연석 선분
+
+## Milestone 3A — 트랙 리밋과 정적 충돌 경계
+
+TestTrackDefinition.collisionWalls와 curbs가 벽·연석의 시작점, 끝점, 두께·폭, 높이와 반발 계수를 제공한다. TestTrackVisual은 이 선분을 화면에 표시하고 RapierChassisSuspension은 같은 선분을 fixed collider로 생성한다. 렌더러가 별도의 좌표를 재구성하지 않으므로 화면에서 보이는 경계와 물리 경계가 같은 데이터 원본을 사용한다.
+
+TrackLimitsMonitor는 sampleTestTrackLocation()의 onTrack과 경계 거리·구간 라벨을 읽는다. 차량이 도로 바깥으로 처음 넘어간 fixed step에만 이벤트를 만들고, 해당 랩을 무효화하며 initial assumption 패널티를 누적한다. 패널티는 완주 시각에 반영되고, 벽·연석 높이와 폭은 실제 트랙 규정값이 아니다.
 
 `sampleTestTrackLocation()`은 `asphalt`, `grass`, `off-track` 상태를 결정한다. 인필드 잔디와 외곽 경계 바깥은 주행 표면 이탈로 판정하며, 외곽 경계 바깥은 `off-track`으로 구분한다. `distanceToBoundaryM`은 경계 안에서는 가장 가까운 외곽 경계까지의 양수 거리, 바깥에서는 이탈 거리의 음수 값이다.
 

@@ -1,13 +1,15 @@
 /**
- * M2B 다차량 레이스 세션의 순수 fixed-step 실행기다.
- * 차량 위치·속도는 각 VehicleSimulation이 소유하고, 이 모듈은 AI 입력·랩 진행·순위만 조정한다.
- * 충돌·추월·방어는 M2B 범위에서 제외해 차량 수 증가와 순위 결정성을 먼저 검증한다.
+ * M3A 다차량 레이스 세션의 순수 fixed-step 실행기다.
+ * 차량 위치·속도는 각 VehicleSimulation이 소유하고, 이 모듈은 AI 입력·랩 진행·트랙 리밋·접촉 응답·순위를 조정한다.
+ * 접촉은 초기 원형 근사로 분리하고, 정교한 차체 형상·추월·손상은 후속 마일스톤의 확장 경계로 남긴다.
  */
 import type { VehicleControlInput } from "../../game/input/VehicleControlInput";
 import { neutralVehicleControlInput } from "../../game/input/VehicleControlInput";
 import { SingleOpponentAI, type SingleOpponentAIConfig } from "../ai/SingleOpponentAI";
 import { VehicleSimulation, type VehicleRenderSnapshot } from "../../game/physics/VehicleSimulation";
 import { TEST_TRACK_DATA, type TestTrackDefinition, type TestTrackStartPose, type TrackPoint } from "../../tracks/TestTrack";
+import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "./TrackLimits";
+import { resolveVehicleContacts } from "./VehicleContact";
 
 /** 레이스 세션에 참가하는 차량의 제어 주체다. */
 export type RaceParticipantKind = "player" | "ai";
@@ -36,6 +38,7 @@ export interface RaceParticipantSnapshot {
   raceDistanceM: number;
   finished: boolean;
   retired: boolean;
+  trackLimits: TrackLimitsSnapshot;
   finishTimeSeconds?: number;
 }
 
@@ -51,6 +54,7 @@ export interface RaceSessionSnapshot {
   resetCount: number;
   fixedStepDurationMs: number;
   maximumFixedStepDurationMs: number;
+  contactCount: number;
   standings: readonly RaceParticipantSnapshot[];
 }
 
@@ -68,6 +72,9 @@ export const DEFAULT_RACE_GRID_SIZE = 6;
 /** RaceSession이 비정상 입력을 무한히 실행하지 않도록 하는 기본 fixed-step 상한이다. */
 export const DEFAULT_RACE_MAX_STEPS = 120 * 180;
 
+/** M3A 원형 접촉 근사의 차량 반경(m)이다. 차체 형상은 Rapier 리그가 소유한다. */
+const RACE_CONTACT_RADIUS_M = 1.25;
+
 /** 레이싱 라인 길이와 선분별 시작 거리를 캐시한다. 거리 단위는 m다. */
 interface TrackDistanceMap {
   segmentLengthsM: readonly number[];
@@ -80,6 +87,7 @@ interface RaceParticipantState {
   definition: RaceParticipantDefinition;
   simulation: VehicleSimulation;
   ai?: SingleOpponentAI;
+  trackLimits: TrackLimitsMonitor;
   previousProjectedDistanceM: number;
   progressM: number;
   finished: boolean;
@@ -201,6 +209,7 @@ export class RaceSession {
   private resetCount = 0;
   private fixedStepDurationMs = 0;
   private maximumFixedStepDurationMs = 0;
+  private contactCount = 0;
 
   constructor(
     definitions: readonly RaceParticipantDefinition[] = createRaceGrid(),
@@ -222,6 +231,7 @@ export class RaceSession {
         definition: { ...definition, startPose: { ...definition.startPose, position: { ...definition.startPose.position } } },
         simulation,
         ai: definition.kind === "ai" ? new SingleOpponentAI(track, definition.aiConfig) : undefined,
+        trackLimits: new TrackLimitsMonitor(track),
         previousProjectedDistanceM: projectedDistanceM,
         progressM: 0,
         finished: false,
@@ -251,6 +261,7 @@ export class RaceSession {
     this.participants.forEach((participant) => {
       participant.simulation.reset();
       participant.ai?.reset();
+      participant.trackLimits.reset();
       participant.previousProjectedDistanceM = projectDistanceM(participant.simulation.current.position, this.track, this.distanceMap);
       participant.progressM = 0;
       participant.finished = false;
@@ -262,6 +273,7 @@ export class RaceSession {
     this.elapsedSeconds = 0;
     this.fixedStepDurationMs = 0;
     this.maximumFixedStepDurationMs = 0;
+    this.contactCount = 0;
     this.resetCount += 1;
   }
 
@@ -277,12 +289,35 @@ export class RaceSession {
         : participant.ai?.update({ ...participant.simulation.current, maxGear: participant.simulation.config.gearRatios.length }, dtSeconds)
           ?? neutralVehicleControlInput();
       participant.simulation.step(input, dtSeconds);
+      participant.trackLimits.update(participant.simulation.current.position, dtSeconds);
       this.updateProgress(participant);
       const current = participant.simulation.current;
       if (!Number.isFinite(current.position.x) || !Number.isFinite(current.position.z) || !Number.isFinite(current.speedMps)) {
         participant.retired = true;
       }
     });
+
+    // 차량 간 접촉은 AI 명령과 분리된 물리 응답으로만 적용해 위치 직접 조작 경계를 보존한다.
+    const contactResult = resolveVehicleContacts(
+      this.participants
+        .filter((participant) => !participant.finished && !participant.retired)
+        .map((participant) => ({
+          id: participant.definition.id,
+          position: participant.simulation.current.position,
+          velocity: participant.simulation.current.velocity,
+          massKg: participant.simulation.config.massKg,
+          radiusM: RACE_CONTACT_RADIUS_M,
+        })),
+    );
+    if (contactResult.contacts.length > 0) {
+      const contactedIds = new Set(contactResult.contacts.flatMap((contact) => [contact.firstId, contact.secondId]));
+      contactResult.responses.forEach((response) => {
+        if (!contactedIds.has(response.id)) return;
+        this.participants.find((participant) => participant.definition.id === response.id)
+          ?.simulation.applyContactResolution(response);
+      });
+      this.contactCount += contactResult.contacts.length;
+    }
 
     this.stepIndex += 1;
     this.elapsedSeconds += dtSeconds;
@@ -340,12 +375,14 @@ export class RaceSession {
       resetCount: this.resetCount,
       fixedStepDurationMs: this.fixedStepDurationMs,
       maximumFixedStepDurationMs: this.maximumFixedStepDurationMs,
+      contactCount: this.contactCount,
       standings,
     };
   }
 
   /** 한 차량의 현재 투영 위치를 누적 진행 거리와 완료 상태로 변환한다. */
   private updateProgress(participant: RaceParticipantState): void {
+    const previousLapIndex = Math.floor(Math.max(0, participant.progressM) / Math.max(1, this.trackLengthM));
     const projectedDistanceM = projectDistanceM(participant.simulation.current.position, this.track, this.distanceMap);
     participant.progressM += signedTrackDeltaM(
       participant.previousProjectedDistanceM,
@@ -353,6 +390,11 @@ export class RaceSession {
       this.trackLengthM,
     );
     participant.previousProjectedDistanceM = projectedDistanceM;
+    const currentLapIndex = Math.floor(Math.max(0, participant.progressM) / Math.max(1, this.trackLengthM));
+    if (currentLapIndex > previousLapIndex && currentLapIndex < this.totalLaps) {
+      // 랩이 넘어갈 때 이전 랩의 유효성은 보존하고, 다음 랩의 규칙 상태를 새로 시작한다.
+      participant.trackLimits.startLap();
+    }
     if (participant.progressM >= this.trackLengthM * this.totalLaps) {
       participant.finished = true;
       participant.finishTimeSeconds ??= this.elapsedSeconds + 1 / 120;
@@ -362,6 +404,7 @@ export class RaceSession {
   /** 내부 참가자 상태를 위치·거리·랩 기준의 외부 스냅샷으로 투영한다. */
   private toParticipantSnapshot(participant: RaceParticipantState): RaceParticipantSnapshot {
     const progressM = Math.max(0, participant.progressM);
+    const trackLimits = participant.trackLimits.getSnapshot();
     return {
       id: participant.definition.id,
       label: participant.definition.label,
@@ -375,7 +418,11 @@ export class RaceSession {
       raceDistanceM: progressM,
       finished: participant.finished,
       retired: participant.retired,
-      finishTimeSeconds: participant.finishTimeSeconds,
+      trackLimits,
+      // 트랙 리밋 패널티는 완주 시각에 더해 최종 분류 순서에도 반영한다.
+      finishTimeSeconds: participant.finishTimeSeconds === undefined
+        ? undefined
+        : participant.finishTimeSeconds + trackLimits.penaltySeconds,
     };
   }
 }

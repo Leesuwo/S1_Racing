@@ -109,7 +109,7 @@ test("keeps the M2A driving mode available from the training lab", async ({ page
   await expect(page.getByText("휠 하중 / N", { exact: true })).toBeVisible();
   await expect(page.getByText("Rapier 접지", { exact: true })).toBeVisible();
   await expect(page.getByText(/4\/4 ·/)).toBeVisible();
-  await expect(page.locator(".ai-readout strong")).not.toHaveText(/^0 km\/h/, { timeout: 3_000 });
+  await expect(page.locator(".ai-readout strong").first()).not.toHaveText(/^0 km\/h/, { timeout: 3_000 });
 });
 
 test("moves the vehicle when throttle is held in driving mode", async ({ page }) => {
@@ -136,6 +136,15 @@ test("applies the keyboard preset without an input delay", async ({ page }) => {
   await page.keyboard.up("w");
 
   await expect(page.locator(".speed-readout strong")).not.toHaveText("0");
+});
+
+test("exposes M3A track-limit and wall telemetry in driving mode", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "주행 모드" }).click();
+
+  await expect(page.getByText("트랙 리밋", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("차량 텔레메트리").getByText("벽·연석 접촉", { exact: true })).toBeVisible();
+  await expect(page.getByText("AI 트랙 리밋", { exact: true })).toBeVisible();
 });
 
 test("opens the M2B to M2D race weekend control surface", async ({ page }) => {
@@ -174,4 +183,12 @@ test("starts the multi-car race from the qualifying grid and resets the weekend"
   await page.getByRole("button", { name: "주말 리셋" }).click();
   await expect(page.locator("header").getByText("연습 준비", { exact: true })).toBeVisible();
   await expect(page.getByText("Q1 20 → 15 대기", { exact: true })).toBeVisible();
+});
+
+test("shows M3A contact and track-limit state in the race weekend panel", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "레이스 주말" }).click();
+  await expect(page.getByText("M3A · 트랙 리밋·접촉", { exact: true })).toBeVisible();
+  await expect(page.getByText(/차량 접촉/).first()).toBeVisible();
+  await expect(page.getByText(/PLAYER \d+회 위반/)).toBeVisible();
 });

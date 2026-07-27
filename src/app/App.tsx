@@ -26,6 +26,7 @@ import {
 import { zeroWheelValues } from "../game/physics/Suspension";
 import type { RapierSuspensionTelemetry } from "../game/physics/RapierChassisSuspension";
 import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
+import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "../gameplay/race/TrackLimits";
 import { detectWebGL2, type WebGL2Support } from "./webgl2";
 import { DrivingScene } from "./DrivingScene";
 import { TrainingScene } from "./TrainingScene";
@@ -63,6 +64,9 @@ const INITIAL_TELEMETRY: VehicleTelemetry = {
   distanceToBoundaryM: 4,
 };
 
+/** M3A 트랙 리밋 HUD가 WebGL 초기화 전에도 유한한 값을 표시하도록 하는 시작 상태다. */
+const INITIAL_TRACK_LIMITS: TrackLimitsSnapshot = new TrackLimitsMonitor().getSnapshot();
+
 /** 속도·RPM·힘처럼 단위가 있는 HUD 숫자를 한국어 로케일로 표시한다. */
 function formatNumber(value: number, digits = 0): string {
   return value.toLocaleString("ko-KR", {
@@ -96,10 +100,14 @@ function AppTelemetry({
   telemetry,
   opponentTelemetry,
   suspensionTelemetry,
+  trackLimits,
+  opponentTrackLimits,
 }: {
   telemetry: VehicleTelemetry;
   opponentTelemetry: VehicleTelemetry;
   suspensionTelemetry: RapierSuspensionTelemetry | null;
+  trackLimits: TrackLimitsSnapshot;
+  opponentTrackLimits: TrackLimitsSnapshot;
 }) {
   // redline 대비 현재 RPM을 0..1 바 너비로 변환한다.
   const rpmRatio = Math.min(1, telemetry.rpm / telemetry.redlineRpm);
@@ -139,6 +147,12 @@ function AppTelemetry({
             : "이탈 · 리셋 권장"}
         </strong>
       </div>
+      <div className="surface-readout">
+        <span>트랙 리밋</span>
+        <strong className={trackLimits.lapValid ? "track-status--valid" : "track-status--off"}>
+          {trackLimits.violationCount}회 · 패널티 {formatNumber(trackLimits.penaltySeconds, 2)} s
+        </strong>
+      </div>
       <div className="surface-readout ai-readout">
         <span>AI 상대</span>
         <strong>{formatNumber(opponentTelemetry.speedKmh)} km/h · {opponentTelemetry.trackSectionLabel}</strong>
@@ -161,6 +175,18 @@ function AppTelemetry({
               + formatNumber(suspensionTelemetry.downforceN) + " N"
             : "초기화 중"}
         </strong>
+      </div>
+      <div className="surface-readout">
+        <span>벽·연석 접촉</span>
+        <strong>
+          {suspensionTelemetry
+            ? "벽 " + suspensionTelemetry.wallContactCount + " · 연석 " + suspensionTelemetry.curbContactCount
+            : "초기화 중"}
+        </strong>
+      </div>
+      <div className="surface-readout ai-readout">
+        <span>AI 트랙 리밋</span>
+        <strong>{opponentTrackLimits.violationCount}회 · {opponentTrackLimits.lapValid ? "유효" : "무효"}</strong>
       </div>
     </div>
   );
@@ -403,6 +429,9 @@ export function App() {
   const [opponentTelemetry, setOpponentTelemetry] = useState(INITIAL_TELEMETRY);
   // Rapier 접지 상태를 표시하는 읽기 전용 텔레메트리다.
   const [suspensionTelemetry, setSuspensionTelemetry] = useState<RapierSuspensionTelemetry | null>(null);
+  // 플레이어·AI의 트랙 리밋 이벤트와 현재 랩 유효성을 표시하는 읽기 전용 스냅샷이다.
+  const [trackLimits, setTrackLimits] = useState<TrackLimitsSnapshot>(INITIAL_TRACK_LIMITS);
+  const [opponentTrackLimits, setOpponentTrackLimits] = useState<TrackLimitsSnapshot>(INITIAL_TRACK_LIMITS);
   // 브라우저 입력 어댑터는 앱 수명 동안 하나만 생성한다.
   const input = useMemo(() => new BrowserVehicleInput(window), []);
   // 입력 프리셋 select와 입력 어댑터의 현재 값을 동기화한다.
@@ -662,6 +691,10 @@ export function App() {
                 onTelemetry={setTelemetry}
                 onOpponentTelemetry={setOpponentTelemetry}
                 onSuspensionTelemetry={setSuspensionTelemetry}
+                onTrackLimits={(player, opponent) => {
+                  setTrackLimits(player);
+                  setOpponentTrackLimits(opponent);
+                }}
               />
             )}
           </Canvas>
@@ -693,6 +726,8 @@ export function App() {
               telemetry={telemetry}
               opponentTelemetry={opponentTelemetry}
               suspensionTelemetry={suspensionTelemetry}
+              trackLimits={trackLimits}
+              opponentTrackLimits={opponentTrackLimits}
             />
             <div className="simulation-toolbar">
               <label className="input-preset-control">
@@ -809,6 +844,18 @@ export function App() {
             <strong>
               {suspensionTelemetry
                 ? formatNumber(suspensionTelemetry.maximumFrictionUsage * 100, 0) + "%"
+              : "초기화 중"}
+            </strong>
+          </article>
+          <article>
+            <span>트랙 리밋 위반</span>
+            <strong>{trackLimits.violationCount}회 · 패널티 {formatNumber(trackLimits.penaltySeconds, 2)} s</strong>
+          </article>
+          <article>
+            <span>벽·연석 접촉</span>
+            <strong>
+              {suspensionTelemetry
+                ? "벽 " + suspensionTelemetry.wallContactCount + " · 연석 " + suspensionTelemetry.curbContactCount
                 : "초기화 중"}
             </strong>
           </article>

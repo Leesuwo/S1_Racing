@@ -74,6 +74,25 @@ export interface TestTrackCheckpoint {
   radiusM: number;
 }
 
+/** Rapier가 생성할 벽의 평면 선분과 높이·반발 계수다. 길이 단위는 m다. */
+export interface TestTrackCollisionSegment {
+  id: string;
+  start: TrackPoint;
+  end: TrackPoint;
+  thicknessM: number;
+  heightM: number;
+  restitution: number;
+}
+
+/** 도로 가장자리에 배치할 낮은 연석의 평면 선분과 높이다. 수치는 initial_assumption이다. */
+export interface TestTrackCurbSegment {
+  id: string;
+  start: TrackPoint;
+  end: TrackPoint;
+  widthM: number;
+  heightM: number;
+}
+
 /** 차량을 재현 가능한 위치·방향에 배치하는 시작 포즈다. */
 export interface TestTrackStartPose {
   position: TrackPoint;
@@ -122,6 +141,10 @@ export interface TestTrackDefinition {
   sections: readonly TestTrackSection[];
   markers: readonly TestTrackMarker[];
   checkpoints: readonly TestTrackCheckpoint[];
+  /** 화면과 Rapier가 공유하는 정적 벽 선분이다. */
+  collisionWalls?: readonly TestTrackCollisionSegment[];
+  /** 화면과 Rapier가 공유하는 낮은 연석 선분이다. */
+  curbs?: readonly TestTrackCurbSegment[];
   startPose: TestTrackStartPose;
   opponentStartPose: TestTrackStartPose;
   racingLine: readonly TestTrackRacingLinePoint[];
@@ -225,6 +248,26 @@ export const TEST_TRACK_DATA: TestTrackDefinition = {
     { id: "checkpoint-right", order: 1, label: "우측 코너", position: { x: 18, z: 0 }, radiusM: 4 },
     { id: "checkpoint-back", order: 2, label: "백 스트레이트", position: { x: 0, z: -10 }, radiusM: 4 },
     { id: "checkpoint-left", order: 3, label: "좌측 코너", position: { x: -18, z: 0 }, radiusM: 4 },
+  ],
+  collisionWalls: [
+    { id: "outer-wall-north", start: { x: -22, z: 14 }, end: { x: 22, z: 14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
+    { id: "outer-wall-east", start: { x: 22, z: 14 }, end: { x: 22, z: -14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
+    { id: "outer-wall-south", start: { x: 22, z: -14 }, end: { x: -22, z: -14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
+    { id: "outer-wall-west", start: { x: -22, z: -14 }, end: { x: -22, z: 14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
+    { id: "inner-wall-north", start: { x: -13, z: 6 }, end: { x: 13, z: 6 }, thicknessM: 0.3, heightM: 0.5, restitution: 0.12 },
+    { id: "inner-wall-east", start: { x: 13, z: 6 }, end: { x: 13, z: -6 }, thicknessM: 0.3, heightM: 0.5, restitution: 0.12 },
+    { id: "inner-wall-south", start: { x: 13, z: -6 }, end: { x: -13, z: -6 }, thicknessM: 0.3, heightM: 0.5, restitution: 0.12 },
+    { id: "inner-wall-west", start: { x: -13, z: -6 }, end: { x: -13, z: 6 }, thicknessM: 0.3, heightM: 0.5, restitution: 0.12 },
+  ],
+  curbs: [
+    { id: "curb-north", start: { x: -12.5, z: 13.5 }, end: { x: 12.5, z: 13.5 }, widthM: 0.7, heightM: 0.08 },
+    { id: "curb-east", start: { x: 21.5, z: 5.5 }, end: { x: 21.5, z: -5.5 }, widthM: 0.7, heightM: 0.08 },
+    { id: "curb-south", start: { x: 12.5, z: -13.5 }, end: { x: -12.5, z: -13.5 }, widthM: 0.7, heightM: 0.08 },
+    { id: "curb-west", start: { x: -21.5, z: -5.5 }, end: { x: -21.5, z: 5.5 }, widthM: 0.7, heightM: 0.08 },
+    { id: "curb-infield-north", start: { x: -12.5, z: 6.4 }, end: { x: 12.5, z: 6.4 }, widthM: 0.7, heightM: 0.08 },
+    { id: "curb-infield-east", start: { x: 13.4, z: 5.5 }, end: { x: 13.4, z: -5.5 }, widthM: 0.7, heightM: 0.08 },
+    { id: "curb-infield-south", start: { x: 12.5, z: -6.4 }, end: { x: -12.5, z: -6.4 }, widthM: 0.7, heightM: 0.08 },
+    { id: "curb-infield-west", start: { x: -13.4, z: -5.5 }, end: { x: -13.4, z: 5.5 }, widthM: 0.7, heightM: 0.08 },
   ],
   startPose: {
     position: { x: -10, z: 10 },

@@ -166,6 +166,19 @@ export class VehicleSimulation {
     this.current.surface = sampleTestTrackLocation(this.current.position, this.track).surface;
   }
 
+  /**
+   * M3A 접촉 해결기가 계산한 위치·속도 응답을 차량 물리 경계에 적용한다.
+   * AI나 렌더러가 호출하지 않으며, 접촉 침투를 분리한 뒤에도 기어·RPM·입력 소유권은 유지한다.
+   */
+  applyContactResolution(response: Pick<ExternalPlanarVehiclePose, "position" | "velocity">): void {
+    this.synchronizeFromExternalPose({
+      position: response.position,
+      velocity: response.velocity,
+      yawRad: this.current.yawRad,
+      yawRateRadS: this.current.yawRateRadS,
+    }, 1 / 120);
+  }
+
   getRenderSnapshot(alpha: number): VehicleRenderSnapshot {
     // 렌더 보간 비율은 누적기 오류가 있어도 [0, 1]을 벗어나지 않게 한다.
     const blend = Math.max(0, Math.min(1, alpha));

@@ -112,6 +112,54 @@ function TrackMarkers({ track }: { track: TestTrackDefinition }) {
   );
 }
 
+/** 선분의 중심·길이·회전값을 계산해 화면과 Rapier가 같은 방향을 사용하게 한다. */
+function segmentTransform(start: { x: number; z: number }, end: { x: number; z: number }) {
+  const deltaX = end.x - start.x;
+  const deltaZ = end.z - start.z;
+  return {
+    centerX: (start.x + end.x) * 0.5,
+    centerZ: (start.z + end.z) * 0.5,
+    lengthM: Math.hypot(deltaX, deltaZ),
+    rotationRad: Math.atan2(-deltaZ, deltaX),
+  };
+}
+
+/** 트랙 정의의 정적 벽과 연석을 표시해 물리 경계를 운전 중 관찰할 수 있게 한다. */
+function TrackCollisionVisuals({ track }: { track: TestTrackDefinition }) {
+  return (
+    <>
+      {track.collisionWalls?.map((wall) => {
+        const transform = segmentTransform(wall.start, wall.end);
+        return (
+          <mesh
+            key={wall.id}
+            position={[transform.centerX, TRACK_EDGE_Y + wall.heightM * 0.5, transform.centerZ]}
+            rotation={[0, transform.rotationRad, 0]}
+            castShadow
+          >
+            <boxGeometry args={[transform.lengthM, wall.heightM, wall.thicknessM]} />
+            <meshStandardMaterial color={wall.id.startsWith("inner-") ? "#c5a154" : "#9aa5b4"} roughness={0.78} />
+          </mesh>
+        );
+      })}
+      {track.curbs?.map((curb) => {
+        const transform = segmentTransform(curb.start, curb.end);
+        return (
+          <mesh
+            key={curb.id}
+            position={[transform.centerX, TRACK_EDGE_Y + curb.heightM * 0.5, transform.centerZ]}
+            rotation={[0, transform.rotationRad, 0]}
+            receiveShadow
+          >
+            <boxGeometry args={[transform.lengthM, curb.heightM, curb.widthM]} />
+            <meshStandardMaterial color="#d65c65" roughness={0.86} />
+          </mesh>
+        );
+      })}
+    </>
+  );
+}
+
 /** 기존 사각 테스트 루프의 도로·인필드 표시를 유지한다. */
 function RectangularTestLoop({ track }: { track: TestTrackDefinition }) {
   const { outerBounds, innerGrassBounds } = track;
@@ -180,6 +228,7 @@ export function TestTrackVisual({ track = TEST_TRACK_DATA }: TestTrackVisualProp
     <group>
       <TrackGround track={track} />
       {hasCenterline ? <CenterlineRoad track={track} /> : <RectangularTestLoop track={track} />}
+      <TrackCollisionVisuals track={track} />
       <TrackMarkers track={track} />
     </group>
   );
