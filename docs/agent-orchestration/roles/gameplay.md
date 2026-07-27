@@ -7,7 +7,7 @@
 - `src/rules/**`
 - 각 경계의 테스트 파일
 
-현재 이 디렉터리들은 아직 구현되지 않았다. Milestone 1F가 완료되었으므로 M2A에서 단일 AI 상대와 함께 gameplay 경계를 시작할 수 있다.
+현재 gameplay 경계는 `src/gameplay/ai/`, `src/gameplay/training/`, `src/gameplay/race/`에 구현되어 있다. M2B~M2D에서 다차량 세션·퀄리파잉·레이스 주말 상태를 추가했으며, 다음에는 M3A에서 트랙 리밋과 접촉 모델을 연결한다.
 
 ## 책임
 

@@ -157,10 +157,53 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 6vw, 4.5rem); line-height: 0.95; l
 .training-context > div { background: #08161c; }
 .training-context strong { color: #a9d8df; }
 
+/* M2B~M2D 레이스 주말은 그리드·퀄리파잉·전략 상태를 amber/cyan 계기판으로 묶는다. */
+.app-shell--weekend { background: radial-gradient(circle at 8% 4%, #2d2514 0, transparent 28rem); }
+.app-shell--weekend .eyebrow { color: #f2bd56; }
+.status-chip--weekend { border-color: #e6a83f; color: #f4c76d; }
+.simulation-panel--weekend { border-color: #5d4725; box-shadow: 0 24px 90px #21160688, inset 0 0 60px #5e3e0d1f; }
+.simulation-panel--weekend canvas { min-height: min(70vh, 720px); }
+.weekend-dashboard { margin-top: 12px; padding: 22px; border: 1px solid #4e3b21; border-radius: 14px; background: linear-gradient(135deg, #17140d, #0d1119 63%); }
+.weekend-dashboard__header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.weekend-dashboard__header h2 { margin: 7px 0 0; color: #fff1d2; font-size: 1.25rem; letter-spacing: -0.04em; }
+.weekend-stage { padding: 7px 10px; border: 1px solid #a97832; border-radius: 6px; color: #f6d18a; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.08em; }
+.weekend-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.weekend-summary-card { min-height: 104px; padding: 14px; border: 1px solid #4b3822; border-radius: 9px; background: #17130e; }
+.weekend-summary-card > span { display: block; margin-bottom: 12px; color: #a28a63; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.1em; }
+.weekend-summary-card > strong { display: block; overflow: hidden; color: #f5d492; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.03rem; text-overflow: ellipsis; white-space: nowrap; }
+.weekend-summary-card > em { display: block; margin-top: 9px; color: #9b8765; font-size: 0.65rem; font-style: normal; line-height: 1.35; }
+.weekend-summary-card--primary { border-color: #a97832; background: linear-gradient(150deg, #49341a, #17130e); }
+.weekend-summary-card--primary > strong { color: #ffe09a; }
+.weekend-controls { display: flex; gap: 7px; margin-top: 15px; }
+.weekend-strategy { display: flex; align-items: flex-end; gap: 10px; margin-top: 13px; padding: 13px; border: 1px solid #3a3020; border-radius: 9px; background: #11110e; }
+.weekend-strategy label { display: grid; gap: 6px; min-width: 130px; }
+.weekend-strategy label > span { color: #a28a63; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.1em; }
+.weekend-strategy select { border: 1px solid #66502e; border-radius: 7px; padding: 8px 28px 8px 10px; color: #f5dfb1; background: #221c12; }
+.weekend-strategy p { flex: 1; margin: 0; color: #9b8765; font-size: 0.68rem; line-height: 1.45; }
+.weekend-results-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 9px; margin-top: 13px; }
+.weekend-result-card { min-height: 210px; padding: 15px; border: 1px solid #3a3020; border-radius: 9px; background: #11110e; }
+.weekend-result-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.weekend-result-card__header h3 { margin: 6px 0 0; color: #f6e1b2; font-size: 0.95rem; letter-spacing: -0.03em; }
+.weekend-result-card__header > strong { color: #f2bd56; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; }
+.weekend-cut-list { display: grid; gap: 8px; }
+.weekend-cut-list span { padding: 9px 10px; border-left: 2px solid #a97832; color: #d7bd86; background: #1c170f; font-size: 0.72rem; }
+.weekend-result-note { margin: 15px 0 0; color: #887658; font-size: 0.68rem; line-height: 1.45; }
+.weekend-standings { display: grid; gap: 3px; }
+.weekend-standing-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 6px 8px; color: #d6c49d; background: #18150f; font-size: 0.71rem; }
+.weekend-standing-row:nth-child(even) { background: #14120e; }
+.weekend-standing-row b { color: #f2bd56; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.weekend-standing-row span { color: #e8dec5; }
+.weekend-standing-row em { color: #9b8765; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.65rem; font-style: normal; }
+.weekend-context { border-color: #4e3b21; background: #17130e; }
+.weekend-context > div { background: #17130e; }
+.weekend-context strong { color: #dfc28c; }
+
 @media (max-width: 1120px) {
   .training-metric-grid { grid-template-columns: repeat(3, 1fr); }
   .training-controls { left: 18px; right: 18px; flex-wrap: wrap; }
   .training-control-note { flex: 1; }
+  .weekend-strategy { flex-wrap: wrap; }
+  .weekend-strategy p { flex-basis: 100%; }
 }
 
 @media (max-width: 860px) {
@@ -187,4 +230,12 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 6vw, 4.5rem); line-height: 0.95; l
   .training-metric-grid { grid-template-columns: repeat(2, 1fr); }
   .training-search__header { display: block; }
   .training-search__grid { grid-template-columns: 1fr; }
+  .weekend-dashboard { padding: 16px; }
+  .weekend-dashboard__header { display: block; }
+  .weekend-stage { display: inline-block; margin-top: 13px; }
+  .weekend-summary-grid, .weekend-results-grid { grid-template-columns: 1fr; }
+  .weekend-controls { flex-wrap: wrap; }
+  .weekend-controls .training-button { flex: 1; }
+  .weekend-strategy { display: grid; grid-template-columns: repeat(2, 1fr); align-items: stretch; }
+  .weekend-strategy label { min-width: 0; }
 }

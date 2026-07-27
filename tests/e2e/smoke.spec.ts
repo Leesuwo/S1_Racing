@@ -137,3 +137,41 @@ test("applies the keyboard preset without an input delay", async ({ page }) => {
 
   await expect(page.locator(".speed-readout strong")).not.toHaveText("0");
 });
+
+test("opens the M2B to M2D race weekend control surface", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("tab", { name: "레이스 주말" }).click();
+  await expect(page.getByRole("heading", { name: "Race Weekend" })).toBeVisible();
+  await expect(page.locator("header").getByText("연습 준비", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("타이어 선택")).toHaveValue("medium");
+  await expect(page.getByLabel("피트 정지 랩")).toBeVisible();
+  await expect(page.getByText("M2B · 다차량", { exact: true })).toBeVisible();
+});
+
+test("runs deterministic qualifying cuts and exposes valid lap rules", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "레이스 주말" }).click();
+
+  await page.getByRole("button", { name: "퀄리파잉 실행" }).click();
+  await expect(page.getByText("Q1 20 → 15 완료", { exact: true })).toBeVisible();
+  await expect(page.getByText("Q2 15 → 10 완료", { exact: true })).toBeVisible();
+  await expect(page.getByText("Q3 10 최종 순위 확정", { exact: true })).toBeVisible();
+  await expect(page.locator("header").getByText("퀄리파잉 완료", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "레이스 시작" })).toBeEnabled();
+});
+
+test("starts the multi-car race from the qualifying grid and resets the weekend", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "레이스 주말" }).click();
+  await page.getByRole("button", { name: "퀄리파잉 실행" }).click();
+  await page.getByRole("button", { name: "레이스 시작" }).click();
+
+  await expect(page.locator("header").getByText("레이스 진행 중", { exact: true })).toBeVisible();
+  await expect(page.getByText("20대 그리드", { exact: true })).toBeVisible();
+  await expect(page.locator(".weekend-standing-row")).toHaveCount(8);
+
+  await page.getByRole("button", { name: "주말 리셋" }).click();
+  await expect(page.locator("header").getByText("연습 준비", { exact: true })).toBeVisible();
+  await expect(page.getByText("Q1 20 → 15 대기", { exact: true })).toBeVisible();
+});

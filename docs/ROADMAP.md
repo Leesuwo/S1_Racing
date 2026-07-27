@@ -46,18 +46,18 @@ Rapier 동적 차체, 정적 지면, 4개 휠 레이캐스트, 스프링·댐퍼
 
 M2A-0에서 검증한 AI 설정을 단일 AI 주행 세션에 전달하고, 플레이어와 동일한 `VehicleControlInput`·`VehicleSimulation`·Rapier 힘 적용 순서를 사용한다. AI는 별도 물리 보너스나 위치 직접 대입 없이 트랙의 목표 속도·레이싱 라인·브레이크 지점만 입력으로 변환한다. 관련 목표·검증 결과는 [M2A 상세 문서](./MILESTONE_2A.md)에 기록했다.
 
-## Milestone 2B — Multi-car race session (예정)
+## Milestone 2B — Multi-car race session (완료)
 
-여러 차량의 스폰·그리드·충돌 없는 기본 순위·세션 리셋을 추가한다. 차량 수 증가에 따른 고정 스텝 시간과 텔레메트리 수집 비용을 측정한다.
+`RaceSession`이 차량별 `VehicleSimulation`과 AI 입력을 소유하고, 2~20대의 고유 그리드·랩 진행·기본 순위·리셋·fixed-step 비용 스냅샷을 제공한다. 상세 범위와 검증 결과는 [M2B 상세 문서](./MILESTONE_2B.md)에 기록했다.
 
-## Milestone 2C — Qualifying (예정)
+## Milestone 2C — Qualifying (완료)
 
-단일 퀄리파잉 세션에서 랩 타이밍, 유효 랩, Q1/Q2/Q3 컷을 구현한다. 타이밍 판정과 세션 전환을 결정적 시나리오로 검증한다.
+`QualifyingSession`이 유효 랩 최고 기록과 `s1-racing-qualifying-v1`의 Q1 20→15, Q2 15→10, Q3 10 최종 순위를 관리하며 RaceSession 그리드 순서로 전달한다. 상세 범위와 검증 결과는 [M2C 상세 문서](./MILESTONE_2C.md)에 기록했다.
 
-## Milestone 2D — Race weekend and strategy (예정)
+## Milestone 2D — Race weekend and strategy (완료)
 
-연습·퀄리파잉·레이스 흐름, 타이어 선택과 피트 전략의 최소 경계를 추가한다. 타이어 열·마모와 실제 충돌·손상은 별도 설계 결정 후 진행한다.
+`RaceWeekendSession`과 `Race Weekend` UI로 Practice→Qualifying→Race→Results 흐름, 시작 타이어, 다른 컴파운드로 1회 정지하는 최소 전략 경계를 추가했다. 타이어 열·마모, 실제 피트 물리, 충돌·손상은 다음 설계로 남긴다. 상세 범위와 검증 결과는 [M2D 상세 문서](./MILESTONE_2D.md)에 기록했다.
 
-## Milestone 3A — Track limits and contact model (예정)
+## Milestone 3A — Track limits and contact model (다음)
 
 실제 높이·연석·벽·차량 접촉을 Rapier에 추가하고, 트랙 리밋·충돌 안정성·고속 공력 검증을 확장한다.

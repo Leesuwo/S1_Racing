@@ -29,6 +29,14 @@ import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { detectWebGL2, type WebGL2Support } from "./webgl2";
 import { DrivingScene } from "./DrivingScene";
 import { TrainingScene } from "./TrainingScene";
+import { RaceWeekendScene } from "./RaceWeekendScene";
+import { RaceWeekendPanel } from "./RaceWeekendPanel";
+import {
+  RaceWeekendSession,
+  type RaceStrategy,
+  type RaceWeekendSnapshot,
+  type TyreCompound,
+} from "../gameplay/race/RaceWeekendSession";
 
 /** WebGL 초기화 전후의 일반 주행 HUD가 사용할 유한한 중립 텔레메트리다. */
 const INITIAL_TELEMETRY: VehicleTelemetry = {
@@ -73,6 +81,14 @@ function trainingStatusLabel(status: AITrainingSnapshot["status"]): string {
     failed: "실패",
   };
   return labels[status];
+}
+
+/** 레이스 주말 단계 상태를 헤더 칩에서 짧게 표시한다. */
+function weekendStatusLabel(snapshot: RaceWeekendSnapshot): string {
+  if (snapshot.stage === "practice") return "연습 준비";
+  if (snapshot.stage === "qualifying") return snapshot.status === "complete" ? "퀄리파잉 완료" : "퀄리파잉 진행";
+  if (snapshot.stage === "race") return snapshot.status === "running" ? "레이스 진행 중" : "레이스 대기";
+  return "결과 확인";
 }
 
 /** 플레이어 물리 지표와 AI 상대의 진행 상태를 표시하는 읽기 전용 HUD다. */
@@ -380,7 +396,7 @@ export function App() {
   // Page Visibility 상태는 두 장면의 일시정지 경계가 공유한다.
   const [paused, setPaused] = useState(() => document.hidden);
   // 현재 사용자가 보고 있는 장면 모드이며 교육실을 기본 화면으로 연다.
-  const [mode, setMode] = useState<"training" | "drive">("training");
+  const [mode, setMode] = useState<"training" | "drive" | "weekend">("training");
   // 플레이어 주행 모드의 마지막 텔레메트리 샘플이다.
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
   // AI 상대의 마지막 텔레메트리 샘플이다.
@@ -409,6 +425,12 @@ export function App() {
       completedSnapshot: AITrainingSnapshot;
     }) | null
   >(null);
+  // M2B~M2D 세션은 React 렌더와 분리된 하나의 mutable owner로 유지한다.
+  const raceWeekendSession = useMemo(() => new RaceWeekendSession(), []);
+  // 주말 패널은 세션 내부 객체가 아니라 복사된 스냅샷만 구독한다.
+  const [raceWeekendSnapshot, setRaceWeekendSnapshot] = useState<RaceWeekendSnapshot>(
+    () => raceWeekendSession.getSnapshot(),
+  );
   // 새 에피소드가 끝난 뒤에만 한 번 자동 튜닝하도록 시작·일시정지·HUD 콜백 사이의 의도를 보존한다.
   const automaticTuningPendingRef = useRef(false);
 
@@ -490,6 +512,47 @@ export function App() {
     setTrainingSnapshot(trainingRunner.getSnapshot());
   }, [trainingRunner]);
 
+  // 레이스 장면이 10Hz로 전달한 스냅샷을 패널 상태로 복사한다.
+  const handleRaceWeekendSnapshot = useCallback((snapshot: RaceWeekendSnapshot) => {
+    setRaceWeekendSnapshot(snapshot);
+  }, []);
+
+  // 버튼 한 번으로 Practice 완료와 결정적 Q1/Q2/Q3 기록을 실행한다.
+  const runWeekendQualifying = useCallback(() => {
+    setRaceWeekendSnapshot(raceWeekendSession.runDeterministicQualifying());
+  }, [raceWeekendSession]);
+
+  // 시작 타이어를 바꿀 때 피트 타이어가 같아지는 경우 다른 컴파운드로 함께 조정한다.
+  const selectWeekendTyre = useCallback((compound: TyreCompound) => {
+    raceWeekendSession.selectTyre(compound);
+    const nextSnapshot = raceWeekendSession.getSnapshot();
+    if (nextSnapshot.strategy.pitStopCompound === compound) {
+      const fallbackCompound = (["soft", "medium", "hard"] as const).find((candidate) => candidate !== compound) ?? "medium";
+      raceWeekendSession.setStrategy({
+        ...nextSnapshot.strategy,
+        pitStopCompound: fallbackCompound,
+      });
+    }
+    setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
+  }, [raceWeekendSession]);
+
+  // 화면의 전략 select는 순수 세션 검증을 통과한 경우에만 상태를 갱신한다.
+  const updateWeekendStrategy = useCallback((strategy: RaceStrategy) => {
+    raceWeekendSession.setStrategy(strategy);
+    setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
+  }, [raceWeekendSession]);
+
+  // 퀄리파잉 결과가 확정된 뒤 순서를 레이스 그리드에 반영한다.
+  const startWeekendRace = useCallback(() => {
+    setRaceWeekendSnapshot(raceWeekendSession.beginRace());
+  }, [raceWeekendSession]);
+
+  // 주말의 모든 단계와 차량을 초기 그리드로 되돌린다.
+  const resetWeekend = useCallback(() => {
+    raceWeekendSession.reset();
+    setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
+  }, [raceWeekendSession]);
+
   useEffect(() => {
     // 브라우저 입력과 WebGL 지원을 초기화하고 visibility 리스너를 등록한다.
     input.connect();
@@ -507,26 +570,35 @@ export function App() {
   }, [input]);
 
   // 모드를 바꾸기 전에 교육을 멈춰 다시 돌아왔을 때 같은 상태를 관찰할 수 있게 한다.
-  const selectMode = (nextMode: "training" | "drive") => {
-    if (nextMode === "drive") trainingRunner.pause();
+  const selectMode = (nextMode: "training" | "drive" | "weekend") => {
+    if (nextMode !== "training") trainingRunner.pause();
     setMode(nextMode);
     setTrainingSnapshot(trainingRunner.getSnapshot());
+    if (nextMode === "weekend") setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
   };
 
   const trainingMode = mode === "training";
+  const weekendMode = mode === "weekend";
+  const drivingMode = !trainingMode && !weekendMode;
 
   return (
-    <main className={"app-shell " + (trainingMode ? "app-shell--training" : "")}>
+    <main className={"app-shell " + (trainingMode ? "app-shell--training" : weekendMode ? "app-shell--weekend" : "")}>
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            {trainingMode ? "S1 RACING / M2A-0 · AI TRAINING LAB" : "S1 RACING / MILESTONE 2A · 단일 AI 상대"}
+            {trainingMode
+              ? "S1 RACING / M2A-0 · AI TRAINING LAB"
+              : weekendMode
+                ? "S1 RACING / M2B → M2C → M2D · RACE WEEKEND"
+                : "S1 RACING / MILESTONE 2A · 단일 AI 상대"}
           </p>
-          <h1>{trainingMode ? "Training Lab" : "S1 Racing"}</h1>
+          <h1>{trainingMode ? "Training Lab" : weekendMode ? "Race Weekend" : "S1 Racing"}</h1>
           <p className="subtitle">
             {trainingMode
               ? "Northfield GP · AI의 레이싱 라인과 제동을 눈앞에서 관찰하는 120Hz 교육실"
-              : "공유 VehicleControlInput과 120Hz 물리로 주행하는 AI 상대"}
+              : weekendMode
+                ? "다차량 그리드 · 유효 랩 퀄리파잉 · 최소 피트 전략을 하나의 결정적 흐름으로 검증"
+                : "공유 VehicleControlInput과 120Hz 물리로 주행하는 AI 상대"}
           </p>
         </div>
         <div className="topbar__actions">
@@ -543,29 +615,45 @@ export function App() {
             <button
               type="button"
               role="tab"
-              aria-selected={!trainingMode}
-              className={!trainingMode ? "mode-switch__tab mode-switch__tab--active" : "mode-switch__tab"}
+              aria-selected={drivingMode}
+              className={drivingMode ? "mode-switch__tab mode-switch__tab--active" : "mode-switch__tab"}
               onClick={() => selectMode("drive")}
             >
               주행 모드
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={weekendMode}
+              className={weekendMode ? "mode-switch__tab mode-switch__tab--active" : "mode-switch__tab"}
+              onClick={() => selectMode("weekend")}
+            >
+              레이스 주말
+            </button>
           </div>
-          <span className={"status-chip " + (paused ? "status-chip--paused " : "") + (trainingMode ? "status-chip--training" : "")}>
-            {trainingMode ? trainingStatusLabel(trainingSnapshot.status) : paused ? "일시정지" : "주행 준비"}
+          <span className={"status-chip " + (paused ? "status-chip--paused " : "") + (trainingMode ? "status-chip--training" : weekendMode ? "status-chip--weekend" : "")}>
+            {trainingMode ? trainingStatusLabel(trainingSnapshot.status) : weekendMode ? weekendStatusLabel(raceWeekendSnapshot) : paused ? "일시정지" : "주행 준비"}
           </span>
         </div>
       </header>
 
-      <section className={"simulation-panel " + (trainingMode ? "simulation-panel--training" : "")} aria-label={trainingMode ? "AI Training Lab 시뮬레이션" : "S1 Racing 주행 테스트"}>
+      <section className={"simulation-panel " + (trainingMode ? "simulation-panel--training" : weekendMode ? "simulation-panel--weekend" : "")} aria-label={trainingMode ? "AI Training Lab 시뮬레이션" : weekendMode ? "레이스 주말 시뮬레이션" : "S1 Racing 주행 테스트"}>
         {webgl?.supported ? (
           <Canvas
-            camera={trainingMode ? { position: [0, 30, 25], fov: 45 } : { position: [4, 4, 6], fov: 55 }}
+            camera={trainingMode ? { position: [0, 30, 25], fov: 45 } : weekendMode ? { position: [0, 8, 16], fov: 55 } : { position: [4, 4, 6], fov: 55 }}
             dpr={[1, 1.5]}
             shadows
             onCreated={({ gl }) => input.attach(gl.domElement)}
           >
             {trainingMode ? (
               <TrainingScene runner={trainingRunner} paused={paused} onSnapshot={handleTrainingSnapshot} />
+            ) : weekendMode ? (
+              <RaceWeekendScene
+                session={raceWeekendSession}
+                input={input}
+                paused={paused}
+                onSnapshot={handleRaceWeekendSnapshot}
+              />
             ) : (
               <DrivingScene
                 input={input}
@@ -599,7 +687,7 @@ export function App() {
           </>
         )}
 
-        {webgl?.supported && !trainingMode && (
+        {webgl?.supported && drivingMode && (
           <>
             <AppTelemetry
               telemetry={telemetry}
@@ -634,7 +722,7 @@ export function App() {
           </>
         )}
         <div className="canvas-label">
-          {trainingMode ? "AI TRAINING LAB / NORTHFIELD GP PROTOTYPE" : "PHYSICS PROTOTYPE / TEST TRACK"}
+          {trainingMode ? "AI TRAINING LAB / NORTHFIELD GP PROTOTYPE" : weekendMode ? "RACE WEEKEND / MULTI-CAR PROTOTYPE" : "PHYSICS PROTOTYPE / TEST TRACK"}
         </div>
       </section>
 
@@ -645,6 +733,15 @@ export function App() {
             <TrainingSearchSummary result={trainingSearchResult} onSave={saveTrainingResult} />
           )}
         </>
+      ) : weekendMode ? (
+        <RaceWeekendPanel
+          snapshot={raceWeekendSnapshot}
+          onRunQualifying={runWeekendQualifying}
+          onStartRace={startWeekendRace}
+          onReset={resetWeekend}
+          onSelectTyre={selectWeekendTyre}
+          onStrategy={updateWeekendStrategy}
+        />
       ) : (
         <section className="telemetry-grid" aria-label="차량 상태">
           <article>
@@ -731,6 +828,21 @@ export function App() {
           <div>
             <span>다음 단계</span>
             <strong>결정성 평가 후 동일한 설정을 단일 AI 레이스 세션에 연결합니다.</strong>
+          </div>
+        </section>
+      ) : weekendMode ? (
+        <section className="control-panel weekend-context" aria-label="레이스 주말 구현 경계">
+          <div>
+            <span>M2B · 다차량</span>
+            <strong>모든 차량은 동일한 VehicleSimulation과 120Hz fixed-step을 사용하며 기본 순위·리셋을 결정적으로 계산합니다.</strong>
+          </div>
+          <div>
+            <span>M2C · 퀄리파잉</span>
+            <strong>{raceWeekendSnapshot.rulesetVersion} · 유효 랩만 반영 · Q1 20→15 · Q2 15→10 · Q3 10</strong>
+          </div>
+          <div>
+            <span>M2D · 전략 경계</span>
+            <strong>시작 컴파운드와 다른 컴파운드로 최소 1회 피트 전략만 검증하며 열·마모·피트 물리는 후속 단계입니다.</strong>
           </div>
         </section>
       ) : (

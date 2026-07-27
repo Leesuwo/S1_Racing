@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-07-27 — D-026
+
+**결정:** M2B~M2D는 `RaceSession`·`QualifyingSession`·`RaceWeekendSession`으로 분리한다. `RaceSession`은 차량별 `VehicleSimulation`과 fixed-step 순위만 소유하고, `QualifyingSession`은 유효 랩·Q 컷만 계산하며, `RaceWeekendSession`은 단계 전이와 최소 전략만 조정한다.
+
+**이유:** 다차량 물리·랩타이밍·주말 운영을 하나의 장면 컴포넌트에 넣으면 AI 입력 경계와 실패 원인을 분리하기 어렵다. 순수 TypeScript 상태 기계로 두면 React/R3F를 거치지 않고 결정성·리셋·컷 규칙을 테스트할 수 있고, UI는 읽기 전용 스냅샷만 표시한다.
+
+**검증:** `RaceSession.test.ts`, `QualifyingSession.test.ts`, `RaceWeekendSession.test.ts`에서 그리드 결정성·유효 랩·20→15→10 컷·전략 경계·리셋을 검증하고, Playwright에서 Race Weekend 모드의 퀄리파잉 실행·레이스 시작·20대 순위·리셋을 확인한다.
+
+## 2026-07-27 — D-027
+
+**결정:** M2D의 타이어 전략은 시작 컴파운드와 다른 컴파운드로 마지막 전 랩 이전에 최소 한 번 정지하는 `RaceStrategy` 입력 계약만 고정한다. 열·마모·공기압과 실제 피트 물리는 구현하지 않는다.
+
+**이유:** 전략 선택 UI와 레이스 주말 상태 전이를 먼저 검증하면서, 아직 정의되지 않은 타이어 열·마모 모델이 레이스 순위나 AI 성능에 가짜 보너스를 주는 것을 막기 위해서다. 후속 타이어 마일스톤에서 모델을 추가해도 동일한 전략 인터페이스를 유지할 수 있다.
+
+**검증:** `RaceWeekendSession.test.ts`에서 시작·피트 컴파운드 동일 조건과 랩 범위 오류를 거부하고 유효 전략을 보존하는지 확인한다.
+
 ## 2026-07-27 — D-025
 
 **결정:** Training Lab의 자동 튜닝 결과는 `s1-racing.ai-training-result` schema v1 JSON으로 저장한다. 파일에는 완료 에피소드 스냅샷, 기준·최고·후보 설정 평가, 시나리오별 결정성 해시, 자동 적용 여부와 실패 사례를 포함하며, 파일 생성은 앱 셸의 브라우저 다운로드 경계에서만 수행한다.

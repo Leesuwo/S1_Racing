@@ -29,6 +29,24 @@ AI는 플레이어와 같은 차량 물리를 사용하고 `VehicleControlInput`
 - 주행 모드의 AI는 플레이어와 별도 물리 객체를 소유하지만 동일한 120Hz fixed-step 순서로 업데이트한다.
 - AI 텔레메트리는 읽기 전용 HUD로 표시하며, 그리드 순위·충돌·추월·방어는 이 단계에서 다루지 않는다.
 
+## Milestone 2B — Multi-car race session
+
+- `RaceSession`은 차량별 `VehicleSimulation`을 소유하고 AI에는 `VehicleControlInput`만 공급한다.
+- 2~20대의 그리드·랩 진행·기본 순위·리셋을 결정적으로 계산한다.
+- 다차량 충돌·추월·방어는 M3A 이후 범위이며 AI에 숨은 속도·그립·위치 보정을 주지 않는다.
+
+## Milestone 2C — Qualifying
+
+- `QualifyingSession`은 AI 물리 세션과 분리된 랩타임 규칙 실행기다.
+- `s1-racing-qualifying-v1`의 Q1 20→15, Q2 15→10, Q3 10 순서를 사용한다.
+- 무효 랩은 최고 기록과 그리드 순위에 반영하지 않으며, 결과는 레이스 그리드 입력으로만 전달한다.
+
+## Milestone 2D — Race weekend and strategy
+
+- `RaceWeekendSession`은 Practice→Qualifying→Race→Results 상태 전이를 조정한다.
+- Race Weekend UI는 단계·순위·타이어 선택·최소 피트 전략을 읽기 전용 스냅샷과 명령 콜백으로 연결한다.
+- 타이어 열·마모·공기압·실제 피트 물리와 접촉 손상은 후속 모델이며 AI의 물리 우회 수단으로 사용하지 않는다.
+
 ## 예정 계층
 
 1. 교육 트랙과 결정적 평가기 — M2A-0
@@ -37,7 +55,8 @@ AI는 플레이어와 같은 차량 물리를 사용하고 `VehicleControlInput`
 4. PID 기반 가감속 정밀 튜닝 — 후속 작업
 5. 충돌 회피
 6. 추월·방어 상태 머신
-7. 퀄리파잉·레이스 전략
+7. 타이어 열·마모 및 실제 피트 물리
+8. 퀄리파잉·레이스 전략 고도화
 
 ## Milestone 0
 

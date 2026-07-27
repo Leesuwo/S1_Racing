@@ -4,9 +4,9 @@
 
 - 제품: S1 Racing
 - 작업 기준일: 2026-07-27
-- 저장소 문서상 완료 상태: Milestone 2A — Single AI opponent
-- 다음 기능 마일스톤: Milestone 2B — Multi-car race session
-- 현재 오케스트레이션 상태: M2A-0 검증 설정을 단일 AI 주행 세션에 연결하고 공유 물리·텔레메트리 E2E 검증 완료
+- 저장소 문서상 완료 상태: Milestone 2B → 2C → 2D
+- 다음 기능 마일스톤: Milestone 3A — Track limits and contact model
+- 현재 오케스트레이션 상태: 다차량 세션·퀄리파잉·레이스 주말 전략 경계와 브라우저 흐름 구현·검증 완료
 
 ## 완료된 기반
 
@@ -29,11 +29,17 @@
 - AI 뒤쪽·위쪽에서 차체와 전방 레이싱 라인을 유지하는 Training Lab 추적 카메라
 - 긴 고속 가속·강제동·복합·저속 탈출·기술 복귀를 결합한 Northfield 대형 레이아웃
 - 직선·강제동·고속 복합·저속 탈출·전체 랩 교육 커리큘럼
+- `RaceSession`의 2~20대 그리드·랩 진행·기본 순위·리셋·fixed-step 비용 스냅샷
+- `QualifyingSession`의 유효 랩 최고 기록과 Q1 20→15·Q2 15→10·Q3 최종 순위
+- `RaceWeekendSession`의 Practice→Qualifying→Race→Results 단계 전환
+- Race Weekend UI의 다차량 표시·퀄리파잉 컷·타이어 선택·최소 피트 전략·리셋
 
 ## 현재 제한
 
 - 튜닝 결과는 `s1-racing.ai-training-result` schema v1 JSON으로 다운로드할 수 있다. 결과에는 완료 에피소드, 기준·최고 설정, 후보별 평가, 결정성 해시와 실패 사례가 포함된다.
-- AI 레이스 통합, 다차량 세션, 퀄리파잉, 레이스 운영은 아직 구현하지 않는다.
+- 다차량 충돌·추월·방어·트랙 리밋·손상은 구현하지 않는다. M2B의 `retired`는 비정상 수치 방어 상태다.
+- 퀄리파잉 랩 기록은 규칙·단계 전이를 검증하는 결정적 프로토타입 시나리오이며, 실제 차량 랩 완주 기반 타이밍·섹터 델타는 후속 범위다.
+- 타이어 전략은 시작 컴파운드와 최소 1회 피트 컴파운드의 유효성만 확인하며, 열·마모·공기압·실제 피트 물리는 구현하지 않는다.
 - Training Lab은 `NORTHFIELD_GP_DATA`를 기본 트랙으로 사용하며, 플레이어 주행 모드는 기존 `TEST_TRACK_DATA`를 유지한다.
 - 실제 차량 재현을 주장하지 않는 `initial_assumption` 물리 수치를 사용한다.
 - 실제 트랙 복제, 공식 브랜드·팀·드라이버·리버리 자산을 사용하지 않는다.
@@ -41,7 +47,7 @@
 
 ## 알려진 문서 정합성 위험
 
-`AGENTS.md`와 `CODEX_START_PROMPT.md`의 기준선 문구는 M1F 완료 기준을 보존한다. 저장소 상태와 실제 작업 순서는 M2A 완료 후 M2B 다차량 세션으로 갱신한다.
+`AGENTS.md`와 `CODEX_START_PROMPT.md`의 기준선 문구는 M1F 완료 기준을 보존한다. 저장소의 기능 순서와 실제 구현 상태는 M2B~M2D 완료 후 M3A 트랙 리밋·접촉 모델로 갱신했다.
 
 ## 검증 기준
 
