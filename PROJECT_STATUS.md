@@ -3,10 +3,10 @@
 ## 기준선
 
 - 제품: S1 Racing
-- 작업 기준일: 2026-07-24
-- 저장소 문서상 완료 상태: Milestone 1F — Input presets and test track
-- 다음 기능 마일스톤: Milestone 2A-0 — AI Training Circuit & Evaluator
-- 현재 오케스트레이션 상태: M2A-0 Northfield GP 대형 고속·기술 레이아웃과 AI 추적 카메라 검증 완료, 튜닝 결과 저장 진행 예정
+- 작업 기준일: 2026-07-27
+- 저장소 문서상 완료 상태: Milestone 2A — Single AI opponent
+- 다음 기능 마일스톤: Milestone 2B — Multi-car race session
+- 현재 오케스트레이션 상태: M2A-0 검증 설정을 단일 AI 주행 세션에 연결하고 공유 물리·텔레메트리 E2E 검증 완료
 
 ## 완료된 기반
 
@@ -22,6 +22,8 @@
 - `AITrainingRunner`의 120Hz 결정적 실행, 레이싱 라인·목표점·제동 상태 시각화
 - 속도·횡오차·트랙 이탈·체크포인트·입력 채터링·결정성 해시 HUD
 - 단일 AI 상대 주행 모드와 교육 모드 전환
+- Training Lab에서 적용한 AI 설정을 단일 AI 주행 세션으로 전달
+- 단일 AI가 플레이어와 같은 `VehicleControlInput`·VehicleSimulation·Rapier 힘 적용 순서를 공유
 - `Northfield GP` 독립 중심선·도로 폭·곡률·섹터·체크포인트·레이싱 라인 데이터
 - 중심선 도로 메시 기반 Training Lab 디버그 월드
 - AI 뒤쪽·위쪽에서 차체와 전방 레이싱 라인을 유지하는 Training Lab 추적 카메라
@@ -30,7 +32,7 @@
 
 ## 현재 제한
 
-- 튜닝 결과 파일 저장은 아직 구현하지 않는다.
+- 튜닝 결과는 `s1-racing.ai-training-result` schema v1 JSON으로 다운로드할 수 있다. 결과에는 완료 에피소드, 기준·최고 설정, 후보별 평가, 결정성 해시와 실패 사례가 포함된다.
 - AI 레이스 통합, 다차량 세션, 퀄리파잉, 레이스 운영은 아직 구현하지 않는다.
 - Training Lab은 `NORTHFIELD_GP_DATA`를 기본 트랙으로 사용하며, 플레이어 주행 모드는 기존 `TEST_TRACK_DATA`를 유지한다.
 - 실제 차량 재현을 주장하지 않는 `initial_assumption` 물리 수치를 사용한다.
@@ -39,7 +41,7 @@
 
 ## 알려진 문서 정합성 위험
 
-`AGENTS.md`와 `CODEX_START_PROMPT.md`의 기준선 문구는 M1F 완료 기준을 보존한다. 실제 작업 순서는 사용자 결정에 따라 M2A보다 M2A-0 Training Lab을 선행한다.
+`AGENTS.md`와 `CODEX_START_PROMPT.md`의 기준선 문구는 M1F 완료 기준을 보존한다. 저장소 상태와 실제 작업 순서는 M2A 완료 후 M2B 다차량 세션으로 갱신한다.
 
 ## 검증 기준
 

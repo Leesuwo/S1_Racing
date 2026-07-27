@@ -90,6 +90,12 @@ test("automatically tunes and conditionally applies AI configuration after train
   await expect(page.getByText("최고 점수", { exact: true })).toBeVisible();
   await expect(page.getByText("탐색 후보", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "최고 설정 적용" })).toHaveCount(0);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "결과 JSON 저장" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^s1-racing-ai-training-acceleration-.*\.json$/);
+  const savedPath = await download.path();
+  expect(savedPath).not.toBeNull();
   await expect(page.locator(".training-overlay p")).toHaveText(/훈련 대기|시나리오 완료/);
 });
 
@@ -103,6 +109,7 @@ test("keeps the M2A driving mode available from the training lab", async ({ page
   await expect(page.getByText("휠 하중 / N", { exact: true })).toBeVisible();
   await expect(page.getByText("Rapier 접지", { exact: true })).toBeVisible();
   await expect(page.getByText(/4\/4 ·/)).toBeVisible();
+  await expect(page.locator(".ai-readout strong")).not.toHaveText(/^0 km\/h/, { timeout: 3_000 });
 });
 
 test("moves the vehicle when throttle is held in driving mode", async ({ page }) => {

@@ -8,7 +8,10 @@ import { useEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
 import type { VehicleControlInput } from "../game/input/VehicleControlInput";
-import { SingleOpponentAI } from "../gameplay/ai/SingleOpponentAI";
+import {
+  SingleOpponentAI,
+  type SingleOpponentAIConfig,
+} from "../gameplay/ai/SingleOpponentAI";
 import { FixedTimestepAccumulator } from "../game/loop/FixedTimestep";
 import {
   RapierChassisSuspension,
@@ -23,6 +26,8 @@ import { TestTrackVisual } from "../world/TestTrackVisual";
 interface DrivingSceneProps {
   input: BrowserVehicleInput;
   paused: boolean;
+  /** M2A-0에서 검증·적용된 AI 설정이며, 생략하지 않고 주행 세션에 전달한다. */
+  opponentAIConfig: SingleOpponentAIConfig;
   onTelemetry: (telemetry: VehicleTelemetry) => void;
   onOpponentTelemetry: (telemetry: VehicleTelemetry) => void;
   onSuspensionTelemetry: (telemetry: RapierSuspensionTelemetry | null) => void;
@@ -174,6 +179,7 @@ function rapierRotationToPhysicsYaw(rotation: { x: number; y: number; z: number;
 export function DrivingScene({
   input,
   paused,
+  opponentAIConfig,
   onTelemetry,
   onOpponentTelemetry,
   onSuspensionTelemetry,
@@ -188,7 +194,10 @@ export function DrivingScene({
     [simulation],
   );
   // AI 시뮬레이션에만 입력을 공급하는 순수 컨트롤러 인스턴스다.
-  const opponentAI = useMemo(() => new SingleOpponentAI(opponentSimulation.track), [opponentSimulation]);
+  const opponentAI = useMemo(
+    () => new SingleOpponentAI(opponentSimulation.track, opponentAIConfig),
+    [opponentAIConfig, opponentSimulation],
+  );
   // 렌더 delta를 120Hz physics step으로 분해하는 누적기다.
   const accumulator = useMemo(() => new FixedTimestepAccumulator(), []);
   // 플레이어 차량의 표시 그룹 참조다.

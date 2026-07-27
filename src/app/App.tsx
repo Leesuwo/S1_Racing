@@ -18,6 +18,11 @@ import {
   searchAITrainingConfig,
   type AITrainingSearchResult,
 } from "../gameplay/training/AITrainingEvaluator";
+import type { SingleOpponentAIConfig } from "../gameplay/ai/SingleOpponentAI";
+import {
+  createAITrainingResultDocument,
+  serializeAITrainingResult,
+} from "../gameplay/training/AITrainingResult";
 import { zeroWheelValues } from "../game/physics/Suspension";
 import type { RapierSuspensionTelemetry } from "../game/physics/RapierChassisSuspension";
 import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
@@ -242,8 +247,14 @@ function TrainingMetrics({ snapshot }: { snapshot: AITrainingSnapshot }) {
 /** 완료된 에피소드 뒤에 결정적으로 비교한 후보 설정의 자동 적용 결과다. */
 function TrainingSearchSummary({
   result,
+  onSave,
 }: {
-  result: AITrainingSearchResult & { applied: boolean; failure?: AITrainingFailure };
+  result: AITrainingSearchResult & {
+    applied: boolean;
+    failure?: AITrainingFailure;
+    completedSnapshot: AITrainingSnapshot;
+  };
+  onSave: () => void;
 }) {
   // 낮을수록 좋은 점수의 기준 대비 개선률을 0% 아래로 내려가지 않게 표시한다.
   const improvementRatio = result.baseline.totalScore > 0
@@ -283,6 +294,13 @@ function TrainingSearchSummary({
       <p className="training-search__config">
         최고 설정 · lookahead {formatNumber(result.best.config.lookaheadM, 1)} m · heading {formatNumber(result.best.config.headingGain, 2)} · lateral {formatNumber(result.best.config.lateralGain, 2)} · corner {formatNumber(result.best.config.cornerSpeedScale, 2)}
       </p>
+      <button
+        type="button"
+        className="training-button training-button--save"
+        onClick={onSave}
+      >
+        결과 JSON 저장
+      </button>
       {result.failure?.reason === "off-track" && (
         <p className="training-search__failure" aria-label="맵 이탈 학습 사례">
           실패 사례 반영 · {result.failure.sectionLabel}에서 경계 {formatNumber(Math.abs(result.failure.distanceToBoundaryM), 2)} m 초과 · 속도 {formatNumber(result.failure.speedMps * 3.6, 1)} km/h · 횡오차 {formatNumber(Math.abs(result.failure.lateralErrorM), 2)} m
@@ -375,13 +393,21 @@ export function App() {
   const [inputPreset, setInputPreset] = useState<VehicleInputPresetId>(() => input.getPreset());
   // 교육 실행기는 React 렌더와 분리된 단일 mutable simulation owner다.
   const trainingRunner = useMemo(() => new AITrainingRunner(), []);
+  // 주행 모드의 AI는 Training Lab에서 마지막으로 적용된 설정을 읽고, 없으면 기본 설정을 사용한다.
+  const [opponentAIConfig, setOpponentAIConfig] = useState<SingleOpponentAIConfig>(
+    () => trainingRunner.getAIConfig(),
+  );
   // HUD에는 runner가 소유한 내부 객체가 아닌 복사된 스냅샷만 저장한다.
   const [trainingSnapshot, setTrainingSnapshot] = useState<AITrainingSnapshot>(
     () => trainingRunner.getSnapshot(),
   );
   // 후보 탐색이 끝난 뒤에도 기준·최고 설정 비교 결과를 화면에 보존한다.
   const [trainingSearchResult, setTrainingSearchResult] = useState<
-    (AITrainingSearchResult & { applied: boolean; failure?: AITrainingFailure }) | null
+    (AITrainingSearchResult & {
+      applied: boolean;
+      failure?: AITrainingFailure;
+      completedSnapshot: AITrainingSnapshot;
+    }) | null
   >(null);
   // 새 에피소드가 끝난 뒤에만 한 번 자동 튜닝하도록 시작·일시정지·HUD 콜백 사이의 의도를 보존한다.
   const automaticTuningPendingRef = useRef(false);
@@ -394,10 +420,44 @@ export function App() {
       maxCandidates: 14,
     });
     const applied = result.best.totalScore < result.baseline.totalScore;
-    if (applied) trainingRunner.setAIConfig(result.best.config);
-    setTrainingSearchResult({ ...result, applied, failure: completedSnapshot.failure });
+    if (applied) {
+      trainingRunner.setAIConfig(result.best.config);
+      // 다음 주행 세션에도 같은 설정을 전달해 교육 결과와 실제 상대의 제어값이 갈라지지 않게 한다.
+      setOpponentAIConfig(result.best.config);
+    }
+    setTrainingSearchResult({
+      ...result,
+      applied,
+      failure: completedSnapshot.failure,
+      completedSnapshot,
+    });
     setTrainingSnapshot(trainingRunner.getSnapshot());
   }, [trainingRunner]);
+
+  // 저장 시점의 UTC만 파일 메타데이터에 기록하고, 평가 수치·설정·해시는 완료 스냅샷에서 복사한다.
+  const saveTrainingResult = useCallback(() => {
+    if (!trainingSearchResult) return;
+
+    // 결과 문서는 현재 UI 상태와 분리된 복사본이어야 자동 적용 후에도 원본 근거를 보존한다.
+    const document = createAITrainingResultDocument({
+      result: trainingSearchResult,
+      completedSnapshot: trainingSearchResult.completedSnapshot,
+      applied: trainingSearchResult.applied,
+      savedAtUtc: new Date().toISOString(),
+    });
+    // Blob은 서버 저장 없이 브라우저가 즉시 다운로드할 수 있는 파일 경계다.
+    const blob = new Blob([serializeAITrainingResult(document)], { type: "application/json" });
+    // 임시 object URL은 클릭이 끝난 뒤 해제해 세션마다 메모리가 누적되지 않게 한다.
+    const url = URL.createObjectURL(blob);
+    // 실제 파일 다운로드를 발생시키는 일회성 앵커 요소다.
+    const anchor = window.document.createElement("a");
+    // 시나리오와 저장 시각을 파일명에 넣어 여러 평가 결과를 구분한다.
+    const timestamp = document.savedAtUtc.replace(/[:.]/g, "-");
+    anchor.href = url;
+    anchor.download = "s1-racing-ai-training-" + document.scenario.id + "-" + timestamp + ".json";
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }, [trainingSearchResult]);
 
   // R3F가 10Hz로 전달한 종료 스냅샷을 감지해, 주행 완료 뒤에만 후보 평가를 실행한다.
   const handleTrainingSnapshot = useCallback((snapshot: AITrainingSnapshot) => {
@@ -510,6 +570,7 @@ export function App() {
               <DrivingScene
                 input={input}
                 paused={paused}
+                opponentAIConfig={opponentAIConfig}
                 onTelemetry={setTelemetry}
                 onOpponentTelemetry={setOpponentTelemetry}
                 onSuspensionTelemetry={setSuspensionTelemetry}
@@ -581,7 +642,7 @@ export function App() {
         <>
           <TrainingMetrics snapshot={trainingSnapshot} />
           {trainingSearchResult && (
-            <TrainingSearchSummary result={trainingSearchResult} />
+            <TrainingSearchSummary result={trainingSearchResult} onSave={saveTrainingResult} />
           )}
         </>
       ) : (

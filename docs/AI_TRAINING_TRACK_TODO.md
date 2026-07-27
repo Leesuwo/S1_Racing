@@ -3,7 +3,7 @@
 ## 작업 정보
 
 - 마일스톤: M2A-0
-- 상태: 진행 중 — Northfield GP 트랙·저속 탈출 시나리오 구현 완료, 결과 파일 저장과 최종 게이트 남음
+- 상태: 완료 — Northfield GP 트랙·결정적 평가·자동 튜닝·결과 JSON 저장과 인수 게이트 완료
 - 선행 조건: M1F 완료, M2A 작업 트리 검토 결과 확보
 - 기본 실행 모드: `serial`
 - 기본 담당: Gameplay 구현 담당 + Track 담당 + QA
@@ -49,6 +49,9 @@
   - 수정 후보: `src/gameplay/ai/**`, `src/gameplay/training/**`
   - 합격 기준: 선택된 설정 스냅샷과 평가 결과가 UI에서 재현 가능하고, 적용 전후 결정성 해시를 비교할 수 있다.
   - 주의: 새 ML·최적화 production dependency를 추가하지 않는다.
+- [x] `M2A-0-RESULT-SAVE`: 자동 튜닝 결과를 버전 있는 JSON 문서로 저장한다.
+  - 소유 파일: `src/gameplay/training/AITrainingResult.ts`, `src/app/App.tsx`, `tests/e2e/**`
+  - 합격 기준: 완료 에피소드·기준/최고 설정·후보 평가·결정성 해시·실패 사례를 포함한 `s1-racing.ai-training-result` schema v1 파일을 다운로드할 수 있다.
 
 ## Phase 3 — 개발자 검증 화면
 
@@ -71,9 +74,9 @@
 
 ## 이후 순서
 
-1. M2A-0 — AI 교육 트랙과 결정적 평가기
-2. M2A — 단일 AI 상대 통합 및 주행감 튜닝
-3. M2B — 다차량 레이스 세션
+1. M2B — 다차량 레이스 세션
+2. M2C — 퀄리파잉
+3. M2D — 레이스 주말과 전략
 
 ## 보류 항목
 

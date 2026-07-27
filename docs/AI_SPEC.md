@@ -22,6 +22,13 @@ AI는 플레이어와 같은 차량 물리를 사용하고 `VehicleControlInput`
 
 모든 교육 트랙 수치와 AI 튜닝값은 실제 차량 재현값이 아닌 `initial_assumption`이며, 주행감은 `simulation_required` 검증 대상이다.
 
+## Milestone 2A — Single AI opponent
+
+- M2A-0에서 자동 적용된 `SingleOpponentAIConfig`를 주행 모드에 전달한다.
+- AI는 `VehicleControlInput`만 생성하고 플레이어와 동일한 `VehicleSimulation`·Rapier 힘 적용 경계를 사용한다.
+- 주행 모드의 AI는 플레이어와 별도 물리 객체를 소유하지만 동일한 120Hz fixed-step 순서로 업데이트한다.
+- AI 텔레메트리는 읽기 전용 HUD로 표시하며, 그리드 순위·충돌·추월·방어는 이 단계에서 다루지 않는다.
+
 ## 예정 계층
 
 1. 교육 트랙과 결정적 평가기 — M2A-0

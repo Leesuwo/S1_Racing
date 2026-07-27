@@ -150,6 +150,8 @@ h1 { margin-bottom: 0; font-size: clamp(2rem, 6vw, 4.5rem); line-height: 0.95; l
 .training-search__best > strong { color: #ffe09a !important; }
 .training-search__note { margin: 14px 0 0; color: #9e8965; font-size: 0.72rem; line-height: 1.45; }
 .training-search__config { margin: 8px 0 0; color: #e9c982; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.68rem; letter-spacing: 0.01em; }
+.training-button--save { margin-top: 15px; border-color: #a97832; color: #ffe0a0; background: #332516; }
+.training-button--save:hover { border-color: #ffd27a; background: #4b351b; }
 .training-search__failure { margin: 10px 0 0; color: #ffcb8a; font-size: 0.75rem; line-height: 1.55; }
 .training-context { border-color: #1e3f49; background: #08161c; }
 .training-context > div { background: #08161c; }

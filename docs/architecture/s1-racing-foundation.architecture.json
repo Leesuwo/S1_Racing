@@ -48,6 +48,8 @@
     { "from": "training_lab", "to": "training_evaluator", "label": "후보 탐색 요청", "variant": "dashed", "fromSide": "right", "toSide": "top", "labelAt": [450, 496] },
     { "from": "training_runner", "to": "training_evaluator", "label": "시나리오 결과", "variant": "dashed", "fromSide": "bottom", "toSide": "left", "route": "orthogonal-v", "labelAt": [350, 515] },
     { "from": "training_evaluator", "to": "training_metrics", "label": "점수·최고 설정", "variant": "dashed", "fromSide": "bottom", "toSide": "bottom", "route": "orthogonal-v", "labelAt": [895, 600] },
+    { "from": "training_evaluator", "to": "ai_controller", "label": "검증된 설정 스냅샷", "variant": "dashed", "fromSide": "left", "toSide": "bottom", "route": "orthogonal-v", "labelAt": [335, 355] },
+    { "from": "training_evaluator", "to": "training_lab", "label": "schema v1 결과 JSON 저장", "variant": "dashed", "fromSide": "left", "toSide": "bottom", "route": "orthogonal-v", "labelAt": [375, 610] },
     { "from": "training_runner", "to": "training_metrics", "label": "결정적 평가 스냅샷", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [675, 390] },
     { "from": "training_metrics", "to": "training_lab", "label": "읽기 전용 HUD", "variant": "dashed", "fromSide": "left", "toSide": "right", "labelAt": [675, 580] },
     { "from": "track_data", "to": "physics_domain", "label": "노면·구간·리셋 포즈", "variant": "security", "fromSide": "top", "toSide": "bottom", "labelAt": [795, 425] },
@@ -77,6 +79,6 @@
   "cards": [
     { "dot": "cyan", "title": "Milestone 2A-0", "items": ["Training Lab에서 AI 교육을 직접 관찰", "120Hz fixed-step·결정성 해시·평가 지표", "레이싱 라인·제동 목표점 시각화"] },
     { "dot": "emerald", "title": "아키텍처 규칙", "items": ["AI는 VehicleControlInput만 생성", "교육 실행기가 VehicleSimulation을 소유", "HUD는 읽기 전용 스냅샷만 표시"] },
-    { "dot": "rose", "title": "다음 경계", "items": ["결정적 튜닝 결과 파일 저장", "M2A 단일 AI 레이스 통합", "교육 결과와 실제 레이스 세션 연결"] }
+    { "dot": "rose", "title": "다음 경계", "items": ["M2A 단일 AI 레이스 통합", "교육 결과와 실제 레이스 세션 연결", "M2B 다차량 세션·순위"] }
   ]
 }
