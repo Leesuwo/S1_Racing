@@ -56,20 +56,24 @@ M2A-0에서 검증한 AI 설정을 단일 AI 주행 세션에 전달하고, 플�
 
 ## Milestone 2D — Race weekend and strategy (완료)
 
-`RaceWeekendSession`과 `Race Weekend` UI로 Practice→Qualifying→Race→Results 흐름, 시작 타이어, 다른 컴파운드로 1회 정지하는 최소 전략 경계를 추가했다. 타이어 열·마모, 실제 피트 물리, 충돌·손상은 다음 설계로 남긴다. 상세 범위와 검증 결과는 [M2D 상세 문서](./MILESTONE_2D.md)에 기록했다.
+`RaceWeekendSession`과 `Race Weekend` UI로 Practice→Qualifying→Race→Results 흐름, 시작 타이어, 다른 컴파운드로 1회 정지하는 최소 전략 경계를 추가했다. 상세 범위와 검증 결과는 [M2D 상세 문서](./MILESTONE_2D.md)에 기록했다.
 
 ## Milestone 3A — Track limits and contact model (완료)
 
 TestTrackDefinition의 정적 벽·연석을 렌더링·Rapier가 공유하고, 순수 트랙 리밋 규칙과 RaceSession 차량 접촉 응답을 추가했다. 랩 무효화·패널티·벽 접촉 telemetry·Race Weekend 표시를 포함한다. 상세 범위와 검증 결과는 M3A 상세 문서에 기록한다.
 
-## Milestone 3B — Tyre thermal, wear and pressure (예정)
+## Milestone 3B — Tyre thermal, wear and pressure (완료)
 
-타이어 힘 모델에 온도·마모·공기압 상태를 연결하고, 열화가 그립·제동·구동·장거리 랩 안정성에 미치는 영향을 120Hz 고정 스텝으로 검증한다.
+타이어 힘 모델에 온도·마모·공기압 상태를 연결하고, 컴파운드 전략과 HUD가 같은 상태를 읽도록 했다. 상세 범위는 [M3B 상세 문서](./MILESTONE_3B.md)에 기록한다.
 
-## Milestone 3C — Overtake, defence and collision avoidance (예정)
+## Milestone 3C — Overtake, defence and collision avoidance (완료)
 
-트랙 구간·상대 차량·블루 플래그 경계를 읽는 추월·방어·충돌 회피 상태 머신을 추가하되, AI는 계속 VehicleControlInput만 생성하게 한다.
+상대 차량 간격·closing speed·황색기 우선순위를 읽는 racecraft 상태 머신을 추가했다. AI는 계속 `VehicleControlInput`만 생성한다. 상세 범위는 [M3C 상세 문서](./MILESTONE_3C.md)에 기록한다.
 
-## Milestone 3D — Damage, flags and pit physics (예정)
+## Milestone 3D — Damage, flags and pit physics (완료)
 
-접촉 응답을 손상·플래그·실제 피트 레인·피트 시간 상태와 연결한다. 대회 규정과 차량별 손상 모델은 별도 근거와 검증 기준을 먼저 확정한다.
+접촉 응답을 손상·성능 저하·플래그·피트 서비스 시간과 연결했다. 실제 피트 레인 차선과 전체 대회 규정은 제외 범위로 고정한다. 상세 범위는 [M3D 상세 문서](./MILESTONE_3D.md)에 기록한다.
+
+## Milestone 3E — First completion hardening (완료)
+
+결정성 digest, 결과 단계 수렴, 통합 HUD·E2E, 아키텍처 문서와 전체 `npm run verify`를 기준으로 오프라인 단일 트랙 1차 완성 게이트를 닫았다. 포함·제외 범위는 [1차 완성 기준](./FIRST_COMPLETE.md)에 기록한다.

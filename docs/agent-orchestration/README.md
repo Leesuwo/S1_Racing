@@ -182,4 +182,4 @@ Validation required:
 
 ## 현재 배치
 
-M2B~M2D와 M3A가 완료되었고, 현재 저장소는 TASKS.md의 M3B 타이어 열·마모·공기압 모델을 다음 기능 후보로 둔다. Gameplay Agent는 TrackLimitsMonitor와 VehicleContact의 순수 규칙 경계를 유지하며, QA는 트랙 이탈·랩 무효화·패널티·접촉 응답과 AI 물리 우회를 함께 검증한다. 추월·방어·손상 역할은 후속 마일스톤에서 활성화한다.
+M2B~M2D와 M3A~M3E가 완료되었고, 현재 저장소는 오프라인 단일 트랙 1차 완성 상태다. Gameplay Agent는 TrackLimitsMonitor·VehicleContact·TyreCondition·Racecraft·RaceOperations의 순수 규칙 경계를 유지하며, QA는 타이어·레이스크래프트·손상·피트·플래그와 기존 AI 물리 경계를 함께 검증한다. 다음 기능 후보는 M4 다차량 Rapier 차체 형상·회전 충돌이다.

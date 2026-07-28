@@ -10,6 +10,7 @@ import {
   type TestTrackRacingLinePoint,
   type TrackPoint,
 } from "../../tracks/TestTrack";
+import type { RacecraftSnapshot } from "../race/Racecraft";
 
 /** AI가 읽을 수 있는 차량 상태 스냅샷이다. 물리 상태를 직접 소유하지 않는다. */
 export interface SingleOpponentAIState {
@@ -206,7 +207,11 @@ export class SingleOpponentAI {
   }
 
   /** 한 fixed step에 적용할 VehicleControlInput을 결정한다. */
-  update(state: SingleOpponentAIState, dtSeconds: number): VehicleControlInput {
+  update(
+    state: SingleOpponentAIState,
+    dtSeconds: number,
+    racecraft?: RacecraftSnapshot,
+  ): VehicleControlInput {
     // 잘못된 프레임 dt를 고정 120Hz 간격으로 대체해 상태 전이를 유한하게 유지한다.
     const safeDtSeconds = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : 1 / 120;
     this.shiftCooldownSeconds = Math.max(0, this.shiftCooldownSeconds - safeDtSeconds);
@@ -238,6 +243,11 @@ export class SingleOpponentAI {
         - bodySlipAngleRad * this.config.slipRecoverySteeringGain,
       -1,
       1,
+    ) + (racecraft?.steeringBias ?? 0);
+    const racecraftSteering = clamp(
+      steering,
+      -1,
+      1,
     );
 
     // 후진 입력을 전진 제어기로 처리하지 않도록 음수 전진 속도를 0으로 제한한다.
@@ -255,7 +265,7 @@ export class SingleOpponentAI {
         : 0,
       0,
       1,
-    );
+    ) * (racecraft?.brakeScale ?? 1);
     // 제동 중에는 구동 입력을 제거하고, 그 외에는 목표 속도 오차로 스로틀을 계산한다.
     const requestedThrottle = brake > 0
       ? 0
@@ -267,7 +277,7 @@ export class SingleOpponentAI {
       0,
       1,
     );
-    const throttle = requestedThrottle * slipThrottleScale;
+    const throttle = requestedThrottle * slipThrottleScale * (racecraft?.throttleScale ?? 1);
     // RPM과 현재 기어에 따른 one-shot 변속 상승·하강 요청이다.
     const shiftUp = this.shiftCooldownSeconds <= 0
       && state.rpm >= this.config.upshiftRpm
@@ -283,13 +293,13 @@ export class SingleOpponentAI {
     }
 
     return {
-      steering: Number.isFinite(steering) ? steering : 0,
+      steering: Number.isFinite(racecraftSteering) ? racecraftSteering : 0,
       throttle: Number.isFinite(throttle) ? throttle : 0,
       brake: Number.isFinite(brake) ? brake : 0,
       clutch: 0,
       shiftUp,
       shiftDown,
-      overtakeMode: false,
+      overtakeMode: racecraft?.overtakeMode ?? false,
       activeAero: true,
     };
   }

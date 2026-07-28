@@ -4,21 +4,20 @@
 
 ## 진행 중
 
+### 1차 완성 — M3B → M3C → M3D → M3E
+
+- 상태: 구현·통합 검증·문서화 완료 (2026-07-28)
+- 완료된 범위: 타이어 상태, racecraft, 손상·플래그·피트 서비스, 결정성 digest, HUD·E2E·문서
+- 문서: docs/MILESTONE_3B.md, docs/MILESTONE_3C.md, docs/MILESTONE_3D.md, docs/FIRST_COMPLETE.md
+- 합격 기준: `npm run verify` 전체 통과 — 타입 검사·단위 테스트 30개 파일/97개 테스트·아키텍처·빌드·E2E 17건.
+- 실행 모드: serial
+
 ### M3A — 트랙 리밋과 접촉 모델
 
-- 상태: 구현·문서화·최종 npm run verify 완료 (2026-07-27)
+- 상태: 완료 (2026-07-27)
 - 완료된 범위: 공유 벽·연석 데이터, 트랙 리밋·랩 무효화·패널티, 순수 차량 접촉 응답, Rapier 정적 collider·접촉 telemetry, HUD·Race Weekend 표시
-- 문서: docs/MILESTONE_3A.md
-- 검증: npm run verify 통과 — 타입 검사·단위 테스트 85건·아키텍처·빌드·브라우저 E2E 15건
-- 다음 단일 마일스톤: M3B 타이어 열·마모·공기압 모델
-
-### M2B → M2C → M2D — 레이스 주말 세로 절단
-
-- 상태: 구현·최종 `npm run verify` 완료 (2026-07-27)
-- 완료된 범위: 다차량 그리드·기본 순위·리셋, 유효 랩·Q1/Q2/Q3 컷, Practice→Race 단계, 타이어 선택·최소 피트 전략, Race Weekend UI와 브라우저 E2E
-- 문서: `docs/MILESTONE_2B.md`, `docs/MILESTONE_2C.md`, `docs/MILESTONE_2D.md`
-- 검증: `npm run verify` 통과 (타입 검사·단위 테스트 79건·아키텍처·빌드·E2E 13건)
-- 다음 단일 마일스톤: M3A 트랙 리밋과 접촉 모델
+- 문서: `docs/MILESTONE_3A.md`
+- 검증: `npm run verify` 통과
 
 ## 완료
 
@@ -28,11 +27,11 @@
 - 결과: 네 입력 프리셋, 데이터 기반 테스트 트랙, 리셋·경계 HUD와 단위·E2E 검증 구현
 - 검증: `npm run verify` 통과
 
-## 예정
+## 완료 후 후보
 
-1. M3B — 타이어 열·마모·공기압 모델
-2. M3C — 추월·방어·충돌 회피 상태 머신
-3. M3D — 손상·플래그·실제 피트 물리
+1. M4 — 다차량 Rapier 차체 형상·회전 충돌
+2. M4 — 실제 피트 레인 차선·속도 제한
+3. M4 — 규정 기반 플래그·레이스 운영 확장
 
 ## 작업 등록 규칙
 

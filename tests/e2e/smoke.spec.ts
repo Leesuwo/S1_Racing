@@ -192,3 +192,31 @@ test("shows M3A contact and track-limit state in the race weekend panel", async 
   await expect(page.getByText(/차량 접촉/).first()).toBeVisible();
   await expect(page.getByText(/PLAYER \d+회 위반/)).toBeVisible();
 });
+
+test("shows M3B to M3D tyre, racecraft, and race-operations state", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "레이스 주말" }).click();
+
+  await expect(page.getByText("M3B · 타이어 상태", { exact: true })).toBeVisible();
+  await expect(page.getByText("M3C · 레이스크래프트", { exact: true })).toBeVisible();
+  await expect(page.getByText("M3D · 플래그·운영", { exact: true })).toBeVisible();
+  await expect(page.getByText(/MEDIUM · 44 °C/)).toBeVisible();
+  await expect(page.getByText(/GREEN · 0\.0% 손상/)).toBeVisible();
+
+  await page.getByRole("button", { name: "퀄리파잉 실행" }).click();
+  await page.getByRole("button", { name: "레이스 시작" }).click();
+  await expect(page.getByText(/MEDIUM · \d+ °C/)).toBeVisible();
+  await expect(page.getByText(/FOLLOW|ATTACK|DEFEND|AVOID/).first()).toBeVisible();
+});
+
+test("completes the visible race weekend through the results stage", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "레이스 주말" }).click();
+  await page.getByRole("button", { name: "퀄리파잉 실행" }).click();
+  await page.getByRole("button", { name: "레이스 시작" }).click();
+
+  await expect(page.locator(".weekend-stage")).toHaveText("레이스 결과", { timeout: 30_000 });
+  await expect(page.locator("header").getByText("결과 확인", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "주말 리셋" })).toBeVisible();
+  await expect(page.getByText("현재 레이스 순위", { exact: true })).toBeVisible();
+});

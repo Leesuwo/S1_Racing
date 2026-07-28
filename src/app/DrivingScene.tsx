@@ -114,12 +114,13 @@ function stepSimulationWithRig(
     x: rapierSnapshot.position.x,
     z: rapierSnapshot.position.z,
   });
+  const tyreCondition = simulation.getTyreCondition();
   rig.step(dtSeconds, {
     steeringInput: input.steering,
     rearDriveTorqueNm: simulation.current.driveTorqueNm,
     engineBrakeTorqueNm: simulation.current.engineBrakeTorqueNm,
     brakeForceN: simulation.current.brake * simulation.config.maxBrakeForceN,
-    surfaceGripMultiplier: surface.gripMultiplier,
+    surfaceGripMultiplier: surface.gripMultiplier * tyreCondition.gripMultiplier,
     surfaceDragMultiplier: surface.dragMultiplier,
   });
   // 한 fixed step 뒤 Rapier가 소유한 최신 차체 포즈다.

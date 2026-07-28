@@ -1,5 +1,5 @@
 /**
- * M2B~M3A 레이스 주말의 단계·퀄리파잉·전략·트랙 리밋·순위 UI다.
+ * M2B~M3D 레이스 주말의 단계·퀄리파잉·전략·타이어·레이스크래프트·운영 UI다.
  * 세션을 직접 변경하지 않고 앱 셸이 제공한 명령 콜백만 호출한다.
  */
 import type {
@@ -40,7 +40,7 @@ export interface RaceWeekendPanelProps {
   onStrategy: (strategy: RaceStrategy) => void;
 }
 
-/** M2B 다차량·M2C 퀄리파잉·M2D 주말 전략·M3A 접촉 상태를 한 화면에 표시한다. */
+/** M2B~M3D의 다차량·퀄리파잉·전략·주행 운영 상태를 한 화면에 표시한다. */
 export function RaceWeekendPanel({
   snapshot,
   onRunQualifying,
@@ -52,12 +52,16 @@ export function RaceWeekendPanel({
   const qualifyingComplete = snapshot.qualifying.status === "complete";
   const raceStarted = snapshot.stage === "race" || snapshot.stage === "results";
   const pitCompounds = TYRE_COMPOUNDS.filter((compound) => compound !== snapshot.strategy.startCompound);
+  const player = snapshot.race.standings.find((participant) => participant.kind === "player");
+  const tyre = player?.tyreCondition;
+  const operations = player?.operations;
+  const racecraft = player?.racecraft;
 
   return (
     <section className="weekend-dashboard" aria-label="레이스 주말 관리">
       <div className="weekend-dashboard__header">
         <div>
-          <span className="section-kicker">M2B / M2C / M2D · RACE WEEKEND CONTROL</span>
+          <span className="section-kicker">M2B / M2C / M2D / M3B / M3C / M3D · RACE WEEKEND CONTROL</span>
           <h2>레이스 주말을 운영하십시오</h2>
         </div>
         <span className="weekend-stage" aria-label="레이스 주말 단계">{stageLabel(snapshot)}</span>
@@ -82,10 +86,22 @@ export function RaceWeekendPanel({
         <article className="weekend-summary-card weekend-summary-card--m3a">
           <span>M3A · 트랙 리밋·접촉</span>
           <strong>{snapshot.race.contactCount}회 차량 접촉</strong>
-          <em>
-            PLAYER {snapshot.race.standings.find((participant) => participant.kind === "player")?.trackLimits.violationCount ?? 0}회 위반 ·
-            {" "}{snapshot.race.standings.find((participant) => participant.kind === "player")?.trackLimits.lapValid ? "현재 랩 유효" : "현재 랩 무효"}
-          </em>
+          <em>PLAYER {player?.trackLimits.violationCount ?? 0}회 위반 · {player?.trackLimits.lapValid ? "현재 랩 유효" : "현재 랩 무효"}</em>
+        </article>
+        <article className="weekend-summary-card weekend-summary-card--m3b">
+          <span>M3B · 타이어 상태</span>
+          <strong>{tyre?.compound.toUpperCase() ?? "MEDIUM"} · {tyre?.averageTemperatureC.toFixed(0) ?? "44"} °C</strong>
+          <em>{((tyre?.averageWearRatio ?? 0) * 100).toFixed(1)}% 마모 · {tyre?.averagePressureKPa.toFixed(1) ?? "170.0"} kPa</em>
+        </article>
+        <article className="weekend-summary-card weekend-summary-card--m3c">
+          <span>M3C · 레이스크래프트</span>
+          <strong>{racecraft?.mode.toUpperCase() ?? "FOLLOW"}</strong>
+          <em>{racecraft?.reason ?? "레이싱 라인 추종"}</em>
+        </article>
+        <article className="weekend-summary-card weekend-summary-card--m3d">
+          <span>M3D · 플래그·운영</span>
+          <strong>{snapshot.race.flag.toUpperCase()} · {((operations?.damage.totalRatio ?? 0) * 100).toFixed(1)}% 손상</strong>
+          <em>{operations?.pitStop.status === "servicing" ? `피트 서비스 ${(operations.pitStop.remainingSeconds).toFixed(1)} s` : `피트 ${operations?.pitStop.stopCount ?? 0}회 완료`}</em>
         </article>
       </div>
 
@@ -138,7 +154,7 @@ export function RaceWeekendPanel({
             {pitCompounds.map((compound) => <option key={compound} value={compound}>{compound.toUpperCase()}</option>)}
           </select>
         </label>
-        <p>이번 단계는 타이어 선택과 최소 1회 피트 전략의 유효성만 확정합니다. 열·마모·실제 피트 물리는 후속 범위입니다.</p>
+        <p>선택한 컴파운드는 차량 물리와 레이스 전략에 공유되며, 지정 랩에서 실제 피트 서비스 시간이 차감됩니다.</p>
       </div>
 
       <div className="weekend-results-grid">
@@ -161,7 +177,7 @@ export function RaceWeekendPanel({
         <section className="weekend-result-card" aria-label="레이스 순위">
           <div className="weekend-result-card__header">
             <div>
-              <span className="section-kicker">M2B / M3A · DETERMINISTIC STANDINGS</span>
+              <span className="section-kicker">M2B / M3A / M3D · DETERMINISTIC STANDINGS</span>
               <h3>현재 레이스 순위</h3>
             </div>
             <strong>{snapshot.race.elapsedSeconds.toFixed(2)} s</strong>
@@ -171,7 +187,7 @@ export function RaceWeekendPanel({
               <div className="weekend-standing-row" role="row" key={participant.id}>
                 <b>{participant.position}</b>
                 <span>{participant.label}</span>
-                <em>{participant.finished ? "FIN" : participant.retired ? "OUT" : formatDistance(participant.raceDistanceM)}</em>
+                <em>{participant.finished ? "FIN" : participant.retired ? "OUT" : `${participant.operations.flag.toUpperCase()} · ${formatDistance(participant.raceDistanceM)}`}</em>
               </div>
             ))}
           </div>

@@ -21,6 +21,15 @@ import {
   type TestTrackStartPose,
   type TestTrackDefinition,
 } from "../../tracks/TestTrack";
+import {
+  changeTyre,
+  createInitialTyreCondition,
+  getTyreConditionSnapshot,
+  stepTyreCondition,
+  type TyreCompound,
+  type TyreConditionState,
+  type TyreConditionSnapshot,
+} from "./TyreCondition";
 
 /** 렌더러가 보간해 표시할 차량 평면 상태의 읽기 전용 스냅샷이다. */
 export interface VehicleRenderSnapshot {
@@ -57,6 +66,7 @@ export interface VehicleTelemetry {
   trackSectionLabel: string;
   onTrack: boolean;
   distanceToBoundaryM: number;
+  tyreCondition: TyreConditionSnapshot;
 }
 
 /** 외부 Rapier 포즈를 기존 차량 상태로 전달하는 평면 물리 경계다. */
@@ -93,11 +103,16 @@ export class VehicleSimulation {
   readonly startPose: TestTrackStartPose;
   /** 렌더 보간용 이전 fixed step 상태다. */
   private previous: VehicleState;
+  /** 타이어 열화 상태는 차량 물리와 함께 fixed-step으로 갱신한다. */
+  private tyreCondition: TyreConditionState;
+  /** 손상으로 인한 그립 저하는 레이스 세션이 설정하는 읽기 전용 배율이다. */
+  private damagePerformanceMultiplier = 1;
 
   constructor(
     config: VehiclePhysicsConfig = DEFAULT_VEHICLE_CONFIG,
     track: TestTrackDefinition = TEST_TRACK_DATA,
     startPose: TestTrackStartPose = track.startPose,
+    tyreCompound: TyreCompound = "medium",
   ) {
     // 시작 포즈를 복사해 외부 객체 변경이 시뮬레이션 상태를 오염시키지 않게 한다.
     this.config = config;
@@ -109,6 +124,7 @@ export class VehicleSimulation {
     // 현재와 이전 상태를 같은 시작 포즈로 만들어 첫 프레임 보간을 안정화한다.
     this.current = createInitialVehicleState(this.startPose.position, this.startPose.yawRad);
     this.previous = cloneVehicleState(this.current);
+    this.tyreCondition = createInitialTyreCondition(tyreCompound);
   }
 
   step(input: VehicleControlInput, dt: number): void {
@@ -124,13 +140,50 @@ export class VehicleSimulation {
 
     // 차량 위치에서 노면을 샘플링해 동일한 입력이 표면별 그립을 받게 한다.
     const surface = sampleTrackSurface(this.current.position, this.track);
-    stepVehicle(this.current, input, dt, this.config, surface);
+    // 실제 슬립각을 별도 타이어 힘 계산기에서 재사용하지 않고, 현재 차량 축 속도와 입력으로
+    // 열화 스트레스를 추정해 물리 계층을 순수 상태로 유지한다.
+    this.tyreCondition = stepTyreCondition(this.tyreCondition, {
+      dtSeconds: dt,
+      speedMps: this.current.speedMps,
+      forwardSpeedMps: this.current.forwardSpeedMps,
+      lateralSpeedMps: this.current.lateralSpeedMps,
+      throttleInput: input.throttle,
+      brakeInput: input.brake,
+      steeringInput: input.steering,
+      surfaceGripMultiplier: surface.gripMultiplier,
+    });
+    const tyreCondition = getTyreConditionSnapshot(this.tyreCondition);
+    stepVehicle(this.current, input, dt, this.config, {
+      ...surface,
+      gripMultiplier: surface.gripMultiplier
+        * tyreCondition.gripMultiplier
+        * this.damagePerformanceMultiplier,
+    });
   }
 
   reset(): void {
     // AI 차량은 플레이어와 다른 그리드 포즈를 사용할 수 있으므로 track.startPose를 다시 읽지 않는다.
     resetVehicleState(this.current, this.startPose.position, this.startPose.yawRad);
     this.previous = cloneVehicleState(this.current);
+    this.tyreCondition = createInitialTyreCondition(this.tyreCondition.compound);
+    this.damagePerformanceMultiplier = 1;
+  }
+
+  /** 피트 정지나 전략 전환에서 타이어 세트를 새 컴파운드로 교체한다. */
+  changeTyre(compound: TyreCompound): void {
+    this.tyreCondition = changeTyre(this.tyreCondition, compound);
+  }
+
+  /** 레이스 세션이 접촉 손상에 따른 그립 저하를 물리 입력에 반영한다. */
+  setDamagePerformanceMultiplier(multiplier: number): void {
+    this.damagePerformanceMultiplier = Number.isFinite(multiplier)
+      ? Math.max(0.35, Math.min(1, multiplier))
+      : 1;
+  }
+
+  /** 타이어 모델의 내부 객체가 아닌 복사된 현재 상태를 반환한다. */
+  getTyreCondition(): TyreConditionSnapshot {
+    return { ...getTyreConditionSnapshot(this.tyreCondition) };
   }
 
   /**
@@ -223,6 +276,7 @@ export class VehicleSimulation {
       trackSectionLabel: trackLocation.sectionLabel,
       onTrack: trackLocation.onTrack,
       distanceToBoundaryM: trackLocation.distanceToBoundaryM,
+      tyreCondition: this.getTyreCondition(),
     };
   }
 }

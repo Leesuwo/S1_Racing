@@ -1,11 +1,13 @@
 /**
- * M2D 레이스 주말의 단계 전이와 최소 전략 경계를 조정한다.
- * Practice/Qualifying/Race의 규칙 상태만 보유하고, 주행 물리는 RaceSession에 위임한다.
+ * M2D~M3D 레이스 주말의 단계 전이·전략·운영 경계를 조정한다.
+ * Practice/Qualifying/Race의 규칙 상태만 보유하고, 타이어·racecraft·운영 물리는 RaceSession에 위임한다.
  */
 import type { VehicleControlInput } from "../../game/input/VehicleControlInput";
 import { neutralVehicleControlInput } from "../../game/input/VehicleControlInput";
 import { type SingleOpponentAIConfig } from "../ai/SingleOpponentAI";
 import { TEST_TRACK_DATA, type TestTrackDefinition } from "../../tracks/TestTrack";
+import { TYRE_COMPOUNDS, type TyreCompound } from "../../game/physics/TyreCondition";
+export { TYRE_COMPOUNDS, type TyreCompound } from "../../game/physics/TyreCondition";
 import {
   createQualifyingGrid,
   QUALIFYING_RULESET,
@@ -15,12 +17,10 @@ import {
 import {
   createRaceGrid,
   RaceSession,
+  type RaceTyrePlan,
   type RaceParticipantDefinition,
   type RaceSessionSnapshot,
 } from "./RaceSession";
-
-/** 레이스 주말에서 선택할 수 있는 타이어 컴파운드다. 열화 모델은 후속 범위다. */
-export type TyreCompound = "soft" | "medium" | "hard";
 
 /** 최소 한 번의 피트 정지를 표현하는 전략 계약이다. 랩 단위는 1부터 시작한다. */
 export interface RaceStrategy {
@@ -46,9 +46,6 @@ export interface RaceWeekendSnapshot {
   qualifying: QualifyingSnapshot;
   race: RaceSessionSnapshot;
 }
-
-/** 레이스 주말의 최소 전략 선택지와 검증 상태를 UI에서 순회할 때 사용한다. */
-export const TYRE_COMPOUNDS: readonly TyreCompound[] = ["soft", "medium", "hard"];
 
 /** M2D 초기 주말에서 사용하는 랩 수다. 실제 경기 규정 값이 아닌 initial_assumption이다. */
 export const DEFAULT_RACE_WEEKEND_LAPS = 3;
@@ -112,10 +109,17 @@ export class RaceWeekendSession {
     this.participantCount = Math.max(2, Math.min(20, Math.floor(participantCount)));
     this.totalLaps = Math.max(2, Math.floor(totalLaps));
     this.qualifying = new QualifyingSession(createQualifyingGrid());
+    // 짧은 테스트 주말에서도 기본 전략이 마지막 전 랩의 유효 범위를 벗어나지 않게 보정한다.
+    this.strategy = {
+      ...DEFAULT_RACE_STRATEGY,
+      pitStopLap: Math.min(DEFAULT_RACE_STRATEGY.pitStopLap, this.totalLaps - 1),
+    };
     this.raceSession = new RaceSession(
       createRaceGrid(track, this.participantCount, aiConfig),
       track,
       this.totalLaps,
+      undefined,
+      { startCompound: this.selectedCompound },
     );
   }
 
@@ -196,7 +200,12 @@ export class RaceWeekendSession {
     if (this.qualifying.getSnapshot().status !== "complete") throw new Error("Qualifying must be complete before race");
     if (this.stage === "race" && this.status === "running") return this.getSnapshot();
     const definitions = createRaceDefinitions(this.track, this.qualifying, this.participantCount);
-    this.raceSession = new RaceSession(definitions, this.track, this.totalLaps);
+    const tyrePlan: RaceTyrePlan = {
+      startCompound: this.selectedCompound,
+      pitStopLap: this.strategy.pitStopLap,
+      pitStopCompound: this.strategy.pitStopCompound,
+    };
+    this.raceSession = new RaceSession(definitions, this.track, this.totalLaps, undefined, tyrePlan);
     this.raceSession.start();
     this.stage = "race";
     this.status = "running";
@@ -222,7 +231,10 @@ export class RaceWeekendSession {
     this.stage = "practice";
     this.status = "ready";
     this.selectedCompound = DEFAULT_RACE_STRATEGY.startCompound;
-    this.strategy = { ...DEFAULT_RACE_STRATEGY };
+    this.strategy = {
+      ...DEFAULT_RACE_STRATEGY,
+      pitStopLap: Math.min(DEFAULT_RACE_STRATEGY.pitStopLap, this.totalLaps - 1),
+    };
     this.practiceCompleted = false;
   }
 

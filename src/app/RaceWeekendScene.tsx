@@ -1,5 +1,5 @@
 /**
- * M2B~M2D 레이스 주말의 R3F 표시 장면이다.
+ * M2B~M3D 레이스 주말의 R3F 표시 장면이다.
  * RaceWeekendSession이 소유한 VehicleSimulation 스냅샷을 그리며, AI나 렌더러가 위치를 직접 변경하지 않는다.
  */
 import { useFrame, useThree } from "@react-three/fiber";

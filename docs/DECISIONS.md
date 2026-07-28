@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-07-28 — D-029
+
+**결정:** 1차 완성의 오프라인 레이스 운영 범위는 `TyreCondition`·`RacecraftStateMachine`·`RaceOperations` 순수 모듈로 분리하고, `RaceSession`은 이들의 스냅샷과 `VehicleSimulation` fixed-step 순서를 조정한다. 결정성 digest는 렌더 성능 측정값을 제외한 물리·전략·운영 상태만 직렬화한다.
+
+**이유:** 타이어·AI 의도·손상·피트 시간을 React/R3F 또는 Rapier 장면에 직접 넣으면 단위 테스트와 리플레이 경계가 흐려진다. 순수 모듈을 유지하면 기존 M3A 접촉 근사와 공통 `VehicleControlInput`을 보존하면서 1차 완성 기능을 같은 120Hz 규칙으로 검증할 수 있다.
+
+**검증:** `TyreCondition.test.ts`, `Racecraft.test.ts`, `RaceOperations.test.ts`, `RaceSession.test.ts`, Race Weekend HUD E2E와 `npm run verify`를 사용한다. 타이어·손상·피트 수치는 실차 규정값이 아닌 `initial_assumption`이다.
+
+## 2026-07-28 — D-030
+
+**결정:** M3D의 피트 정차는 전략 랩 진입 시 컴파운드를 교체하고 2.5초 initial_assumption 동안 해당 참가자의 물리 입력을 보류한다. 실제 피트 레인 차선과 속도 제한은 1차 완성에서 제외한다.
+
+**이유:** 최소 전략이 실제 레이스 시간에 영향을 주는지 검증하면서도, 아직 피트 레인 지오메트리를 도입해 차량 물리·카메라·트랙 경계를 동시에 변경하지 않기 위해서다.
+
+**검증:** `RaceOperations.test.ts`에서 서비스 진행·완료를, RaceSession 스냅샷에서 피트 상태와 타이어 교체를, Race Weekend E2E에서 운영 HUD를 확인한다.
+
 ## 2026-07-27 — D-028
 
 **결정:** M3A의 트랙 경계는 TestTrackDefinition의 정적 벽·연석 선분을 단일 원본으로 두고, 렌더링과 Rapier가 같은 선분을 각각 메시와 fixed collider로 변환한다. 트랙 리밋·랩 유효성은 순수 TrackLimitsMonitor가 소유하고, RaceSession의 다차량 접촉은 초기에는 순수 2D 원형 근사 응답으로 분리한다.

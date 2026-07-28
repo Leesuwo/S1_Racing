@@ -26,6 +26,7 @@ import {
 import { zeroWheelValues } from "../game/physics/Suspension";
 import type { RapierSuspensionTelemetry } from "../game/physics/RapierChassisSuspension";
 import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
+import { createInitialTyreCondition, getTyreConditionSnapshot, type TyreConditionSnapshot } from "../game/physics/TyreCondition";
 import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "../gameplay/race/TrackLimits";
 import { detectWebGL2, type WebGL2Support } from "./webgl2";
 import { DrivingScene } from "./DrivingScene";
@@ -38,6 +39,9 @@ import {
   type RaceWeekendSnapshot,
   type TyreCompound,
 } from "../gameplay/race/RaceWeekendSession";
+
+/** M3B 타이어 HUD가 물리 초기화 전에도 유한한 상태를 표시하도록 하는 시작값이다. */
+const INITIAL_TYRE_CONDITION: TyreConditionSnapshot = getTyreConditionSnapshot(createInitialTyreCondition());
 
 /** WebGL 초기화 전후의 일반 주행 HUD가 사용할 유한한 중립 텔레메트리다. */
 const INITIAL_TELEMETRY: VehicleTelemetry = {
@@ -62,6 +66,7 @@ const INITIAL_TELEMETRY: VehicleTelemetry = {
   trackSectionLabel: "스타트 직선",
   onTrack: true,
   distanceToBoundaryM: 4,
+  tyreCondition: INITIAL_TYRE_CONDITION,
 };
 
 /** M3A 트랙 리밋 HUD가 WebGL 초기화 전에도 유한한 값을 표시하도록 하는 시작 상태다. */
@@ -151,6 +156,13 @@ function AppTelemetry({
         <span>트랙 리밋</span>
         <strong className={trackLimits.lapValid ? "track-status--valid" : "track-status--off"}>
           {trackLimits.violationCount}회 · 패널티 {formatNumber(trackLimits.penaltySeconds, 2)} s
+        </strong>
+      </div>
+      <div className="surface-readout">
+        <span>타이어 상태</span>
+        <strong>
+          {telemetry.tyreCondition.compound.toUpperCase()} · {formatNumber(telemetry.tyreCondition.averageTemperatureC, 0)} °C ·
+          {" "}{formatNumber(telemetry.tyreCondition.averageWearRatio * 100, 1)}% 마모
         </strong>
       </div>
       <div className="surface-readout ai-readout">
@@ -454,7 +466,7 @@ export function App() {
       completedSnapshot: AITrainingSnapshot;
     }) | null
   >(null);
-  // M2B~M2D 세션은 React 렌더와 분리된 하나의 mutable owner로 유지한다.
+  // M2B~M3D 세션은 React 렌더와 분리된 하나의 mutable owner로 유지한다.
   const raceWeekendSession = useMemo(() => new RaceWeekendSession(), []);
   // 주말 패널은 세션 내부 객체가 아니라 복사된 스냅샷만 구독한다.
   const [raceWeekendSnapshot, setRaceWeekendSnapshot] = useState<RaceWeekendSnapshot>(
@@ -618,7 +630,7 @@ export function App() {
             {trainingMode
               ? "S1 RACING / M2A-0 · AI TRAINING LAB"
               : weekendMode
-                ? "S1 RACING / M2B → M2C → M2D · RACE WEEKEND"
+                ? "S1 RACING / M2B → M3D · RACE WEEKEND"
                 : "S1 RACING / MILESTONE 2A · 단일 AI 상대"}
           </p>
           <h1>{trainingMode ? "Training Lab" : weekendMode ? "Race Weekend" : "S1 Racing"}</h1>
@@ -889,7 +901,7 @@ export function App() {
           </div>
           <div>
             <span>M2D · 전략 경계</span>
-            <strong>시작 컴파운드와 다른 컴파운드로 최소 1회 피트 전략만 검증하며 열·마모·피트 물리는 후속 단계입니다.</strong>
+            <strong>시작 컴파운드·열화·피트 서비스·손상·플래그를 같은 120Hz RaceSession 스냅샷으로 검증합니다.</strong>
           </div>
         </section>
       ) : (

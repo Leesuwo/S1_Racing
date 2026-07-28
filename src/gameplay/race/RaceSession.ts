@@ -1,15 +1,28 @@
 /**
- * M3A 다차량 레이스 세션의 순수 fixed-step 실행기다.
- * 차량 위치·속도는 각 VehicleSimulation이 소유하고, 이 모듈은 AI 입력·랩 진행·트랙 리밋·접촉 응답·순위를 조정한다.
- * 접촉은 초기 원형 근사로 분리하고, 정교한 차체 형상·추월·손상은 후속 마일스톤의 확장 경계로 남긴다.
+ * M3B·M3C·M3D 다차량 레이스 세션의 순수 fixed-step 실행기다.
+ * 차량 위치·속도는 각 VehicleSimulation이 소유하고, 이 모듈은 AI 입력·레이스크래프트·랩 진행·트랙 리밋·접촉·운영 상태·순위를 조정한다.
+ * AI 상태 머신은 입력 편향만 반환하며 차량 위치를 직접 변경하지 않는다.
  */
 import type { VehicleControlInput } from "../../game/input/VehicleControlInput";
 import { neutralVehicleControlInput } from "../../game/input/VehicleControlInput";
 import { SingleOpponentAI, type SingleOpponentAIConfig } from "../ai/SingleOpponentAI";
 import { VehicleSimulation, type VehicleRenderSnapshot } from "../../game/physics/VehicleSimulation";
-import { TEST_TRACK_DATA, type TestTrackDefinition, type TestTrackStartPose, type TrackPoint } from "../../tracks/TestTrack";
+import {
+  sampleTestTrackLocation,
+  TEST_TRACK_DATA,
+  type TestTrackDefinition,
+  type TestTrackStartPose,
+  type TrackPoint,
+} from "../../tracks/TestTrack";
+import { type TyreCompound, type TyreConditionSnapshot } from "../../game/physics/TyreCondition";
 import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "./TrackLimits";
 import { resolveVehicleContacts } from "./VehicleContact";
+import { RacecraftStateMachine, type RacecraftSnapshot } from "./Racecraft";
+import {
+  RaceOperations,
+  type RaceFlag,
+  type RaceOperationsSnapshot,
+} from "./RaceOperations";
 
 /** 레이스 세션에 참가하는 차량의 제어 주체다. */
 export type RaceParticipantKind = "player" | "ai";
@@ -23,6 +36,18 @@ export interface RaceParticipantDefinition {
   startPose: TestTrackStartPose;
   aiConfig?: SingleOpponentAIConfig;
 }
+
+/** 레이스 전체에 적용할 시작 컴파운드와 선택적 피트 교체 계획이다. */
+export interface RaceTyrePlan {
+  startCompound: TyreCompound;
+  pitStopLap?: number;
+  pitStopCompound?: TyreCompound;
+}
+
+/** 단일 차량 세션의 기본 타이어 계획이다. 피트 교체는 선택적으로 활성화된다. */
+export const DEFAULT_RACE_TYRE_PLAN: RaceTyrePlan = {
+  startCompound: "medium",
+};
 
 /** 순위 계산과 렌더링에 필요한 차량 한 대의 읽기 전용 상태다. */
 export interface RaceParticipantSnapshot {
@@ -39,10 +64,13 @@ export interface RaceParticipantSnapshot {
   finished: boolean;
   retired: boolean;
   trackLimits: TrackLimitsSnapshot;
+  tyreCondition: TyreConditionSnapshot;
+  racecraft: RacecraftSnapshot;
+  operations: RaceOperationsSnapshot;
   finishTimeSeconds?: number;
 }
 
-/** M2B fixed-step 레이스 세션의 UI·QA 스냅샷이다. */
+/** M3B·M3C·M3D fixed-step 레이스 세션의 UI·QA 스냅샷이다. */
 export interface RaceSessionSnapshot {
   status: "grid" | "running" | "paused" | "finished";
   trackName: string;
@@ -55,6 +83,8 @@ export interface RaceSessionSnapshot {
   fixedStepDurationMs: number;
   maximumFixedStepDurationMs: number;
   contactCount: number;
+  tyreChangeCount: number;
+  flag: RaceFlag;
   standings: readonly RaceParticipantSnapshot[];
 }
 
@@ -69,11 +99,58 @@ export interface RaceVehicleRenderSnapshot {
 /** 사용자 화면에서 선택할 수 있는 기본 그리드 차량 수다. 수치는 M2B 초기 가정이다. */
 export const DEFAULT_RACE_GRID_SIZE = 6;
 
-/** RaceSession이 비정상 입력을 무한히 실행하지 않도록 하는 기본 fixed-step 상한이다. */
-export const DEFAULT_RACE_MAX_STEPS = 120 * 180;
+/** RaceSession이 비정상 입력을 무한히 실행하지 않도록 하는 기본 fixed-step 상한이다. 시뮬레이션 시간은 45 s다. */
+export const DEFAULT_RACE_MAX_STEPS = 120 * 45;
+
+/**
+ * 렌더 시간·성능 측정값을 제외한 레이스 상태를 FNV-1a digest로 직렬화한다.
+ * 결정성 QA가 같은 입력에서 동일한 물리·전략·운영 상태를 재현했는지 비교할 때 사용한다.
+ */
+export function createRaceDeterminismDigest(snapshot: RaceSessionSnapshot): string {
+  let hash = 2166136261;
+  const append = (value: string): void => {
+    for (let index = 0; index < value.length; index += 1) {
+      hash ^= value.charCodeAt(index);
+      hash = Math.imul(hash, 16777619) >>> 0;
+    }
+  };
+  const number = (value: number, digits = 4): string => Number.isFinite(value) ? value.toFixed(digits) : "NaN";
+  append([snapshot.status, snapshot.trackName, String(snapshot.stepIndex), number(snapshot.elapsedSeconds), String(snapshot.resetCount), snapshot.flag].join("|"));
+  snapshot.standings.forEach((participant) => {
+    append([
+      participant.id,
+      String(participant.position),
+      number(participant.positionM.x),
+      number(participant.positionM.z),
+      number(participant.speedMps),
+      number(participant.progressM),
+      String(participant.lapIndex),
+      String(participant.finished),
+      String(participant.retired),
+      participant.tyreCondition.compound,
+      number(participant.tyreCondition.averageTemperatureC, 3),
+      number(participant.tyreCondition.averageWearRatio, 6),
+      number(participant.tyreCondition.averagePressureKPa, 3),
+      participant.racecraft.mode,
+      String(participant.racecraft.overtakeMode),
+      participant.operations.flag,
+      number(participant.operations.damage.totalRatio, 6),
+      number(participant.operations.damage.performanceMultiplier, 6),
+      participant.operations.pitStop.status,
+      number(participant.operations.pitStop.remainingSeconds, 4),
+      String(participant.operations.pitStop.stopCount),
+      String(participant.trackLimits.violationCount),
+      String(participant.trackLimits.lapValid),
+    ].join("|"));
+  });
+  return hash.toString(16).padStart(8, "0");
+}
 
 /** M3A 원형 접촉 근사의 차량 반경(m)이다. 차체 형상은 Rapier 리그가 소유한다. */
 const RACE_CONTACT_RADIUS_M = 1.25;
+
+/** 트랙 밖 또는 정지 상태가 지속될 때 세션이 결과로 수렴하도록 하는 초기 가정(s)이다. */
+const STALLED_RETIREMENT_SECONDS = 6;
 
 /** 레이싱 라인 길이와 선분별 시작 거리를 캐시한다. 거리 단위는 m다. */
 interface TrackDistanceMap {
@@ -93,6 +170,10 @@ interface RaceParticipantState {
   finished: boolean;
   retired: boolean;
   finishTimeSeconds?: number;
+  tyreChangeApplied: boolean;
+  racecraft: RacecraftStateMachine;
+  operations: RaceOperations;
+  noProgressSeconds: number;
 }
 
 /** 두 평면 위치 사이의 거리(m)를 계산한다. */
@@ -210,12 +291,17 @@ export class RaceSession {
   private fixedStepDurationMs = 0;
   private maximumFixedStepDurationMs = 0;
   private contactCount = 0;
+  private tyreChangeCount = 0;
+  private raceFlag: RaceFlag = "green";
+  private yellowFlagRemainingSeconds = 0;
+  private readonly tyrePlan: RaceTyrePlan;
 
   constructor(
     definitions: readonly RaceParticipantDefinition[] = createRaceGrid(),
     track: TestTrackDefinition = TEST_TRACK_DATA,
     totalLaps = 1,
     maxSteps = DEFAULT_RACE_MAX_STEPS,
+    tyrePlan: RaceTyrePlan = DEFAULT_RACE_TYRE_PLAN,
   ) {
     // 빈 그리드는 순위를 계산할 수 없으므로 방어적으로 두 대 이상의 참가자만 허용한다.
     if (definitions.length < 2) throw new Error("RaceSession requires at least two participants");
@@ -224,8 +310,12 @@ export class RaceSession {
     this.trackLengthM = this.distanceMap.totalLengthM;
     this.totalLaps = Math.max(1, Math.floor(totalLaps));
     this.maxSteps = Math.max(1, Math.floor(maxSteps));
+    this.tyrePlan = {
+      ...tyrePlan,
+      startCompound: tyrePlan.startCompound,
+    };
     this.participants = definitions.map((definition) => {
-      const simulation = new VehicleSimulation(undefined, track, definition.startPose);
+      const simulation = new VehicleSimulation(undefined, track, definition.startPose, this.tyrePlan.startCompound);
       const projectedDistanceM = projectDistanceM(simulation.current.position, track, this.distanceMap);
       return {
         definition: { ...definition, startPose: { ...definition.startPose, position: { ...definition.startPose.position } } },
@@ -236,6 +326,10 @@ export class RaceSession {
         progressM: 0,
         finished: false,
         retired: false,
+        tyreChangeApplied: false,
+        racecraft: new RacecraftStateMachine(),
+        operations: new RaceOperations(),
+        noProgressSeconds: 0,
       };
     });
   }
@@ -267,6 +361,10 @@ export class RaceSession {
       participant.finished = false;
       participant.retired = false;
       participant.finishTimeSeconds = undefined;
+      participant.tyreChangeApplied = false;
+      participant.racecraft.reset();
+      participant.operations.reset();
+      participant.noProgressSeconds = 0;
     });
     this.status = "grid";
     this.stepIndex = 0;
@@ -274,6 +372,9 @@ export class RaceSession {
     this.fixedStepDurationMs = 0;
     this.maximumFixedStepDurationMs = 0;
     this.contactCount = 0;
+    this.tyreChangeCount = 0;
+    this.raceFlag = "green";
+    this.yellowFlagRemainingSeconds = 0;
     this.resetCount += 1;
   }
 
@@ -282,17 +383,38 @@ export class RaceSession {
     if (this.status !== "running") return this.getSnapshot();
     const startTimeMs = typeof performance !== "undefined" ? performance.now() : 0;
     const dtSeconds = 1 / 120;
+    this.yellowFlagRemainingSeconds = Math.max(0, this.yellowFlagRemainingSeconds - dtSeconds);
+    if (this.yellowFlagRemainingSeconds === 0 && this.raceFlag === "yellow") this.raceFlag = "green";
+    // 같은 fixed step에서 모든 AI가 동일한 이전 상태를 읽도록 의도를 먼저 계산한다.
+    this.updateRacecraftStates();
     this.participants.forEach((participant) => {
       if (participant.finished || participant.retired) return;
+      participant.operations.tick(dtSeconds);
+      if (participant.operations.isServicing()) return;
+      const progressBeforeStepM = participant.progressM;
       const input = participant.definition.kind === "player"
         ? playerInput
-        : participant.ai?.update({ ...participant.simulation.current, maxGear: participant.simulation.config.gearRatios.length }, dtSeconds)
+        : participant.ai?.update(
+          { ...participant.simulation.current, maxGear: participant.simulation.config.gearRatios.length },
+          dtSeconds,
+          participant.racecraft.getSnapshot(),
+        )
           ?? neutralVehicleControlInput();
       participant.simulation.step(input, dtSeconds);
       participant.trackLimits.update(participant.simulation.current.position, dtSeconds);
       this.updateProgress(participant);
       const current = participant.simulation.current;
+      const currentLocation = sampleTestTrackLocation(current.position, this.track);
+      const progressDeltaM = Math.abs(participant.progressM - progressBeforeStepM);
+      // 물리 발산이나 AI 정지로 진행이 영원히 멈추지 않도록 결과 수렴용 퇴역 경계를 둔다.
+      if (!currentLocation.onTrack || (progressDeltaM < 0.01 && current.speedMps < 1)) {
+        participant.noProgressSeconds += dtSeconds;
+      } else {
+        participant.noProgressSeconds = 0;
+      }
       if (!Number.isFinite(current.position.x) || !Number.isFinite(current.position.z) || !Number.isFinite(current.speedMps)) {
+        participant.retired = true;
+      } else if (participant.noProgressSeconds >= STALLED_RETIREMENT_SECONDS) {
         participant.retired = true;
       }
     });
@@ -316,7 +438,18 @@ export class RaceSession {
         this.participants.find((participant) => participant.definition.id === response.id)
           ?.simulation.applyContactResolution(response);
       });
+      contactResult.contacts.forEach((contact) => {
+        [contact.firstId, contact.secondId].forEach((participantId) => {
+          const participant = this.participants.find((candidate) => candidate.definition.id === participantId);
+          if (!participant) return;
+          const damage = participant.operations.recordContact(contact.impactSpeedMps, contact.penetrationM);
+          participant.simulation.setDamagePerformanceMultiplier(damage.performanceMultiplier);
+          if (damage.retired) participant.retired = true;
+        });
+      });
       this.contactCount += contactResult.contacts.length;
+      this.raceFlag = "yellow";
+      this.yellowFlagRemainingSeconds = Math.max(this.yellowFlagRemainingSeconds, 2);
     }
 
     this.stepIndex += 1;
@@ -327,6 +460,7 @@ export class RaceSession {
     }
     if (this.stepIndex >= this.maxSteps || this.participants.every((participant) => participant.finished || participant.retired)) {
       this.status = "finished";
+      this.raceFlag = "checkered";
     }
     return this.getSnapshot();
   }
@@ -376,8 +510,55 @@ export class RaceSession {
       fixedStepDurationMs: this.fixedStepDurationMs,
       maximumFixedStepDurationMs: this.maximumFixedStepDurationMs,
       contactCount: this.contactCount,
+      tyreChangeCount: this.tyreChangeCount,
+      flag: this.raceFlag,
       standings,
     };
+  }
+
+  /** 각 AI가 가장 가까운 활성 상대와의 상대 진행·속도를 읽도록 racecraft를 갱신한다. */
+  private updateRacecraftStates(): void {
+    const activeParticipants = this.participants.filter(
+      (participant) => !participant.finished && !participant.retired && !participant.operations.isServicing(),
+    );
+    activeParticipants.forEach((participant) => {
+      const opponent = activeParticipants
+        .filter((candidate) => candidate.definition.id !== participant.definition.id)
+        .sort((first, second) => (
+          distanceM(participant.simulation.current.position, first.simulation.current.position)
+          - distanceM(participant.simulation.current.position, second.simulation.current.position)
+        ))[0];
+      if (!opponent) {
+        participant.racecraft.reset();
+        return;
+      }
+      participant.racecraft.update({
+        self: {
+          progressM: participant.progressM,
+          speedMps: participant.simulation.current.speedMps,
+          position: participant.simulation.current.position,
+        },
+        opponent: {
+          progressM: opponent.progressM,
+          speedMps: opponent.simulation.current.speedMps,
+          position: opponent.simulation.current.position,
+        },
+        trackLengthM: this.trackLengthM,
+        yellowFlag: this.raceFlag === "yellow",
+      });
+    });
+  }
+
+  /** 완주·퇴역·황색기·랩 다운 우선순위로 참가자별 플래그를 계산한다. */
+  private getParticipantFlag(participant: RaceParticipantState): RaceFlag {
+    if (participant.retired) return "red";
+    if (participant.finished) return "checkered";
+    if (this.raceFlag === "yellow") return "yellow";
+    const leaderProgressM = this.participants.reduce(
+      (maximum, candidate) => Math.max(maximum, candidate.progressM),
+      participant.progressM,
+    );
+    return leaderProgressM - participant.progressM >= this.trackLengthM ? "blue" : "green";
   }
 
   /** 한 차량의 현재 투영 위치를 누적 진행 거리와 완료 상태로 변환한다. */
@@ -395,6 +576,23 @@ export class RaceSession {
       // 랩이 넘어갈 때 이전 랩의 유효성은 보존하고, 다음 랩의 규칙 상태를 새로 시작한다.
       participant.trackLimits.startLap();
     }
+    if (
+      !participant.tyreChangeApplied
+      && this.tyrePlan.pitStopLap !== undefined
+      && this.tyrePlan.pitStopCompound !== undefined
+      && currentLapIndex >= Math.max(0, this.tyrePlan.pitStopLap - 1)
+      && this.tyrePlan.pitStopCompound !== participant.simulation.getTyreCondition().compound
+    ) {
+      // 전략 랩은 1부터 세므로 랩 2 전략은 첫 랩을 끝낸 직후 피트 서비스에 들어간다.
+      if (participant.operations.beginPitStop()) {
+        participant.simulation.changeTyre(this.tyrePlan.pitStopCompound);
+        participant.simulation.setDamagePerformanceMultiplier(
+          participant.operations.getSnapshot().damage.performanceMultiplier,
+        );
+        participant.tyreChangeApplied = true;
+        this.tyreChangeCount += 1;
+      }
+    }
     if (participant.progressM >= this.trackLengthM * this.totalLaps) {
       participant.finished = true;
       participant.finishTimeSeconds ??= this.elapsedSeconds + 1 / 120;
@@ -405,6 +603,7 @@ export class RaceSession {
   private toParticipantSnapshot(participant: RaceParticipantState): RaceParticipantSnapshot {
     const progressM = Math.max(0, participant.progressM);
     const trackLimits = participant.trackLimits.getSnapshot();
+    const flag = this.getParticipantFlag(participant);
     return {
       id: participant.definition.id,
       label: participant.definition.label,
@@ -418,6 +617,9 @@ export class RaceSession {
       raceDistanceM: progressM,
       finished: participant.finished,
       retired: participant.retired,
+      tyreCondition: participant.simulation.getTyreCondition(),
+      racecraft: participant.racecraft.getSnapshot(),
+      operations: participant.operations.getSnapshot(flag),
       trackLimits,
       // 트랙 리밋 패널티는 완주 시각에 더해 최종 분류 순서에도 반영한다.
       finishTimeSeconds: participant.finishTimeSeconds === undefined

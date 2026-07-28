@@ -1,10 +1,10 @@
 /**
- * M3A 다차량 세션의 그리드·결정성·트랙 리밋 스냅샷·순위·리셋 경계를 검증한다.
+ * M3B~M3D 다차량 세션의 그리드·결정성·트랙 리밋·타이어·운영 스냅샷·순위·리셋 경계를 검증한다.
  * Rapier 렌더링 장면과 분리된 VehicleSimulation fixed-step 계약만 검사한다.
  */
 import { describe, expect, it } from "vitest";
 import { neutralVehicleControlInput } from "../../game/input/VehicleControlInput";
-import { createRaceGrid, RaceSession } from "./RaceSession";
+import { createRaceDeterminismDigest, createRaceGrid, RaceSession } from "./RaceSession";
 
 describe("RaceSession", () => {
   it("creates unique grid poses and keeps the requested participant count", () => {
@@ -41,6 +41,7 @@ describe("RaceSession", () => {
     expect(firstSnapshot.standings.every((participant) => Number.isFinite(participant.speedMps))).toBe(true);
     expect(firstSnapshot.standings.every((participant) => participant.trackLimits.lapValid)).toBe(true);
     expect(firstSnapshot.contactCount).toBe(0);
+    expect(createRaceDeterminismDigest(firstSnapshot)).toBe(createRaceDeterminismDigest(secondSnapshot));
   });
 
   it("resets every vehicle to the same grid and clears the race clock", () => {
@@ -58,5 +59,32 @@ describe("RaceSession", () => {
     expect(reset.standings.map((participant) => participant.positionM)).toEqual(
       initial.standings.map((participant) => participant.positionM),
     );
+  });
+
+  it("applies a planned compound change and holds the vehicle during pit service", () => {
+    const session = new RaceSession(
+      createRaceGrid(undefined, 2),
+      undefined,
+      2,
+      2400,
+      { startCompound: "medium", pitStopLap: 1, pitStopCompound: "hard" },
+    );
+    session.start();
+    let sawServicing = false;
+    let sawCompleted = false;
+
+    for (let step = 0; step < 1800; step += 1) {
+      const snapshot = session.step({ ...neutralVehicleControlInput(), throttle: 1 });
+      const player = snapshot.standings.find((participant) => participant.kind === "player");
+      if (player?.operations.pitStop.status === "servicing") sawServicing = true;
+      if (player?.operations.pitStop.stopCount === 1) {
+        sawCompleted = true;
+        expect(player.tyreCondition.compound).toBe("hard");
+        break;
+      }
+    }
+
+    expect(sawServicing).toBe(true);
+    expect(sawCompleted).toBe(true);
   });
 });
