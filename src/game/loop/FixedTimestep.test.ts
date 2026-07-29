@@ -24,4 +24,15 @@ describe("FixedTimestepAccumulator", () => {
     expect(steps).toBe(4);
     expect(result.accumulator).toBe(0);
   });
+
+  it("does not carry fractional render time across an explicit session reset", () => {
+    const accumulator = new FixedTimestepAccumulator();
+    accumulator.advance(1 / 240, () => undefined);
+
+    accumulator.reset();
+    const result = accumulator.advance(1 / 240, () => undefined);
+
+    expect(result.stepCount).toBe(0);
+    expect(result.alpha).toBeCloseTo(0.5);
+  });
 });

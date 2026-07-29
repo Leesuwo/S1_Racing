@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-07-29 — D-042
+
+**결정:** 차량 외관을 집중 확인할 수 있도록 최상위 모드에 `차 디자인`을 추가한다. 별도 R3F `DesignStudioScene`은 `LowPolyCar`의 영웅 외관을 읽기 전용으로 표시하고, DOM `DesignStudioPanel`은 OrbitControls 기반 회전·확대·축소 안내, 정면·측면·후면 시점, 무표식 도장 프리셋, 앞바퀴 조향 미리보기, 자동 회전을 제공한다.
+
+**이유:** 주행 카메라와 AI 추적 카메라는 차량 전체 실루엣과 부품 층을 정지 상태로 비교하기 어렵다. 디자인 검토를 물리 장면에서 분리하면 사용자는 노즈·콕핏·사이드포드·리어 에어로를 직접 확인할 수 있고, 검토용 조향각·색상은 차량 물리나 입력 상태를 오염시키지 않는다.
+
+**범위:** `src/app/DesignStudioScene.tsx`, `src/app/DesignStudioPanel.tsx`, `src/app/App.tsx`, `src/styles.css`, 디자인 모드 E2E를 포함한다. 새 외부 의존성은 추가하지 않고 기존 `@react-three/drei`의 `OrbitControls`·`PerspectiveCamera`를 사용한다.
+
+**검증:** 디자인 모드에서 3D 차량·시점 버튼·도장 프리셋·외관 요소 설명·읽기 전용 경계를 확인하고, 전체 `npm run verify`에서 21개 E2E를 통과시킨다.
+
+## 2026-07-29 — D-041
+
+**결정:** 사용자가 제공한 F1 2012 이미지 검색 결과와 시즌 노즈 비교 자료를 재대조해, `LowPolyCar`를 단일 둥근 저폴리 차체가 아닌 낮은 노즈·높은 모노코크·다층 프런트 윙·강한 사이드포드 언더컷·좁아지는 엔진 커버·넓은 후륜의 공통 2012년형 외관으로 보정한다. 단일 차량 Training은 `hero` LOD를 사용하고 Race Weekend 다차량은 `grid` LOD를 유지한다.
+
+**이유:** 초기 모델은 부품은 존재했지만 상면과 후방 시점에서 2012년 F1 특유의 층과 폭 대비보다 둥근 스포츠카로 읽혔다. 2012년 그리드는 대부분의 스텝 노즈와 차종별 로우 노즈 예외, 높은 프런트 윙 밀도, 깊은 사이드포드 언더컷, 큰 후륜을 공통적으로 보여 주므로 이 관계를 우선 보정해야 한다.
+
+**범위:** `src/world/LowPolyCar.tsx`의 렌더 전용 station·패널·휠 비율, `src/app/TrainingScene.tsx`의 단일 차량 LOD, 디자인 참조·그래픽 계획 문서를 포함한다. 물리 트랙 폭·차량 질량·타이어 힘·입력·AI 제어 경계는 변경하지 않는다.
+
+**근거:** [2012 Formula One front-end comparison](https://gurpzf1.wordpress.com/2012/04/09/front-end-comparison/), [McLaren MP4-27와 Ferrari F2012 비교](https://www.ausmotive.com/2012/02/04/mclaren-mp4-27-v-ferrari-f2012.html), [McLaren MP4-27 기술 공개 자료](https://www.ausmotive.com/2012/02/01/mclaren-unveils-2012-f1-car.html). 실제 사진·로고·스폰서·리버리는 런타임 자산으로 복제하지 않는다.
+
+**검증:** `npm run typecheck`, `git diff --check`, 브라우저 Training·Driving 화면 확인, 기존 차량 물리 집중 테스트와 전체 `npm run verify`를 실행한다. 외관 치수·후륜 폭·핀 높이는 렌더 전용 `initial_assumption`이다.
+
 ## 2026-07-29 — D-040
 
 **결정:** 차량 렌더 스냅샷은 물리 위치·속도와 별도로 네 바퀴의 `wheelSpinRad`를 제공한다. 앞바퀴 조향은 부모 그룹의 Y축 회전, 구름은 자식 그룹의 X축 회전으로 분리한다. Rapier 경로에서는 네 바퀴 각속도를 우선 사용하고 순수 AI 교육 경로에서는 속도·휠 반지름 fallback을 사용한다.
@@ -75,6 +97,14 @@
 **이유:** 차량 디자인 조사는 이미지, 기술 설명, 규정, 라이선스 판단을 함께 반복해서 확인해야 하므로 저장소 문서만으로 관리하면 시각 자료 탐색 경로가 분산된다. Notion 허브에 조사 결과를 연결하면 다음 디자인 세션에서 같은 자료를 다시 찾을 수 있고, 저장소에는 재현 가능한 링크와 라이선스 경계를 남길 수 있다. 외부 사진은 현재 런타임 자산으로 복사하지 않는다.
 
 **검증:** Notion 페이지의 부모가 `S1 Racing — 공식 문서·수학 공식·참고자료 허브`인지 다시 조회하고, F1 2012 섹션에 공통 규정·12개 차종 링크·비복제 규칙이 저장되었는지 확인한다. 저장소에서는 `docs/F1_2012_DESIGN_REFERENCE.md`와 `docs/ASSET_LICENSE_REGISTER.md`의 링크·참조 전용 상태를 검토한다.
+
+## 2026-07-29 — D-032
+
+**결정:** 성능 개선은 물리 120Hz와 `VehicleControlInput` 경계를 유지한 채 Training·Race Weekend에 `FixedTimestepAccumulator`를 적용하고, Race Weekend의 AI 차량 그림자·Rapier CCD·collider 선형 탐색을 줄인다. 일반 주행 화면은 모드별 WebGL 장면을 lazy load하며 Canvas는 DPR 1.25, basic shadow, antialias 비활성화를 기본으로 한다.
+
+**이유:** 프레임마다 고정 2-step 또는 `ceil(delta * 120)`을 실행하면 화면 FPS가 물리 시간과 CPU 부하를 결정하고, 20대 AI의 shadow map과 CCD는 주행감과 무관하게 GPU·solver 비용을 키운다. 카메라가 전체 그리드를 매 프레임 복사하는 경로도 10Hz HUD 경계와 맞지 않는다. 수정 범위는 렌더·충돌 비용만 제한하며 AI의 입력, 차량 포즈 소유권, 리플레이 120Hz 기록 계약을 바꾸지 않는다.
+
+**검증:** `FixedTimestep.test.ts`, `RaceSession.test.ts`, `RapierMultiCarCollision.test.ts`, 전체 `npm run verify`, 브라우저 Training·Driving·Race Weekend E2E를 실행한다. `npm run review:code`와 `npm run review:performance`를 `verify`와 GitHub Actions에 넣어 이후 모든 코드 변경에서 공백·도메인 경계·debug 출력·시간 루프·Canvas·Rapier·번들 예산을 자동 검토한다. JavaScript 예산은 전체 4,000,000 B 및 단일 chunk 2,500,000 B로 시작한다. 모드 분할 후 최대 chunk는 Rapier lazy chunk 2,235,460 B였으며, 변경은 실제 프로파일 근거와 함께 이 문서에 기록한다.
 
 ## 2026-07-29 — D-031
 

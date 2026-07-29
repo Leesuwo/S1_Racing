@@ -277,3 +277,29 @@ G2의 공통 2012년형 차체를 유지하면서, 정지된 모형처럼 보이
 - 외관 변경이 차량 위치·속도·AI 입력 경계를 소유하지 않는다.
 
 바퀴별 pitch·roll·차고 변화, 실제 타이어 slip ratio 기반 회전, 팀별 공력 형상과 CFD 보정은 후속 물리 마일스톤으로 남긴다.
+
+## 11. 2026-07-29 F1 2012 이미지 재대조 후 외관 2차 수정
+
+초기 구현은 2012년형 부품 목록은 갖췄지만, 상면에서 둥근 단일 차체처럼 읽히고 Training에서 드라이버가 빠져 시즌 시대감이 약했다. [Google 이미지 검색 — F1 2012](https://www.google.com/search?udm=2&q=f1+2012)와 [전체 노즈 비교 자료](https://gurpzf1.wordpress.com/2012/04/09/front-end-comparison/)를 기준으로 `LowPolyCar`의 형상 대비를 다시 조정했다.
+
+### 수정 항목
+
+- 낮은 노즈 팁과 높은 모노코크 사이의 단차를 station·상면 패널로 분리했다.
+- 프런트 윙에 상부 플랩을 추가하고 메인 플레인·플랩·엔드플레이트의 높이 차를 유지했다.
+- 모노코크 폭을 줄이고 사이드포드 어깨·흡입구·언더컷의 명암 분리를 강화했다.
+- 엔진 커버를 뒤로 갈수록 좁게 만들고 낮은 중앙 핀을 추가했다.
+- 후륜 렌더 폭을 전륜보다 크게 조정해 2012년형 Pirelli 오픈휠 비율을 강조했다. 값은 `initial_assumption`이다.
+- 단일 차량인 Training 장면은 `hero` LOD로 전환해 드라이버·헬멧·콕핏을 노출하고, Race Weekend 다차량은 `grid` LOD를 유지했다.
+
+### 경계와 검증
+
+이 변경은 렌더 전용 geometry와 LOD 선택만 수정한다. `VehicleControlInput`, 120Hz fixed-step, Rapier 포즈 소유권, AI 위치 직접 변경 금지 경계는 유지한다. 새 외부 의존성이나 런타임 이미지 자산은 추가하지 않는다.
+
+## 12. 차량 디자인 검토 UI
+
+차량을 주행 화면의 추적 카메라가 아닌 정지된 스튜디오에서 확인할 수 있도록 `차 디자인` 모드를 추가한다.
+
+- `DesignStudioScene`: 기존 `LowPolyCar` hero 외관, 스튜디오 조명, grid 기준면, OrbitControls, 정면·측면·후면 초기 카메라
+- `DesignStudioPanel`: 시점 프리셋, 무표식 도장 3종, 앞바퀴 조향 미리보기, 자동 회전, 2012년형 외관 포인트 설명
+- 디자인 모드의 조작값은 렌더 검토 상태이며 `VehicleSimulation`, Rapier, `VehicleControlInput`, AI 상태를 변경하지 않는다.
+- 기존 모드의 단일 Canvas와 물리 장면은 유지하고, 새 production dependency는 추가하지 않는다.

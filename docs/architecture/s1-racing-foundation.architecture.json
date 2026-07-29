@@ -46,7 +46,7 @@
     { "id": "vehicle_visuals", "type": "frontend", "label": "공통 차량 렌더", "sublabel": "LowPolyCar + pose + wheel spin", "pos": [470, 700], "size": [180, 64], "tag": "G2/G5" },
     { "id": "determinism_digest", "type": "database", "label": "레이스 결정성 digest", "sublabel": "물리·전략·운영 상태 해시", "pos": [1120, 680], "size": [180, 64], "tag": "M3E" },
     { "id": "race_replay", "type": "backend", "label": "결정적 리플레이 코어", "sublabel": "120Hz 입력 기록·digest 재생·JSON v1", "pos": [1550, 760], "size": [190, 64], "tag": "M5" },
-    { "id": "test_harness", "type": "cloud", "label": "테스트 하네스", "sublabel": "PhysicsValidation + Vitest + Playwright", "pos": [690, 500], "size": [165, 64], "tag": "M1F~3E" },
+    { "id": "test_harness", "type": "cloud", "label": "검증 하네스", "sublabel": "Vitest + Playwright + 코드·최적화 리뷰", "pos": [690, 500], "size": [165, 64], "tag": "M1F~M6" },
     { "id": "project_docs", "type": "cloud", "label": "프로젝트 계약", "sublabel": "AGENTS.md + docs/", "pos": [900, 500], "size": [160, 64] }
   ],
   "boundaries": [

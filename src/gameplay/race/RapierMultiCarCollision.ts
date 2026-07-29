@@ -82,6 +82,8 @@ function createStaticSegmentCollider(
 export class RapierMultiCarCollision implements RaceCollisionWorld {
   private readonly bodies = new Map<string, RAPIER.RigidBody>();
   private readonly colliders = new Map<string, RAPIER.Collider>();
+  // collider handle은 Rapier callback이 직접 제공하므로 매 접촉마다 Map 전체를 찾지 않는다.
+  private readonly colliderIdsByHandle = new Map<number, string>();
   private constructor(private readonly world: RAPIER.World) {}
 
   /** 트랙 정적 경계와 동적 차체를 소유하는 공유 충돌 세계를 생성한다. */
@@ -109,8 +111,10 @@ export class RapierMultiCarCollision implements RaceCollisionWorld {
           .setRotation(yawToRotation(input.yawRad))
           .setLinearDamping(0.05)
           .setAngularDamping(1.2)
-          .setCanSleep(false)
-          .setCcdEnabled(true)
+          // RaceSession이 매 120Hz step마다 pose와 velocity를 주입하므로 CCD·수면 해제는
+          // solver 비용만 늘린다. 고정 step의 짧은 이동 거리에서는 일반 접촉으로 충분하다.
+          .setCanSleep(true)
+          .setCcdEnabled(false)
           // 평면 레이싱을 유지하되 Y축 회전은 허용해 차체 방향과 회전 충돌을 보존한다.
           .enabledTranslations(true, false, true)
           .enabledRotations(false, true, false),
@@ -125,6 +129,7 @@ export class RapierMultiCarCollision implements RaceCollisionWorld {
       );
       this.bodies.set(input.id, body);
       this.colliders.set(input.id, collider);
+      this.colliderIdsByHandle.set(collider.handle, input.id);
     });
   }
 
@@ -151,7 +156,7 @@ export class RapierMultiCarCollision implements RaceCollisionWorld {
       const firstCollider = this.colliders.get(input.id);
       if (!firstCollider) return;
       this.world.contactPairsWith(firstCollider, (secondCollider) => {
-        const secondId = [...this.colliders.entries()].find(([, collider]) => collider.handle === secondCollider.handle)?.[0];
+        const secondId = this.colliderIdsByHandle.get(secondCollider.handle);
         if (!secondId || !activeIds.has(secondId) || secondId === input.id) return;
         const ids = [input.id, secondId].sort();
         const key = ids.join("|");
@@ -213,5 +218,6 @@ export class RapierMultiCarCollision implements RaceCollisionWorld {
     this.world.free();
     this.bodies.clear();
     this.colliders.clear();
+    this.colliderIdsByHandle.clear();
   }
 }

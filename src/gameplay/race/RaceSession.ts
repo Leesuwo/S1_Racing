@@ -603,6 +603,21 @@ export class RaceSession {
     }));
   }
 
+  /**
+   * 추적 카메라가 매 렌더 프레임 전체 그리드를 복사하지 않도록 플레이어 pose만 반환한다.
+   * 반환값은 렌더 전용 스냅샷이며 RaceSession의 물리 상태를 변경하지 않는다.
+   */
+  getPlayerRenderSnapshot(alpha = 1): RaceVehicleRenderSnapshot | undefined {
+    const player = this.participants.find((participant) => participant.definition.kind === "player");
+    if (!player) return undefined;
+    return {
+      id: player.definition.id,
+      label: player.definition.label,
+      kind: player.definition.kind,
+      snapshot: player.simulation.getRenderSnapshot(alpha),
+    };
+  }
+
   /** UI와 테스트에 전달할 읽기 전용 세션 상태를 생성한다. */
   getSnapshot(): RaceSessionSnapshot {
     const standings = this.participants

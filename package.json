@@ -16,6 +16,8 @@
     "physics:validate": "vitest run src/game/physics/PhysicsValidation.test.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "review:code": "node scripts/code-review.mjs",
+    "review:performance": "node scripts/performance-review.mjs",
     "verify": "node scripts/verify.mjs"
   },
   "dependencies": {

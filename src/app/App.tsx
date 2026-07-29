@@ -3,7 +3,7 @@
  * 물리·교육 상태는 각각 장면과 실행기가 소유하고, 이 컴포넌트는 읽기 전용 스냅샷과
  * 사용자 조작 명령만 연결한다.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
 import { VEHICLE_INPUT_PRESETS, type VehicleInputPresetId } from "../game/input/InputPreset";
@@ -29,10 +29,11 @@ import type { VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { createInitialTyreCondition, getTyreConditionSnapshot, type TyreConditionSnapshot } from "../game/physics/TyreCondition";
 import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "../gameplay/race/TrackLimits";
 import { detectWebGL2, type WebGL2Support } from "./webgl2";
-import { DrivingScene } from "./DrivingScene";
-import { TrainingScene } from "./TrainingScene";
-import { RaceWeekendScene } from "./RaceWeekendScene";
-import { RaceWeekendPanel } from "./RaceWeekendPanel";
+import {
+  DESIGN_STUDIO_PAINTS,
+  type DesignStudioPaintId,
+  type DesignStudioView,
+} from "./DesignStudioConfig";
 import {
   RaceWeekendSession,
   type RaceStrategy,
@@ -40,6 +41,17 @@ import {
   type TyreCompound,
 } from "../gameplay/race/RaceWeekendSession";
 import { parseRaceReplay, serializeRaceReplay } from "../gameplay/race/RaceReplay";
+
+/**
+ * 각 WebGL 모드는 선택 시점에만 내려받는다. 초기 Training 화면이 Race Weekend의 Rapier와
+ * 디자인 스튜디오의 OrbitControls를 함께 파싱하지 않도록 해 첫 진입 정지 시간을 줄인다.
+ */
+const DrivingScene = lazy(async () => ({ default: (await import("./DrivingScene")).DrivingScene }));
+const TrainingScene = lazy(async () => ({ default: (await import("./TrainingScene")).TrainingScene }));
+const RaceWeekendScene = lazy(async () => ({ default: (await import("./RaceWeekendScene")).RaceWeekendScene }));
+const DesignStudioScene = lazy(async () => ({ default: (await import("./DesignStudioScene")).DesignStudioScene }));
+const DesignStudioPanel = lazy(async () => ({ default: (await import("./DesignStudioPanel")).DesignStudioPanel }));
+const RaceWeekendPanel = lazy(async () => ({ default: (await import("./RaceWeekendPanel")).RaceWeekendPanel }));
 
 /** M3B 타이어 HUD가 물리 초기화 전에도 유한한 상태를 표시하도록 하는 시작값이다. */
 const INITIAL_TYRE_CONDITION: TyreConditionSnapshot = getTyreConditionSnapshot(createInitialTyreCondition());
@@ -435,7 +447,12 @@ export function App() {
   // Page Visibility 상태는 두 장면의 일시정지 경계가 공유한다.
   const [paused, setPaused] = useState(() => document.hidden);
   // 현재 사용자가 보고 있는 장면 모드이며 교육실을 기본 화면으로 연다.
-  const [mode, setMode] = useState<"training" | "drive" | "weekend">("training");
+  const [mode, setMode] = useState<"training" | "drive" | "weekend" | "design">("training");
+  // 디자인 검토 장면은 물리와 무관한 UI 상태만 보유한다.
+  const [designPaintId, setDesignPaintId] = useState<DesignStudioPaintId>("crimson");
+  const [designView, setDesignView] = useState<DesignStudioView>("hero");
+  const [designSteeringAngleDeg, setDesignSteeringAngleDeg] = useState(0);
+  const [designAutoRotate, setDesignAutoRotate] = useState(true);
   // 플레이어 주행 모드의 마지막 텔레메트리 샘플이다.
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
   // AI 상대의 마지막 텔레메트리 샘플이다.
@@ -643,7 +660,7 @@ export function App() {
   }, [input]);
 
   // 모드를 바꾸기 전에 교육을 멈춰 다시 돌아왔을 때 같은 상태를 관찰할 수 있게 한다.
-  const selectMode = (nextMode: "training" | "drive" | "weekend") => {
+  const selectMode = (nextMode: "training" | "drive" | "weekend" | "design") => {
     if (nextMode !== "training") trainingRunner.pause();
     setMode(nextMode);
     setTrainingSnapshot(trainingRunner.getSnapshot());
@@ -652,10 +669,12 @@ export function App() {
 
   const trainingMode = mode === "training";
   const weekendMode = mode === "weekend";
-  const drivingMode = !trainingMode && !weekendMode;
+  const designMode = mode === "design";
+  const drivingMode = mode === "drive";
+  const designPaint = DESIGN_STUDIO_PAINTS[designPaintId];
 
   return (
-    <main className={"app-shell " + (trainingMode ? "app-shell--training" : weekendMode ? "app-shell--weekend" : "")}>
+    <main className={"app-shell " + (trainingMode ? "app-shell--training" : weekendMode ? "app-shell--weekend" : designMode ? "app-shell--design" : "")}>
       <header className="topbar">
         <div>
           <p className="eyebrow">
@@ -663,14 +682,18 @@ export function App() {
               ? "S1 RACING / M2A-0 · AI TRAINING LAB"
               : weekendMode
                 ? "S1 RACING / M2B → M3D · RACE WEEKEND"
+                : designMode
+                  ? "S1 RACING / DESIGN REVIEW · 2012 OPEN-WHEEL"
                 : "S1 RACING / MILESTONE 2A · 단일 AI 상대"}
           </p>
-          <h1>{trainingMode ? "Training Lab" : weekendMode ? "Race Weekend" : "S1 Racing"}</h1>
+          <h1>{trainingMode ? "Training Lab" : weekendMode ? "Race Weekend" : designMode ? "Car Design" : "S1 Racing"}</h1>
           <p className="subtitle">
             {trainingMode
               ? "Northfield GP · AI의 레이싱 라인과 제동을 눈앞에서 관찰하는 120Hz 교육실"
               : weekendMode
                 ? "다차량 그리드 · 유효 랩 퀄리파잉 · 최소 피트 전략을 하나의 결정적 흐름으로 검증"
+                : designMode
+                  ? "S1 2012 Open-Wheel · 노즈·콕핏·사이드포드·리어 에어로를 독립적으로 검토"
                 : "공유 VehicleControlInput과 120Hz 물리로 주행하는 AI 상대"}
           </p>
         </div>
@@ -703,44 +726,66 @@ export function App() {
             >
               레이스 주말
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={designMode}
+              className={designMode ? "mode-switch__tab mode-switch__tab--active" : "mode-switch__tab"}
+              onClick={() => selectMode("design")}
+            >
+              차 디자인
+            </button>
           </div>
-          <span className={"status-chip " + (paused ? "status-chip--paused " : "") + (trainingMode ? "status-chip--training" : weekendMode ? "status-chip--weekend" : "")}>
-            {trainingMode ? trainingStatusLabel(trainingSnapshot.status) : weekendMode ? weekendStatusLabel(raceWeekendSnapshot) : paused ? "일시정지" : "주행 준비"}
+          <span className={"status-chip " + (paused ? "status-chip--paused " : "") + (trainingMode ? "status-chip--training" : weekendMode ? "status-chip--weekend" : designMode ? "status-chip--design" : "")}>
+            {trainingMode ? trainingStatusLabel(trainingSnapshot.status) : weekendMode ? weekendStatusLabel(raceWeekendSnapshot) : designMode ? "검토 준비" : paused ? "일시정지" : "주행 준비"}
           </span>
         </div>
       </header>
 
-      <section className={"simulation-panel " + (trainingMode ? "simulation-panel--training" : weekendMode ? "simulation-panel--weekend" : "")} aria-label={trainingMode ? "AI Training Lab 시뮬레이션" : weekendMode ? "레이스 주말 시뮬레이션" : "S1 Racing 주행 테스트"}>
+      <section className={"simulation-panel " + (trainingMode ? "simulation-panel--training" : weekendMode ? "simulation-panel--weekend" : designMode ? "simulation-panel--design" : "")} aria-label={trainingMode ? "AI Training Lab 시뮬레이션" : weekendMode ? "레이스 주말 시뮬레이션" : designMode ? "차량 디자인 3D 검토" : "S1 Racing 주행 테스트"}>
         {webgl?.supported ? (
           <Canvas
-            camera={trainingMode ? { position: [0, 30, 25], fov: 45 } : weekendMode ? { position: [0, 8, 16], fov: 55 } : { position: [4, 4, 6], fov: 55 }}
-            dpr={[1, 1.5]}
-            shadows
+            camera={trainingMode ? { position: [0, 30, 25], fov: 45 } : weekendMode ? { position: [0, 8, 16], fov: 55 } : designMode ? { position: [5.4, 2.9, 6.4], fov: 38 } : { position: [4, 4, 6], fov: 55 }}
+            // 게임 물리와 입력 반응성을 우선해 고밀도 화면에서도 fill-rate와 shadow map을 제한한다.
+            dpr={[1, 1.25]}
+            shadows="basic"
+            gl={{ antialias: false, powerPreference: "high-performance" }}
             onCreated={({ gl }) => input.attach(gl.domElement)}
           >
-            {trainingMode ? (
-              <TrainingScene runner={trainingRunner} paused={paused} onSnapshot={handleTrainingSnapshot} />
-            ) : weekendMode ? (
-              <RaceWeekendScene
-                session={raceWeekendSession}
-                input={input}
-                paused={paused}
-                onSnapshot={handleRaceWeekendSnapshot}
-              />
-            ) : (
-              <DrivingScene
-                input={input}
-                paused={paused}
-                opponentAIConfig={opponentAIConfig}
-                onTelemetry={setTelemetry}
-                onOpponentTelemetry={setOpponentTelemetry}
-                onSuspensionTelemetry={setSuspensionTelemetry}
-                onTrackLimits={(player, opponent) => {
-                  setTrackLimits(player);
-                  setOpponentTrackLimits(opponent);
-                }}
-              />
-            )}
+            <Suspense fallback={null}>
+              {trainingMode ? (
+                <TrainingScene runner={trainingRunner} paused={paused} onSnapshot={handleTrainingSnapshot} />
+              ) : designMode ? (
+                <DesignStudioScene
+                  bodyColor={designPaint.bodyColor}
+                  accentColor={designPaint.accentColor}
+                  emissiveColor={designPaint.emissiveColor}
+                  view={designView}
+                  steeringAngleRad={designSteeringAngleDeg * Math.PI / 180}
+                  autoRotate={designAutoRotate}
+                />
+              ) : weekendMode ? (
+                <RaceWeekendScene
+                  session={raceWeekendSession}
+                  input={input}
+                  paused={paused}
+                  onSnapshot={handleRaceWeekendSnapshot}
+                />
+              ) : (
+                <DrivingScene
+                  input={input}
+                  paused={paused}
+                  opponentAIConfig={opponentAIConfig}
+                  onTelemetry={setTelemetry}
+                  onOpponentTelemetry={setOpponentTelemetry}
+                  onSuspensionTelemetry={setSuspensionTelemetry}
+                  onTrackLimits={(player, opponent) => {
+                    setTrackLimits(player);
+                    setOpponentTrackLimits(opponent);
+                  }}
+                />
+              )}
+            </Suspense>
           </Canvas>
         ) : webgl ? (
           <div className="error-panel" role="alert">
@@ -801,11 +846,22 @@ export function App() {
           </>
         )}
         <div className="canvas-label">
-          {trainingMode ? "AI TRAINING LAB / NORTHFIELD GP PROTOTYPE" : weekendMode ? "RACE WEEKEND / MULTI-CAR PROTOTYPE" : "PHYSICS PROTOTYPE / TEST TRACK"}
+          {trainingMode ? "AI TRAINING LAB / NORTHFIELD GP PROTOTYPE" : weekendMode ? "RACE WEEKEND / MULTI-CAR PROTOTYPE" : designMode ? "DESIGN REVIEW / S1 2012 OPEN-WHEEL" : "PHYSICS PROTOTYPE / TEST TRACK"}
         </div>
       </section>
 
-      {trainingMode ? (
+      {designMode ? (
+        <DesignStudioPanel
+          paintId={designPaintId}
+          view={designView}
+          steeringAngleDeg={designSteeringAngleDeg}
+          autoRotate={designAutoRotate}
+          onPaintChange={setDesignPaintId}
+          onViewChange={setDesignView}
+          onSteeringChange={setDesignSteeringAngleDeg}
+          onAutoRotateChange={setDesignAutoRotate}
+        />
+      ) : trainingMode ? (
         <>
           <TrainingMetrics snapshot={trainingSnapshot} />
           {trainingSearchResult && (
@@ -937,6 +993,21 @@ export function App() {
           <div>
             <span>M2D · 전략 경계</span>
             <strong>시작 컴파운드·열화·피트 서비스·손상·플래그를 같은 120Hz RaceSession 스냅샷으로 검증합니다.</strong>
+          </div>
+        </section>
+      ) : designMode ? (
+        <section className="control-panel design-context" aria-label="차량 디자인 구현 경계">
+          <div>
+            <span>렌더 경계</span>
+            <strong>이 화면은 LowPolyCar의 읽기 전용 외관만 표시하며 물리 포즈·입력·AI 상태를 변경하지 않습니다.</strong>
+          </div>
+          <div>
+            <span>2012 기준</span>
+            <strong>스텝 노즈 · 다층 프런트 윙 · 오픈 콕핏 · 언더컷 사이드포드 · 코크 보틀 리어</strong>
+          </div>
+          <div>
+            <span>검토 조작</span>
+            <strong>드래그 회전 · 휠 줌 · 시점 프리셋 · 앞바퀴 조향 미리보기</strong>
           </div>
         </section>
       ) : (

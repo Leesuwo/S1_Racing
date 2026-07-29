@@ -62,6 +62,16 @@ describe("RaceSession", () => {
     );
   });
 
+  it("returns only the player render snapshot for the per-frame camera path", () => {
+    const session = new RaceSession(createRaceGrid(undefined, 6));
+
+    const player = session.getPlayerRenderSnapshot(1);
+
+    expect(player?.kind).toBe("player");
+    expect(player?.id).toBe("player");
+    expect(player?.snapshot.position).toEqual(session.getRenderSnapshots(1)[0]?.snapshot.position);
+  });
+
   it("applies a planned compound change and holds the vehicle during pit service", () => {
     const session = new RaceSession(
       createRaceGrid(undefined, 2),

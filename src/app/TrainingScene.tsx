@@ -15,6 +15,7 @@ import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
 import { LowPolyCar, type LowPolyCarWheelRefs } from "../world/LowPolyCar";
 import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
+import { FixedTimestepAccumulator } from "../game/loop/FixedTimestep";
 
 /** 교육 장면이 React HUD에 전달하는 읽기 전용 상태 경계다. */
 interface TrainingSceneProps {
@@ -28,6 +29,10 @@ const TRAINING_CAMERA_FOLLOW_DISTANCE_M = 11;
 const TRAINING_CAMERA_LATERAL_OFFSET_M = 3.4;
 const TRAINING_CAMERA_HEIGHT_M = 7.5;
 const TRAINING_CAMERA_LOOK_AHEAD_M = 6;
+/** Canvas가 비가시 상태가 된 환경에서 고정 물리를 이어갈 fallback 확인 간격(ms)이다. */
+const TRAINING_FALLBACK_INTERVAL_MS = 1000 / 60;
+/** R3F frame이 이 시간보다 오래 오지 않을 때만 fallback을 허용한다. */
+const TRAINING_RENDER_STALL_MS = 100;
 
 /** 프레임 시간과 무관하게 안정적인 카메라 추적 감쇠율을 만든다. */
 function followDamping(deltaSeconds: number, responsePerSecond: number): number {
@@ -57,7 +62,7 @@ function TrainingVehicleModel({
   wheelRefs: LowPolyCarWheelRefs;
   groupRef: RefObject<THREE.Group | null>;
 }) {
-  // 교육 카메라는 차량에서 11 m 떨어져 레이싱 라인과 마커를 함께 보여 주므로, 공통 실루엣 LOD로 120 Hz 관찰 루프를 보호한다.
+  // 교육 루프는 매 프레임 상태를 관찰하므로 grid LOD를 유지하되, GridCar 내부의 경량 운전자 실루엣을 함께 표시한다.
   return (
     <LowPolyCar
       groupRef={groupRef}
@@ -176,6 +181,10 @@ export function TrainingScene({ runner, paused, onSnapshot }: TrainingSceneProps
   };
   const snapshotRef = useRef<AITrainingSnapshot>(runner.getSnapshot());
   const snapshotClock = useRef(0);
+  // WebGL 또는 lazy scene 전환 때문에 R3F frame이 멈춘 시간을 기록한다.
+  const lastRenderFrameAtMs = useRef(performance.now());
+  // 교육 물리는 렌더링 FPS가 아닌 동일한 120Hz 누적기로만 진행한다.
+  const fixedTimestep = useMemo(() => new FixedTimestepAccumulator(), []);
   const cameraPosition = useMemo(() => new THREE.Vector3(), []);
   const cameraTarget = useMemo(() => new THREE.Vector3(), []);
 
@@ -190,11 +199,34 @@ export function TrainingScene({ runner, paused, onSnapshot }: TrainingSceneProps
     onSnapshot(initialSnapshot);
   }, [camera, cameraTarget, onSnapshot, runner]);
 
+  useEffect(() => {
+    // 정상 렌더링 중에는 useFrame만 물리를 진행한다. fallback은 WebGL frame이 멈춘 E2E·백그라운드
+    // 환경에서만 실제 시간에 맞춰 120Hz runner를 이어, UI가 running인데 step 0으로 고정되는 것을 막는다.
+    const intervalId = window.setInterval(() => {
+      const nowMs = performance.now();
+      if (paused || nowMs - lastRenderFrameAtMs.current < TRAINING_RENDER_STALL_MS) return;
+      fixedTimestep.advance(TRAINING_FALLBACK_INTERVAL_MS / 1000, () => {
+        snapshotRef.current = runner.advance(1);
+      });
+      snapshotClock.current += TRAINING_FALLBACK_INTERVAL_MS / 1000;
+      if (snapshotClock.current >= 0.1) {
+        snapshotClock.current = 0;
+        const nextSnapshot = runner.getSnapshot();
+        snapshotRef.current = nextSnapshot;
+        onSnapshot(nextSnapshot);
+      }
+    }, TRAINING_FALLBACK_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [fixedTimestep, onSnapshot, paused, runner]);
+
   useFrame((_, deltaSeconds) => {
+    lastRenderFrameAtMs.current = performance.now();
     // 페이지가 숨겨진 동안에는 브라우저 visibility 정책에 따라 교육 스텝을 멈춘다.
     if (!paused) {
-      // 두 fixed step을 60fps 프레임마다 실행해 120Hz 교육 시간이 실제 관찰 시간과 맞게 한다.
-      snapshotRef.current = runner.advance(2);
+      // 렌더 FPS가 30/60/120Hz로 바뀌어도 실제 교육 시간은 120Hz fixed step만 누적한다.
+      fixedTimestep.advance(deltaSeconds, () => {
+        snapshotRef.current = runner.advance(1);
+      });
     }
 
     // AI 차량은 교육 실행기가 소유한 평면 스냅샷만 읽어 렌더 transform을 갱신한다.

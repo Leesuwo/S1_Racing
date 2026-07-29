@@ -3,7 +3,7 @@
  * RaceWeekendSession이 소유한 VehicleSimulation 스냅샷을 그리며, AI나 렌더러가 위치를 직접 변경하지 않는다.
  */
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
 import { RaceWeekendSession, type RaceWeekendSnapshot } from "../gameplay/race/RaceWeekendSession";
@@ -13,6 +13,12 @@ import { LowPolyCar } from "../world/LowPolyCar";
 import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 import { RapierMultiCarCollision } from "../gameplay/race/RapierMultiCarCollision";
+import { FixedTimestepAccumulator } from "../game/loop/FixedTimestep";
+
+/** Canvas가 frame을 중단한 환경에서 Race Weekend fixed step을 확인하는 간격(ms)이다. */
+const WEEKEND_FALLBACK_INTERVAL_MS = 1000 / 60;
+/** R3F frame 부재로 판단하는 보수적 지연(ms)이다. */
+const WEEKEND_RENDER_STALL_MS = 100;
 
 /** 레이스 주말 장면이 앱 셸과 공유하는 입력·일시정지·스냅샷 경계다. */
 export interface RaceWeekendSceneProps {
@@ -33,8 +39,23 @@ function vehicleColor(vehicle: RaceVehicleRenderSnapshot): string {
 /** 차량 하나의 물리 렌더 스냅샷을 표시한다. 이 컴포넌트는 상태를 계산하거나 소유하지 않는다. */
 function RaceVehicleModel({ vehicle }: { vehicle: RaceVehicleRenderSnapshot }) {
   const { snapshot } = vehicle;
+  const vehicleRef = useRef<THREE.Group>(null);
+
+  useLayoutEffect(() => {
+    // 그리드 AI는 플레이어 바로 뒤의 보조 시각 요소다. 19대가 모두 shadow map을 갱신하면
+    // 낮은 폴리곤 수와 무관하게 draw-call 비용이 급증하므로, 플레이어만 그림자를 남긴다.
+    if (vehicle.kind === "player") return;
+    vehicleRef.current?.traverse((object) => {
+      if (object instanceof THREE.Mesh) {
+        object.castShadow = false;
+        object.receiveShadow = false;
+      }
+    });
+  });
+
   return (
     <group
+      ref={vehicleRef}
       position={[snapshot.position.x, 0.24, snapshot.position.z]}
       rotation={[0, physicsYawToThreeYaw(snapshot.yawRad), 0]}
     >
@@ -58,6 +79,10 @@ export function RaceWeekendScene({ session, input, paused, onSnapshot }: RaceWee
   const desiredCamera = useMemo(() => new THREE.Vector3(), []);
   const forward = useMemo(() => new THREE.Vector3(), []);
   const collisionWorldRef = useRef<RapierMultiCarCollision | null>(null);
+  // Race Weekend도 Driving과 같은 누적기를 사용해 ceil 기반 과잉 step과 catch-up 폭주를 막는다.
+  const fixedTimestep = useMemo(() => new FixedTimestepAccumulator(), []);
+  // lazy scene·WebGL 절전으로 R3F frame이 멈춘 시간을 기록한다.
+  const lastRenderFrameAtMs = useRef(performance.now());
 
   useEffect(() => {
     let disposed = false;
@@ -77,21 +102,48 @@ export function RaceWeekendScene({ session, input, paused, onSnapshot }: RaceWee
     };
   }, [session]);
 
+  useEffect(() => {
+    // 정상 frame이 있는 동안에는 아래 useFrame만 실행한다. fallback은 렌더가 멈춘 경우에만
+    // 동일한 accumulator와 입력 경계로 레이스를 진행해 상태 패널과 물리 시간이 분리되지 않게 한다.
+    const intervalId = window.setInterval(() => {
+      const nowMs = performance.now();
+      const liveSnapshot = session.getSnapshot();
+      if (
+        paused
+        || nowMs - lastRenderFrameAtMs.current < WEEKEND_RENDER_STALL_MS
+        || liveSnapshot.stage !== "race"
+        || liveSnapshot.status !== "running"
+      ) return;
+      session.getRaceSession().setCollisionWorld(collisionWorldRef.current ?? undefined);
+      fixedTimestep.advance(WEEKEND_FALLBACK_INTERVAL_MS / 1000, (dtSeconds) => {
+        session.advanceRace(input.sample(dtSeconds), 1);
+      });
+      snapshotClock.current += WEEKEND_FALLBACK_INTERVAL_MS / 1000;
+      if (snapshotClock.current >= 0.1) {
+        snapshotClock.current = 0;
+        setVehicles(session.getRaceSession().getRenderSnapshots(1));
+        onSnapshot(session.getSnapshot());
+      }
+    }, WEEKEND_FALLBACK_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [fixedTimestep, input, onSnapshot, paused, session]);
+
   useFrame((_, deltaSeconds) => {
+    lastRenderFrameAtMs.current = performance.now();
     const liveSnapshot = session.getSnapshot();
     if (!paused && liveSnapshot.stage === "race" && liveSnapshot.status === "running") {
       // 브라우저 입력은 공통 VehicleControlInput으로 변환되어 RaceSession의 120Hz 경계를 통과한다.
       // RaceWeekendSession은 레이스 시작 때 RaceSession 인스턴스를 교체하므로 매 프레임 현재 세션에 연결한다.
       session.getRaceSession().setCollisionWorld(collisionWorldRef.current ?? undefined);
-      // Rapier 다차량 충돌로 렌더 프레임이 낮아져도 레이스 시간이 화면 프레임에 종속되지 않게
-      // 경과 시간에 필요한 fixed-step을 보충한다. 최대 12스텝은 탭 복귀 시 긴 catch-up으로
-      // 한 프레임을 독점하는 것을 막는 안전 상한이며, RaceSession 내부는 여전히 120Hz를 사용한다.
-      const fixedStepCount = Math.max(1, Math.min(12, Math.ceil(Math.max(0, deltaSeconds) * 120)));
-      session.advanceRace(input.sample(deltaSeconds), fixedStepCount);
+      // 렌더 프레임 delta는 120Hz 누적기에만 전달한다. 느린 프레임에서 이전 구현처럼
+      // 한 렌더마다 최대 12회의 Rapier·리플레이 작업을 몰아 실행하지 않는다.
+      fixedTimestep.advance(deltaSeconds, (dtSeconds) => {
+        session.advanceRace(input.sample(dtSeconds), 1);
+      });
     }
 
-    const renderSnapshots = session.getRaceSession().getRenderSnapshots(1);
-    const player = renderSnapshots.find((vehicle) => vehicle.kind === "player") ?? renderSnapshots[0];
+    // 카메라는 매 프레임 플레이어 하나만 읽고, 전체 그리드 배열은 HUD와 같은 10Hz로만 복사한다.
+    const player = session.getRaceSession().getPlayerRenderSnapshot(1);
     if (player) {
       forward.set(Math.sin(player.snapshot.yawRad), 0, -Math.cos(player.snapshot.yawRad));
       desiredCamera.set(
@@ -111,7 +163,7 @@ export function RaceWeekendScene({ session, input, paused, onSnapshot }: RaceWee
     snapshotClock.current += deltaSeconds;
     if (snapshotClock.current >= 0.1) {
       snapshotClock.current = 0;
-      setVehicles(renderSnapshots);
+      setVehicles(session.getRaceSession().getRenderSnapshots(1));
       onSnapshot(session.getSnapshot());
     }
   });

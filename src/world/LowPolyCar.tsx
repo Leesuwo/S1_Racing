@@ -45,10 +45,13 @@ export interface LowPolyCarWheelSpin {
 /** 2012년형 외관을 위한 정규화 치수이며 물리 설정을 덮어쓰지 않는 초기 가정이다. */
 export const S1_2012_OPEN_WHEEL_DIMENSIONS = {
   wheelbaseM: 3.3,
-  trackWidthM: 1.6,
-  wheelRadiusM: 0.33,
-  frontTyreWidthM: 0.3,
-  rearTyreWidthM: 0.34,
+  /** 앞·뒤 차축을 같은 값으로 뭉개지 않고 2012년형 오픈휠의 시각적 stance를 보존한다. */
+  frontTrackWidthM: 1.72,
+  rearTrackWidthM: 1.68,
+  /** 기존 물리 바퀴 반지름과 분리된 렌더링 전용 초기 가정이다. */
+  wheelRadiusM: 0.32,
+  frontTyreWidthM: 0.27,
+  rearTyreWidthM: 0.41,
   frontWingZ: -2.78,
   rearWingZ: 2.34,
 } as const;
@@ -80,42 +83,45 @@ type Point3 = readonly [x: number, y: number, z: number];
 
 /** 높은 모노코크와 낮은 노즈의 단차를 만드는 전방 차체 단면이다. */
 const NOSE_STATIONS: readonly HullStation[] = [
-  { z: -2.66, halfWidth: 0.09, bottomY: 0.28, shoulderY: 0.34, crownY: 0.39 },
-  { z: -2.35, halfWidth: 0.17, bottomY: 0.28, shoulderY: 0.39, crownY: 0.46 },
-  { z: -1.98, halfWidth: 0.26, bottomY: 0.3, shoulderY: 0.47, crownY: 0.54 },
-  // 이 높이 차이가 2012년형 스텝 노즈의 시각적 단서를 만든다.
-  { z: -1.68, halfWidth: 0.34, bottomY: 0.32, shoulderY: 0.5, crownY: 0.58 },
-  { z: -1.55, halfWidth: 0.39, bottomY: 0.34, shoulderY: 0.63, crownY: 0.76 },
+  { z: -2.72, halfWidth: 0.05, bottomY: 0.27, shoulderY: 0.31, crownY: 0.34 },
+  { z: -2.46, halfWidth: 0.12, bottomY: 0.28, shoulderY: 0.35, crownY: 0.39 },
+  { z: -2.12, halfWidth: 0.2, bottomY: 0.3, shoulderY: 0.4, crownY: 0.45 },
+  { z: -1.82, halfWidth: 0.28, bottomY: 0.31, shoulderY: 0.46, crownY: 0.5 },
+  // 낮은 코 부분을 길게 유지한 뒤 모노코크가 한 번에 올라가야 2012년형 platypus nose가 읽힌다.
+  { z: -1.67, halfWidth: 0.31, bottomY: 0.32, shoulderY: 0.48, crownY: 0.53 },
+  { z: -1.54, halfWidth: 0.34, bottomY: 0.34, shoulderY: 0.67, crownY: 0.78 },
 ];
 
 /** 운전석 전후의 높고 좁은 모노코크 실루엣이다. */
 const MONOCOQUE_STATIONS: readonly HullStation[] = [
-  { z: -1.55, halfWidth: 0.39, bottomY: 0.34, shoulderY: 0.63, crownY: 0.76 },
-  { z: -1.18, halfWidth: 0.48, bottomY: 0.35, shoulderY: 0.69, crownY: 0.84 },
-  { z: -0.62, halfWidth: 0.54, bottomY: 0.36, shoulderY: 0.72, crownY: 0.9 },
-  { z: -0.05, halfWidth: 0.56, bottomY: 0.37, shoulderY: 0.74, crownY: 0.93 },
-  { z: 0.52, halfWidth: 0.5, bottomY: 0.38, shoulderY: 0.71, crownY: 0.88 },
-  { z: 0.95, halfWidth: 0.42, bottomY: 0.39, shoulderY: 0.66, crownY: 0.79 },
+  { z: -1.54, halfWidth: 0.34, bottomY: 0.34, shoulderY: 0.67, crownY: 0.78 },
+  { z: -1.3, halfWidth: 0.4, bottomY: 0.35, shoulderY: 0.7, crownY: 0.84 },
+  { z: -0.8, halfWidth: 0.47, bottomY: 0.36, shoulderY: 0.74, crownY: 0.92 },
+  { z: -0.22, halfWidth: 0.5, bottomY: 0.37, shoulderY: 0.76, crownY: 0.94 },
+  { z: 0.36, halfWidth: 0.48, bottomY: 0.38, shoulderY: 0.74, crownY: 0.91 },
+  { z: 0.78, halfWidth: 0.42, bottomY: 0.39, shoulderY: 0.69, crownY: 0.82 },
+  { z: 1.04, halfWidth: 0.37, bottomY: 0.4, shoulderY: 0.64, crownY: 0.75 },
 ];
 
 /** 콕핏 뒤에서 기어박스까지 좁아지는 코크 보틀의 상부 덮개다. */
 const ENGINE_COVER_STATIONS: readonly HullStation[] = [
-  { z: 0.25, halfWidth: 0.37, bottomY: 0.51, shoulderY: 0.79, crownY: 1.05 },
-  { z: 0.72, halfWidth: 0.36, bottomY: 0.5, shoulderY: 0.78, crownY: 1.16 },
-  { z: 1.16, halfWidth: 0.31, bottomY: 0.49, shoulderY: 0.72, crownY: 1.09 },
-  { z: 1.62, halfWidth: 0.22, bottomY: 0.48, shoulderY: 0.63, crownY: 0.88 },
-  { z: 1.86, halfWidth: 0.17, bottomY: 0.47, shoulderY: 0.56, crownY: 0.72 },
+  { z: 0.2, halfWidth: 0.35, bottomY: 0.5, shoulderY: 0.78, crownY: 1.03 },
+  { z: 0.68, halfWidth: 0.33, bottomY: 0.5, shoulderY: 0.76, crownY: 1.1 },
+  { z: 1.1, halfWidth: 0.29, bottomY: 0.49, shoulderY: 0.7, crownY: 1.02 },
+  { z: 1.52, halfWidth: 0.22, bottomY: 0.48, shoulderY: 0.61, crownY: 0.84 },
+  { z: 1.85, halfWidth: 0.16, bottomY: 0.46, shoulderY: 0.54, crownY: 0.7 },
 ];
 
 /** 좌우 사이드포드의 깊은 언더컷과 후방 수축을 만드는 단면이다. */
 const SIDEPOD_STATIONS: readonly SidepodStation[] = [
-  { z: -1.14, innerX: 0.42, outerX: 0.72, bottomY: 0.38, shoulderY: 0.58, crownY: 0.66 },
-  { z: -0.78, innerX: 0.48, outerX: 0.94, bottomY: 0.37, shoulderY: 0.64, crownY: 0.74 },
-  // 바닥 쪽을 안으로 파서 2012년형 언더컷의 밝고 어두운 면을 만든다.
-  { z: -0.28, innerX: 0.51, outerX: 0.96, bottomY: 0.36, shoulderY: 0.67, crownY: 0.79 },
-  { z: 0.3, innerX: 0.48, outerX: 0.9, bottomY: 0.37, shoulderY: 0.64, crownY: 0.75 },
-  { z: 0.86, innerX: 0.4, outerX: 0.73, bottomY: 0.39, shoulderY: 0.58, crownY: 0.67 },
-  { z: 1.24, innerX: 0.3, outerX: 0.53, bottomY: 0.4, shoulderY: 0.52, crownY: 0.59 },
+  { z: -1.2, innerX: 0.36, outerX: 0.7, bottomY: 0.37, shoulderY: 0.6, crownY: 0.68 },
+  { z: -0.9, innerX: 0.41, outerX: 0.88, bottomY: 0.36, shoulderY: 0.68, crownY: 0.79 },
+  // 흡입구 아래쪽을 안으로 밀어 넣고 어깨를 높여 2012년형 언더컷을 옆면에서 읽게 한다.
+  { z: -0.48, innerX: 0.45, outerX: 0.91, bottomY: 0.35, shoulderY: 0.72, crownY: 0.84 },
+  { z: 0.05, innerX: 0.45, outerX: 0.88, bottomY: 0.36, shoulderY: 0.7, crownY: 0.81 },
+  { z: 0.6, innerX: 0.38, outerX: 0.7, bottomY: 0.38, shoulderY: 0.62, crownY: 0.71 },
+  { z: 1.05, innerX: 0.3, outerX: 0.53, bottomY: 0.4, shoulderY: 0.54, crownY: 0.62 },
+  { z: 1.35, innerX: 0.22, outerX: 0.4, bottomY: 0.41, shoulderY: 0.49, crownY: 0.56 },
 ];
 
 /** 프런트 윙의 메인 플레인은 노즈보다 넓고 끝으로 갈수록 뒤로 스윕된다. */
@@ -140,6 +146,24 @@ const FRONT_WING_FLAP_PLANFORM: readonly PlanformPoint[] = [
   [1.08, -2.73],
   [0.96, -2.82],
   [-0.96, -2.82],
+];
+
+/** 메인 플레인 앞쪽에 겹치는 얇은 플랩으로 2012년형 다층 프런트 윙의 밀도를 만든다. */
+const FRONT_WING_UPPER_FLAP_PLANFORM: readonly PlanformPoint[] = [
+  [-1.02, -2.62],
+  [-0.58, -2.54],
+  [0.58, -2.54],
+  [1.02, -2.62],
+  [0.91, -2.69],
+  [-0.91, -2.69],
+];
+
+/** 노즈 단차의 평평한 상면을 별도 패널로 분리해 옆면 실루엣을 선명하게 한다. */
+const NOSE_STEP_PLANFORM: readonly PlanformPoint[] = [
+  [-0.31, -1.74],
+  [0.31, -1.74],
+  [0.34, -1.52],
+  [-0.34, -1.52],
 ];
 
 /** 차량 하부의 바닥과 디퓨저가 만드는 얇은 어두운 실루엣이다. */
@@ -491,11 +515,13 @@ function Wheels({
   };
   const resolvedRearLeft = wheelRefs?.rearLeft ?? { rolling: internalRearLeftRollingRef };
   const resolvedRearRight = wheelRefs?.rearRight ?? { rolling: internalRearRightRollingRef };
-  const halfTrackM = S1_2012_OPEN_WHEEL_DIMENSIONS.trackWidthM * 0.5;
+  // 시각 휠 축은 전·후 타이어 폭과 차체 어깨가 만드는 외부 stance에 맞춘다.
+  const frontHalfTrackM = S1_2012_OPEN_WHEEL_DIMENSIONS.frontTrackWidthM * 0.5;
+  const rearHalfTrackM = S1_2012_OPEN_WHEEL_DIMENSIONS.rearTrackWidthM * 0.5;
   const frontZ = -S1_2012_OPEN_WHEEL_DIMENSIONS.wheelbaseM * (1.815 / 3.3);
   const rearZ = S1_2012_OPEN_WHEEL_DIMENSIONS.wheelbaseM * (1.485 / 3.3);
-  const frontRadius = S1_2012_OPEN_WHEEL_DIMENSIONS.wheelRadiusM;
-  const rearRadius = frontRadius * 1.015;
+  const frontRadius = S1_2012_OPEN_WHEEL_DIMENSIONS.wheelRadiusM * 0.98;
+  const rearRadius = S1_2012_OPEN_WHEEL_DIMENSIONS.wheelRadiusM * 1.02;
 
   useEffect(() => {
     // 조향과 구름을 다른 그룹에 적용해 차체 yaw가 휠 회전축을 오염시키지 않게 한다.
@@ -529,7 +555,7 @@ function Wheels({
         steeringGroupRef={resolvedFrontLeft.steering}
         rollingGroupRef={resolvedFrontLeft.rolling}
         accentColor={accentColor}
-        position={[-halfTrackM, frontRadius, frontZ]}
+        position={[-frontHalfTrackM, frontRadius, frontZ]}
         radius={frontRadius}
         side={-1}
         width={S1_2012_OPEN_WHEEL_DIMENSIONS.frontTyreWidthM}
@@ -538,7 +564,7 @@ function Wheels({
         steeringGroupRef={resolvedFrontRight.steering}
         rollingGroupRef={resolvedFrontRight.rolling}
         accentColor={accentColor}
-        position={[halfTrackM, frontRadius, frontZ]}
+        position={[frontHalfTrackM, frontRadius, frontZ]}
         radius={frontRadius}
         side={1}
         width={S1_2012_OPEN_WHEEL_DIMENSIONS.frontTyreWidthM}
@@ -548,7 +574,7 @@ function Wheels({
           key={`rear-wheel-${side}`}
           rollingGroupRef={side < 0 ? resolvedRearLeft.rolling : resolvedRearRight.rolling}
           accentColor={accentColor}
-          position={[side * halfTrackM, rearRadius, rearZ]}
+          position={[side * rearHalfTrackM, rearRadius, rearZ]}
           radius={rearRadius}
           side={side}
           width={S1_2012_OPEN_WHEEL_DIMENSIONS.rearTyreWidthM}
@@ -562,22 +588,43 @@ function Wheels({
 function SuspensionArms({ color }: { color: string }) {
   const frontZ = -1.815;
   const rearZ = 1.485;
-  const wheelX = S1_2012_OPEN_WHEEL_DIMENSIONS.trackWidthM * 0.5;
+  const frontWheelX = S1_2012_OPEN_WHEEL_DIMENSIONS.frontTrackWidthM * 0.5;
+  const rearWheelX = S1_2012_OPEN_WHEEL_DIMENSIONS.rearTrackWidthM * 0.5;
 
   return (
     <>
       {([-1, 1] as const).map((side) => (
         <group key={`suspension-${side}`}>
-          <Link color={color} end={[side * wheelX, 0.5, frontZ]} start={[side * 0.38, 0.76, -1.18]} width={0.045} />
-          <Link color={color} end={[side * wheelX, 0.46, frontZ]} start={[side * 0.48, 0.61, -1.42]} width={0.04} />
-          <Link color={color} end={[side * wheelX, 0.38, frontZ]} start={[side * 0.52, 0.42, -1.34]} width={0.045} />
+          <Link color={color} end={[side * frontWheelX, 0.5, frontZ]} start={[side * 0.38, 0.76, -1.18]} width={0.045} />
+          <Link color={color} end={[side * frontWheelX, 0.46, frontZ]} start={[side * 0.48, 0.61, -1.42]} width={0.04} />
+          <Link color={color} end={[side * frontWheelX, 0.38, frontZ]} start={[side * 0.52, 0.42, -1.34]} width={0.045} />
           {/* 후방 pull-rod는 휠 허브에서 기어박스 상부로 올라가는 반대 방향 링크다. */}
-          <Link color={color} end={[side * wheelX, 0.48, rearZ]} start={[side * 0.26, 0.95, 0.98]} width={0.045} />
-          <Link color={color} end={[side * wheelX, 0.54, rearZ]} start={[side * 0.42, 0.64, 1.16]} width={0.04} />
-          <Link color={color} end={[side * wheelX, 0.38, rearZ]} start={[side * 0.5, 0.43, 1.14]} width={0.045} />
+          <Link color={color} end={[side * rearWheelX, 0.48, rearZ]} start={[side * 0.26, 0.95, 0.98]} width={0.045} />
+          <Link color={color} end={[side * rearWheelX, 0.54, rearZ]} start={[side * 0.42, 0.64, 1.16]} width={0.04} />
+          <Link color={color} end={[side * rearWheelX, 0.38, rearZ]} start={[side * 0.5, 0.43, 1.14]} width={0.045} />
         </group>
       ))}
     </>
+  );
+}
+
+/** 다차량·교육 화면에서 비용을 제한하면서도 콕핏 안의 운전자 방향을 읽게 하는 경량 실루엣이다. */
+function GridDriverCockpit({ accentColor }: { accentColor: string }) {
+  return (
+    <group position={[0, 0.54, -0.02]}>
+      <mesh position={[0, 0.22, 0.03]} castShadow>
+        <boxGeometry args={[0.24, 0.32, 0.28]} />
+        <meshStandardMaterial color="#111821" roughness={0.88} flatShading />
+      </mesh>
+      <mesh position={[0, 0.43, -0.01]} castShadow>
+        <sphereGeometry args={[0.14, 6, 4]} />
+        <meshStandardMaterial color={accentColor} roughness={0.66} flatShading />
+      </mesh>
+      <mesh position={[0, 0.44, -0.12]}>
+        <boxGeometry args={[0.15, 0.05, 0.025]} />
+        <meshStandardMaterial color="#05070a" metalness={0.42} roughness={0.24} flatShading />
+      </mesh>
+    </group>
   );
 }
 
@@ -602,8 +649,15 @@ function GridCar({
       <HullPanel color={bodyColor} emissiveColor="#000000" stations={ENGINE_COVER_STATIONS} />
       <SidepodPanel color={bodyColor} side={-1} stations={SIDEPOD_STATIONS} />
       <SidepodPanel color={bodyColor} side={1} stations={SIDEPOD_STATIONS} />
+      <PlanformPanel color={bodyColor} points={NOSE_STEP_PLANFORM} position={[0, 0.6, 0]} thickness={0.035} />
       <PlanformPanel color={carbonColor} points={FLOOR_PLANFORM} position={[0, 0.29, 0]} thickness={0.055} />
+      <mesh position={[0, 0.9, -0.12]}>
+        <boxGeometry args={[0.38, 0.045, 0.72]} />
+        <meshStandardMaterial color="#07090c" roughness={0.92} flatShading />
+      </mesh>
+      <GridDriverCockpit accentColor={resolvedAccentColor} />
       <PlanformPanel color={aeroColor} points={FRONT_WING_MAIN_PLANFORM} position={[0, 0.25, 0]} thickness={0.07} />
+      <PlanformPanel color={carbonColor} points={FRONT_WING_UPPER_FLAP_PLANFORM} position={[0, 0.4, 0]} thickness={0.03} />
       <PlanformPanel color={aeroColor} points={REAR_WING_MAIN_PLANFORM} position={[0, 1.06, 0]} thickness={0.08} />
       <mesh position={[0, 1.22, 2.4]}>
         <boxGeometry args={[1.54, 0.07, 0.1]} />
@@ -666,6 +720,13 @@ export function LowPolyCar({
       <SidepodPanel color={bodyColor} side={-1} stations={SIDEPOD_STATIONS} />
       <SidepodPanel color={bodyColor} side={1} stations={SIDEPOD_STATIONS} />
 
+      {/* 스텝 노즈의 상면을 분리해 둥근 단일 노즈가 아닌 2012년형 단차를 보존한다. */}
+      <PlanformPanel color={bodyColor} points={NOSE_STEP_PLANFORM} position={[0, 0.6, 0]} thickness={0.04} />
+      <mesh position={[0, 0.56, -1.68]} castShadow>
+        <boxGeometry args={[0.54, 0.06, 0.26]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.68} flatShading />
+      </mesh>
+
       {/* 바닥은 차체보다 낮고 길게 두어 오픈휠 차의 얇은 허리를 만든다. */}
       <PlanformPanel color={carbonColor} points={FLOOR_PLANFORM} position={[0, 0.29, 0]} thickness={0.055} />
       <mesh position={[0, 0.34, 0.28]} castShadow>
@@ -725,6 +786,12 @@ export function LowPolyCar({
         <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
       </mesh>
 
+      {/* 일부 2012 차량에서 보이는 낮은 엔진 커버 핀을 과장하지 않고 공통 시대감으로만 사용한다. */}
+      <mesh position={[0, 1.08, 0.92]} rotation={[0, 0, 0]}>
+        <boxGeometry args={[0.045, 0.28, 0.92]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
+      </mesh>
+
       {/* 사이드포드 입구와 바닥 언더컷을 어두운 면으로 분리한다. */}
       {([-1, 1] as const).map((side) => (
         <group key={`sidepod-detail-${side}`}>
@@ -735,6 +802,15 @@ export function LowPolyCar({
           <mesh position={[side * 0.65, 0.41, -0.24]} rotation={[0, side * 0.08, 0]}>
             <boxGeometry args={[0.035, 0.055, 0.74]} />
             <meshStandardMaterial color={aeroColor} roughness={0.82} flatShading />
+          </mesh>
+          {/* 높은 어깨와 검은 흡입구를 나눠야 차체가 넓은 포드가 아니라 언더컷 포드로 읽힌다. */}
+          <mesh position={[side * 0.79, 0.75, -0.52]} rotation={[0, side * 0.11, side * 0.04]}>
+            <boxGeometry args={[0.12, 0.15, 0.56]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.88} flatShading />
+          </mesh>
+          <mesh position={[side * 0.84, 0.79, -0.5]} rotation={[0, side * 0.11, side * 0.04]}>
+            <boxGeometry args={[0.035, 0.075, 0.38]} />
+            <meshStandardMaterial color="#050608" roughness={0.96} flatShading />
           </mesh>
           {/* 2012년형 고후방 배기의 위치감만 표현하며 물리 공력 이득은 부여하지 않는다. */}
           <mesh position={[side * 0.28, 0.92, 1.44]} rotation={[Math.PI / 2, 0, 0]}>
@@ -763,6 +839,7 @@ export function LowPolyCar({
       {/* 노즈 지지대, 다층 메인 플레인, 플랩, 엔드플레이트로 프런트 윙을 구성한다. */}
       <PlanformPanel color={aeroColor} points={FRONT_WING_MAIN_PLANFORM} position={[0, 0.25, 0]} thickness={0.07} />
       <PlanformPanel color={carbonColor} points={FRONT_WING_FLAP_PLANFORM} position={[0, 0.33, 0]} thickness={0.05} />
+      <PlanformPanel color={carbonColor} points={FRONT_WING_UPPER_FLAP_PLANFORM} position={[0, 0.4, 0]} thickness={0.035} />
       <mesh position={[0, 0.4, frontWingZ + 0.12]}>
         <boxGeometry args={[0.78, 0.045, 0.08]} />
         <meshStandardMaterial color={accentColor} roughness={0.62} flatShading />
