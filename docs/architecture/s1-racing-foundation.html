@@ -532,7 +532,7 @@
 
     <!-- Main Diagram -->
     <div class="diagram-container">
-      <svg viewBox="0 0 1590 832" role="img" aria-label="S1 Racing — Milestone 2B~3E — 다차량 세션·타이어·레이스크래프트·운영·1차 완성 검증 (architecture diagram)">
+      <svg viewBox="0 0 1590 852" role="img" aria-label="S1 Racing — Milestone 2B~3E — 다차량 세션·타이어·레이스크래프트·운영·1차 완성 검증 (architecture diagram)">
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -556,7 +556,7 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect x="10" y="90" width="1540" height="594" rx="12" class="c-region" stroke-width="1"/>
+        <rect x="10" y="90" width="1540" height="694" rx="12" class="c-region" stroke-width="1"/>
         <text x="18" y="108" class="t-cloud" font-size="9" font-weight="600">브라우저 런타임</text>
 
         <rect x="10" y="90" width="1540" height="674" rx="8" class="c-security-group" stroke-width="1"/>
@@ -603,6 +603,11 @@
         <path d="M 565 420 L 769.5 420 Q 777.5 420 777.5 412 L 777.5 192 Q 777.5 184 785.5 184 L 990 184" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path d="M 660 452 L 708.25 452 Q 716.25 452 716.25 444 L 716.25 192 Q 716.25 184 724.25 184 L 772.5 184" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 772.5 184 L 670.5 184 Q 662.5 184 662.5 192 L 662.5 272 Q 662.5 280 654.5 280 L 552.5 280" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 130 700 L 443.25 700 Q 451.25 700 451.25 692 L 451.25 192 Q 451.25 184 459.25 184 L 772.5 184" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 220 732 L 250 732" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 340 700 L 438.25 700 Q 446.25 700 446.25 692 L 446.25 352 Q 446.25 344 454.25 344 L 552.5 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 1425 184 L 1000.5 184 Q 992.5 184 992.5 192 L 992.5 692 Q 992.5 700 984.5 700 L 560 700" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 560 700 L 558.125 700 Q 556.25 700 556.25 698.125 L 556.25 345.875 Q 556.25 344 554.375 344 L 552.5 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 650 152 L 703.25 152 Q 711.25 152 711.25 160 L 711.25 272 Q 711.25 280 719.25 280 L 772.5 280" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path d="M 855 312 L 900 312" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path d="M 772.5 280 L 873.25 280 Q 881.25 280 881.25 272 L 881.25 192 Q 881.25 184 889.25 184 L 990 184" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
@@ -808,6 +813,24 @@
         <text x="772.5" y="166" class="t-muted" font-size="9" text-anchor="middle">중심선 도로 + 추적 시점 + 마커</text>
         <text x="772.5" y="176" class="t-frontend" font-size="7" text-anchor="middle">M2A-0</text>
 
+        <rect x="40" y="700" width="180" height="64" rx="6" class="c-mask"/>
+        <rect x="40" y="700" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+        <text x="130" y="730" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">공통 시각 팔레트</text>
+        <text x="130" y="746" class="t-muted" font-size="9" text-anchor="middle">도로·잔디·연석·HUD 토큰</text>
+        <text x="130" y="756" class="t-frontend" font-size="7" text-anchor="middle">G3</text>
+
+        <rect x="250" y="700" width="180" height="64" rx="6" class="c-mask"/>
+        <rect x="250" y="700" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+        <text x="340" y="730" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">공통 장면 조명</text>
+        <text x="340" y="746" class="t-muted" font-size="9" text-anchor="middle">노을·안개·환경광·그림자</text>
+        <text x="340" y="756" class="t-frontend" font-size="7" text-anchor="middle">G3</text>
+
+        <rect x="470" y="700" width="180" height="64" rx="6" class="c-mask"/>
+        <rect x="470" y="700" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+        <text x="560" y="730" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">공통 차량 렌더</text>
+        <text x="560" y="746" class="t-muted" font-size="9" text-anchor="middle">LowPolyCar + 읽기 전용 pose</text>
+        <text x="560" y="756" class="t-frontend" font-size="7" text-anchor="middle">G2</text>
+
         <rect x="1120" y="680" width="180" height="64" rx="6" class="c-mask"/>
         <rect x="1120" y="680" width="180" height="64" rx="6" class="c-database" stroke-width="1.5"/>
         <text x="1210" y="710" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">레이스 결정성 digest</text>
@@ -906,6 +929,16 @@
         <text x="675" y="358" class="t-messagebus" font-size="8" text-anchor="middle">마커·경계 시각화</text>
         <rect x="708.4" y="188" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
         <text x="735" y="198" class="t-messagebus" font-size="8" text-anchor="middle">월드 표시</text>
+        <rect x="571.4" y="668" width="77.2" height="14" rx="3" class="c-mask"/>
+        <text x="610" y="678" class="t-messagebus" font-size="8" text-anchor="middle">트랙 색상 토큰</text>
+        <rect x="196.4" y="768" width="77.2" height="14" rx="3" class="c-mask"/>
+        <text x="235" y="778" class="t-messagebus" font-size="8" text-anchor="middle">공통 환경 기준</text>
+        <rect x="506.4" y="586" width="77.2" height="14" rx="3" class="c-mask"/>
+        <text x="545" y="596" class="t-messagebus" font-size="8" text-anchor="middle">안개·광원 구성</text>
+        <rect x="1361.4" y="188" width="77.2" height="14" rx="3" class="c-mask"/>
+        <text x="1400" y="198" class="t-messagebus" font-size="8" text-anchor="middle">읽기 전용 pose</text>
+        <rect x="528.4" y="586" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
+        <text x="555" y="596" class="t-messagebus" font-size="8" text-anchor="middle">차량 표시</text>
         <rect x="672.4" y="188" width="77.2" height="14" rx="3" class="c-mask"/>
         <text x="711" y="198" class="t-muted" font-size="8" text-anchor="middle">고정 스텝 입력</text>
         <rect x="848.5" y="266" width="58" height="14" rx="3" class="c-mask"/>
@@ -952,19 +985,19 @@
         <text x="975" y="578" class="t-messagebus" font-size="8" text-anchor="middle">계약 적용</text>
 
         <!-- Legend -->
-        <text x="40" y="803" class="t-primary" font-size="9" font-weight="600">Legend</text>
-        <rect x="40" y="808" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
-        <text x="60" y="816" class="t-muted" font-size="8">External</text>
-        <rect x="138" y="808" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
-        <text x="158" y="816" class="t-muted" font-size="8">Frontend</text>
-        <rect x="236" y="808" width="14" height="9" rx="2" class="c-messagebus" stroke-width="1"/>
-        <text x="256" y="816" class="t-muted" font-size="8">Message bus</text>
-        <rect x="349" y="808" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
-        <text x="369" y="816" class="t-muted" font-size="8">Backend</text>
-        <rect x="442" y="808" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
-        <text x="462" y="816" class="t-muted" font-size="8">Database</text>
-        <rect x="540" y="808" width="14" height="9" rx="2" class="c-cloud" stroke-width="1"/>
-        <text x="560" y="816" class="t-muted" font-size="8">Cloud</text>
+        <text x="40" y="823" class="t-primary" font-size="9" font-weight="600">Legend</text>
+        <rect x="40" y="828" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
+        <text x="60" y="836" class="t-muted" font-size="8">External</text>
+        <rect x="138" y="828" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
+        <text x="158" y="836" class="t-muted" font-size="8">Frontend</text>
+        <rect x="236" y="828" width="14" height="9" rx="2" class="c-messagebus" stroke-width="1"/>
+        <text x="256" y="836" class="t-muted" font-size="8">Message bus</text>
+        <rect x="349" y="828" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
+        <text x="369" y="836" class="t-muted" font-size="8">Backend</text>
+        <rect x="442" y="828" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
+        <text x="462" y="836" class="t-muted" font-size="8">Database</text>
+        <rect x="540" y="828" width="14" height="9" rx="2" class="c-cloud" stroke-width="1"/>
+        <text x="560" y="836" class="t-muted" font-size="8">Cloud</text>
       </svg>
     </div>
 

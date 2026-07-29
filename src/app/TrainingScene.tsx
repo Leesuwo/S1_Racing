@@ -12,6 +12,8 @@ import {
 } from "../gameplay/training/AITrainingRunner";
 import type { VehicleRenderSnapshot } from "../game/physics/VehicleSimulation";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
+import { LowPolyCar } from "../world/LowPolyCar";
+import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 
 /** 교육 장면이 React HUD에 전달하는 읽기 전용 상태 경계다. */
@@ -22,10 +24,10 @@ interface TrainingSceneProps {
 }
 
 /** AI 차량을 계속 화면에 유지하는 교육용 추적 카메라의 초기 거리·높이(m)다. */
-const TRAINING_CAMERA_FOLLOW_DISTANCE_M = 15;
-const TRAINING_CAMERA_LATERAL_OFFSET_M = 4.5;
-const TRAINING_CAMERA_HEIGHT_M = 10;
-const TRAINING_CAMERA_LOOK_AHEAD_M = 8;
+const TRAINING_CAMERA_FOLLOW_DISTANCE_M = 11;
+const TRAINING_CAMERA_LATERAL_OFFSET_M = 3.4;
+const TRAINING_CAMERA_HEIGHT_M = 7.5;
+const TRAINING_CAMERA_LOOK_AHEAD_M = 6;
 
 /** 프레임 시간과 무관하게 안정적인 카메라 추적 감쇠율을 만든다. */
 function followDamping(deltaSeconds: number, responsePerSecond: number): number {
@@ -49,43 +51,7 @@ function getTrainingCameraPose(snapshot: VehicleRenderSnapshot): {
 
 /** 교육 중인 AI 차량을 데이터 스냅샷으로만 표시하는 렌더 모델이다. */
 function TrainingVehicleModel({ groupRef }: { groupRef: RefObject<THREE.Group | null> }) {
-  return (
-    <group ref={groupRef}>
-      <mesh position={[0, 0.32, 0]} castShadow>
-        <boxGeometry args={[1.8, 0.34, 3.2]} />
-        <meshStandardMaterial
-          color="#32c8e8"
-          emissive="#075e75"
-          emissiveIntensity={0.65}
-          metalness={0.45}
-          roughness={0.3}
-        />
-      </mesh>
-      <mesh position={[0, 0.54, -0.15]} castShadow>
-        <boxGeometry args={[0.72, 0.25, 1.2]} />
-        <meshStandardMaterial color="#07121b" metalness={0.25} roughness={0.3} />
-      </mesh>
-      <mesh position={[0, 0.3, -1.78]} castShadow>
-        <boxGeometry args={[2.25, 0.1, 0.22]} />
-        <meshStandardMaterial color="#0b1118" roughness={0.68} />
-      </mesh>
-      <mesh position={[0, 0.3, 1.76]} castShadow>
-        <boxGeometry args={[2.05, 0.12, 0.28]} />
-        <meshStandardMaterial color="#0b1118" roughness={0.68} />
-      </mesh>
-      {[
-        [-0.95, 0.22, -1.05],
-        [0.95, 0.22, -1.05],
-        [-0.95, 0.22, 1.05],
-        [0.95, 0.22, 1.05],
-      ].map(([x, y, z]) => (
-        <mesh key={`${x}-${z}`} position={[x, y, z]} rotation={[0, 0, Math.PI / 2]} castShadow>
-          <cylinderGeometry args={[0.36, 0.36, 0.22, 16]} />
-          <meshStandardMaterial color="#05070a" roughness={0.92} />
-        </mesh>
-      ))}
-    </group>
-  );
+  return <LowPolyCar groupRef={groupRef} bodyColor="#32c8e8" accentColor="#ffbe55" emissiveColor="#075e75" />;
 }
 
 /** 레이싱 라인을 화면에서 연속 cyan 곡선으로 표시해 AI가 따르는 진입·에이펙스·탈출 흐름을 드러낸다. */
@@ -234,11 +200,7 @@ export function TrainingScene({ runner, paused, onSnapshot }: TrainingSceneProps
 
   return (
     <>
-      <color attach="background" args={["#061118"]} />
-      <fog attach="fog" args={["#061118", 60, 240]} />
-      <ambientLight intensity={1.15} />
-      <directionalLight position={[-12, 22, 14]} intensity={2.5} castShadow />
-      <pointLight position={[0, 8, 0]} intensity={18} distance={45} color="#1caac6" />
+      <SceneLighting variant="training" />
       <TestTrackVisual track={runner.track} />
       <TrainingRacingLine runner={runner} />
       <TrainingRacingReferenceMarkers runner={runner} />

@@ -21,6 +21,8 @@ import { sampleTestTrackSurface } from "../game/physics/TrackSurface";
 import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "../gameplay/race/TrackLimits";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
+import { LowPolyCar } from "../world/LowPolyCar";
+import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 
 /** R3F 장면과 플레이어·AI 텔레메트리 콜백 사이의 통합 경계다. */
@@ -43,39 +45,7 @@ function VehicleModel({
   groupRef: RefObject<THREE.Group | null>;
   color: string;
 }) {
-  // groupRef는 물리 객체가 아닌 렌더링 transform의 소유 참조다.
-  return (
-    <group ref={groupRef}>
-      <mesh position={[0, 0.32, 0]} castShadow>
-        <boxGeometry args={[1.8, 0.34, 3.2]} />
-        <meshStandardMaterial color={color} metalness={0.35} roughness={0.42} />
-      </mesh>
-      <mesh position={[0, 0.54, -0.15]} castShadow>
-        <boxGeometry args={[0.72, 0.25, 1.2]} />
-        <meshStandardMaterial color="#161b25" metalness={0.15} roughness={0.35} />
-      </mesh>
-      <mesh position={[0, 0.3, -1.78]} castShadow>
-        <boxGeometry args={[2.25, 0.1, 0.22]} />
-        <meshStandardMaterial color="#11151d" roughness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.3, 1.76]} castShadow>
-        <boxGeometry args={[2.05, 0.12, 0.28]} />
-        <meshStandardMaterial color="#11151d" roughness={0.7} />
-      </mesh>
-      {/* 렌더링용 휠 위치는 차량 모델 시각화에만 사용한다. */}
-      {[
-        [-0.95, 0.22, -1.05],
-        [0.95, 0.22, -1.05],
-        [-0.95, 0.22, 1.05],
-        [0.95, 0.22, 1.05],
-      ].map(([x, y, z]) => (
-        <mesh key={`${x}-${z}`} position={[x, y, z]} rotation={[0, 0, Math.PI / 2]} castShadow>
-          <cylinderGeometry args={[0.36, 0.36, 0.22, 16]} />
-          <meshStandardMaterial color="#080a0e" roughness={0.92} />
-        </mesh>
-      ))}
-    </group>
-  );
+  return <LowPolyCar groupRef={groupRef} bodyColor={color} accentColor="#d8b96a" />;
 }
 /** 시뮬레이션의 시작·리셋 포즈를 해당 Rapier 리그에 동기화한다. */
 function syncRigFromSimulation(
@@ -347,10 +317,7 @@ export function DrivingScene({
 
   return (
     <>
-      <color attach="background" args={["#080b10"]} />
-      <fog attach="fog" args={["#080b10", 35, 90]} />
-      <ambientLight intensity={1.1} />
-      <directionalLight position={[-12, 18, 10]} intensity={2.2} castShadow />
+      <SceneLighting variant="driving" />
       <TestTrackVisual track={simulation.track} />
       <VehicleModel groupRef={vehicleRef} color="#d92f4f" />
       <VehicleModel groupRef={opponentVehicleRef} color="#27b8d6" />

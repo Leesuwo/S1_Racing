@@ -9,6 +9,8 @@ import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
 import { RaceWeekendSession, type RaceWeekendSnapshot } from "../gameplay/race/RaceWeekendSession";
 import type { RaceVehicleRenderSnapshot } from "../gameplay/race/RaceSession";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
+import { LowPolyCar } from "../world/LowPolyCar";
+import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 
 /** 레이스 주말 장면이 앱 셸과 공유하는 입력·일시정지·스냅샷 경계다. */
@@ -35,18 +37,7 @@ function RaceVehicleModel({ vehicle }: { vehicle: RaceVehicleRenderSnapshot }) {
       position={[snapshot.position.x, 0.24, snapshot.position.z]}
       rotation={[0, physicsYawToThreeYaw(snapshot.yawRad), 0]}
     >
-      <mesh position={[0, 0.32, 0]} castShadow>
-        <boxGeometry args={[1.8, 0.34, 3.2]} />
-        <meshStandardMaterial color={vehicleColor(vehicle)} metalness={0.35} roughness={0.42} />
-      </mesh>
-      <mesh position={[0, 0.54, -0.15]} castShadow>
-        <boxGeometry args={[0.72, 0.25, 1.2]} />
-        <meshStandardMaterial color="#161b25" metalness={0.15} roughness={0.35} />
-      </mesh>
-      <mesh position={[0, 0.3, -1.78]} castShadow>
-        <boxGeometry args={[2.25, 0.1, 0.22]} />
-        <meshStandardMaterial color="#11151d" roughness={0.7} />
-      </mesh>
+      <LowPolyCar bodyColor={vehicleColor(vehicle)} accentColor="#d8b96a" />
     </group>
   );
 }
@@ -72,15 +63,15 @@ export function RaceWeekendScene({ session, input, paused, onSnapshot }: RaceWee
     if (player) {
       forward.set(Math.sin(player.snapshot.yawRad), 0, -Math.cos(player.snapshot.yawRad));
       desiredCamera.set(
-        player.snapshot.position.x - forward.x * 10,
-        8,
-        player.snapshot.position.z - forward.z * 10,
+        player.snapshot.position.x - forward.x * 8.5,
+        6.5,
+        player.snapshot.position.z - forward.z * 8.5,
       );
       camera.position.lerp(desiredCamera, paused ? 0.025 : 0.08);
       target.set(
-        player.snapshot.position.x + forward.x * 3,
-        0,
-        player.snapshot.position.z + forward.z * 3,
+        player.snapshot.position.x + forward.x * 3.5,
+        0.2,
+        player.snapshot.position.z + forward.z * 3.5,
       );
       camera.lookAt(target);
     }
@@ -95,10 +86,7 @@ export function RaceWeekendScene({ session, input, paused, onSnapshot }: RaceWee
 
   return (
     <>
-      <color attach="background" args={["#080b10"]} />
-      <fog attach="fog" args={["#080b10", 45, 120]} />
-      <ambientLight intensity={1.1} />
-      <directionalLight position={[-12, 18, 10]} intensity={2.2} castShadow />
+      <SceneLighting variant="weekend" />
       <TestTrackVisual track={session.track} />
       {vehicles.map((vehicle) => <RaceVehicleModel key={vehicle.id} vehicle={vehicle} />)}
     </>

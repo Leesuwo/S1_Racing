@@ -6,6 +6,7 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { TEST_TRACK_DATA, type TestTrackDefinition } from "../tracks/TestTrack";
+import { VISUAL_PALETTE } from "./VisualPalette";
 
 /** 트랙 표시가 차량·교육 장면으로부터 받는 읽기 전용 입력이다. */
 interface TestTrackVisualProps {
@@ -14,6 +15,8 @@ interface TestTrackVisualProps {
 
 /** 도로와 지면이 겹치지 않도록 사용하는 공통 디버그 높이(m)다. */
 const TRACK_EDGE_Y = -0.39;
+/** 사각 트랙의 도로 링을 잔디 바닥보다 올려 depth buffer 겹침을 막는 높이(m)다. */
+const RECTANGULAR_ROAD_Y = -0.42;
 
 /** 축 정렬 범위의 길이(m)를 계산한다. */
 function boundsSize(min: number, max: number): number {
@@ -79,7 +82,48 @@ function CenterlineRoad({ track }: { track: TestTrackDefinition }) {
   if (!geometry) return null;
   return (
     <mesh geometry={geometry} receiveShadow>
-      <meshStandardMaterial color="#303844" roughness={0.94} />
+      <meshStandardMaterial color={VISUAL_PALETTE.track.road} roughness={0.96} flatShading />
+    </mesh>
+  );
+}
+
+/** 내부 잔디 구멍을 가진 사각 도로 링을 하나의 geometry로 생성한다. */
+function createRectangularRoadGeometry(track: TestTrackDefinition): THREE.ShapeGeometry {
+  const { outerBounds, innerGrassBounds } = track;
+  // ShapeGeometry는 XY 평면을 사용하므로 -Z를 Y축으로 넣어 회전 뒤 원래 좌표계를 보존한다.
+  const shape = new THREE.Shape();
+  shape.moveTo(outerBounds.minX, -outerBounds.minZ);
+  shape.lineTo(outerBounds.maxX, -outerBounds.minZ);
+  shape.lineTo(outerBounds.maxX, -outerBounds.maxZ);
+  shape.lineTo(outerBounds.minX, -outerBounds.maxZ);
+  shape.closePath();
+
+  // hole 방향은 외곽 path와 반대로 구성해 내부 잔디 영역을 도로 삼각화에서 제외한다.
+  const hole = new THREE.Path();
+  hole.moveTo(innerGrassBounds.minX, -innerGrassBounds.minZ);
+  hole.lineTo(innerGrassBounds.minX, -innerGrassBounds.maxZ);
+  hole.lineTo(innerGrassBounds.maxX, -innerGrassBounds.maxZ);
+  hole.lineTo(innerGrassBounds.maxX, -innerGrassBounds.minZ);
+  hole.closePath();
+  shape.holes.push(hole);
+
+  const geometry = new THREE.ShapeGeometry(shape);
+  geometry.rotateX(-Math.PI / 2);
+  geometry.translate(0, RECTANGULAR_ROAD_Y, 0);
+  return geometry;
+}
+
+/** 사각 테스트 루프의 도로를 잔디와 겹치지 않는 단일 링으로 표시한다. */
+function RectangularRoad({ track }: { track: TestTrackDefinition }) {
+  const geometry = useMemo(() => createRectangularRoadGeometry(track), [track]);
+
+  useEffect(() => () => {
+    geometry.dispose();
+  }, [geometry]);
+
+  return (
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial color={VISUAL_PALETTE.track.road} roughness={0.96} flatShading />
     </mesh>
   );
 }
@@ -95,7 +139,7 @@ function TrackMarkers({ track }: { track: TestTrackDefinition }) {
           position={[marker.position.x, TRACK_EDGE_Y - 0.01, marker.position.z]}
         >
           <planeGeometry args={[marker.widthM, marker.lengthM]} />
-          <meshBasicMaterial color={marker.kind === "start-finish" ? "#f7f8fa" : "#ffcf5b"} />
+          <meshBasicMaterial color={marker.kind === "start-finish" ? VISUAL_PALETTE.track.startFinish : VISUAL_PALETTE.track.brakeMarker} />
         </mesh>
       ))}
       {track.checkpoints.map((checkpoint) => (
@@ -105,7 +149,7 @@ function TrackMarkers({ track }: { track: TestTrackDefinition }) {
           position={[checkpoint.position.x, TRACK_EDGE_Y - 0.02, checkpoint.position.z]}
         >
           <ringGeometry args={[checkpoint.radiusM - 0.08, checkpoint.radiusM, 32]} />
-          <meshBasicMaterial color="#a6dbe3" transparent opacity={0.34} />
+          <meshBasicMaterial color={VISUAL_PALETTE.track.checkpoint} transparent opacity={0.34} />
         </mesh>
       ))}
     </>
@@ -138,7 +182,7 @@ function TrackCollisionVisuals({ track }: { track: TestTrackDefinition }) {
             castShadow
           >
             <boxGeometry args={[transform.lengthM, wall.heightM, wall.thicknessM]} />
-            <meshStandardMaterial color={wall.id.startsWith("inner-") ? "#c5a154" : "#9aa5b4"} roughness={0.78} />
+        <meshStandardMaterial color={wall.id.startsWith("inner-") ? VISUAL_PALETTE.track.wallInner : VISUAL_PALETTE.track.wallOuter} roughness={0.82} flatShading />
           </mesh>
         );
       })}
@@ -152,7 +196,7 @@ function TrackCollisionVisuals({ track }: { track: TestTrackDefinition }) {
             receiveShadow
           >
             <boxGeometry args={[transform.lengthM, curb.heightM, curb.widthM]} />
-            <meshStandardMaterial color="#d65c65" roughness={0.86} />
+          <meshStandardMaterial color={VISUAL_PALETTE.track.curb} roughness={0.86} flatShading />
           </mesh>
         );
       })}
@@ -170,35 +214,29 @@ function RectangularTestLoop({ track }: { track: TestTrackDefinition }) {
 
   return (
     <>
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[boundsCenter(outerBounds.minX, outerBounds.maxX), -0.5, boundsCenter(outerBounds.minZ, outerBounds.maxZ)]}
-      >
-        <planeGeometry args={[trackWidth, trackLength]} />
-        <meshStandardMaterial color="#303844" roughness={0.95} />
-      </mesh>
+      <RectangularRoad track={track} />
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[boundsCenter(innerGrassBounds.minX, innerGrassBounds.maxX), -0.46, boundsCenter(innerGrassBounds.minZ, innerGrassBounds.maxZ)]}
       >
         <planeGeometry args={[infieldWidth, infieldLength]} />
-        <meshStandardMaterial color="#1c3a2b" roughness={1} />
+        <meshStandardMaterial color={VISUAL_PALETTE.track.grass} roughness={1} flatShading />
       </mesh>
       <mesh position={[0, TRACK_EDGE_Y, outerBounds.maxZ - 0.15]}>
         <boxGeometry args={[trackWidth, 0.08, 0.3]} />
-        <meshStandardMaterial color="#d6dbe0" roughness={0.8} />
+        <meshStandardMaterial color={VISUAL_PALETTE.track.wallTop} roughness={0.8} flatShading />
       </mesh>
       <mesh position={[0, TRACK_EDGE_Y, outerBounds.minZ + 0.15]}>
         <boxGeometry args={[trackWidth, 0.08, 0.3]} />
-        <meshStandardMaterial color="#d6dbe0" roughness={0.8} />
+        <meshStandardMaterial color={VISUAL_PALETTE.track.wallTop} roughness={0.8} flatShading />
       </mesh>
       <mesh position={[outerBounds.maxX - 0.15, TRACK_EDGE_Y, 0]}>
         <boxGeometry args={[0.3, 0.08, trackLength]} />
-        <meshStandardMaterial color="#d6dbe0" roughness={0.8} />
+        <meshStandardMaterial color={VISUAL_PALETTE.track.wallTop} roughness={0.8} flatShading />
       </mesh>
       <mesh position={[outerBounds.minX + 0.15, TRACK_EDGE_Y, 0]}>
         <boxGeometry args={[0.3, 0.08, trackLength]} />
-        <meshStandardMaterial color="#d6dbe0" roughness={0.8} />
+        <meshStandardMaterial color={VISUAL_PALETTE.track.wallTop} roughness={0.8} flatShading />
       </mesh>
     </>
   );
@@ -216,7 +254,7 @@ function TrackGround({ track }: { track: TestTrackDefinition }) {
       receiveShadow
     >
       <planeGeometry args={[groundWidth, groundLength]} />
-      <meshStandardMaterial color="#17271f" roughness={1} />
+      <meshStandardMaterial color={VISUAL_PALETTE.track.grass} roughness={1} flatShading />
     </mesh>
   );
 }

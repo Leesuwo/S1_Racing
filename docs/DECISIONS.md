@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-07-29 — D-031
+
+**결정:** 저폴리 그래픽 1차 재구성은 `VisualPalette`와 `SceneLighting`을 공통 렌더 모듈로 두고, Training·Driving·Race Weekend는 동일한 트랙 색상·노을 환경광·안개 규칙을 사용한다. 카메라 거리와 HUD 폭만 장면 목적에 맞게 조정하며 물리 스냅샷·입력·AI 경계는 변경하지 않는다.
+
+**이유:** 장면마다 배경·조명·재질 색을 직접 수정하면 같은 트랙이 모드에 따라 서로 다른 게임처럼 보이고, HUD가 시야를 덮는 문제를 개별 화면에서 반복 수정하게 된다. 공통 토큰과 제한된 광원 수를 사용하면 저폴리 면 대비를 유지하면서 시각 변경의 범위와 성능 비용을 예측할 수 있다. 도시형 배경과 외부 자산은 추가하지 않는다.
+
+**검증:** `npm run typecheck`, `npm run architecture:check`, `npm run verify`와 Codex 앱 브라우저의 Training·Driving·Race Weekend 초기 화면 캡처를 사용한다. 색상·조명·카메라 수치는 실제 트랙 재현값이 아닌 `initial_assumption`이다.
+
 ## 2026-07-28 — D-029
 
 **결정:** 1차 완성의 오프라인 레이스 운영 범위는 `TyreCondition`·`RacecraftStateMachine`·`RaceOperations` 순수 모듈로 분리하고, `RaceSession`은 이들의 스냅샷과 `VehicleSimulation` fixed-step 순서를 조정한다. 결정성 digest는 렌더 성능 측정값을 제외한 물리·전략·운영 상태만 직렬화한다.
