@@ -1,5 +1,5 @@
 /**
- * M2B~M3D 레이스 주말의 단계·퀄리파잉·전략·타이어·레이스크래프트·운영 UI다.
+ * M2B~M5의 레이스 주말 단계·전략·운영·결정적 리플레이 UI다.
  * 세션을 직접 변경하지 않고 앱 셸이 제공한 명령 콜백만 호출한다.
  */
 import type {
@@ -38,6 +38,9 @@ export interface RaceWeekendPanelProps {
   onReset: () => void;
   onSelectTyre: (compound: TyreCompound) => void;
   onStrategy: (strategy: RaceStrategy) => void;
+  onSaveReplay: () => void;
+  onLoadReplay: (file: File) => void;
+  replayError: string | null;
 }
 
 /** M2B~M3D의 다차량·퀄리파잉·전략·주행 운영 상태를 한 화면에 표시한다. */
@@ -48,6 +51,9 @@ export function RaceWeekendPanel({
   onReset,
   onSelectTyre,
   onStrategy,
+  onSaveReplay,
+  onLoadReplay,
+  replayError,
 }: RaceWeekendPanelProps) {
   const qualifyingComplete = snapshot.qualifying.status === "complete";
   const raceStarted = snapshot.stage === "race" || snapshot.stage === "results";
@@ -131,6 +137,44 @@ export function RaceWeekendPanel({
           주말 리셋
         </button>
       </div>
+
+      <section className="weekend-replay" aria-label="결정적 리플레이">
+        <div>
+          <span className="section-kicker">M5 · DETERMINISTIC REPLAY</span>
+          <strong>{snapshot.replay.status.toUpperCase()}</strong>
+          <em>
+            {snapshot.replay.frameCount} frames · {snapshot.replay.fixedStepHz} Hz
+            {snapshot.replay.finalDigest ? " · " + snapshot.replay.finalDigest : ""}
+          </em>
+        </div>
+        <div className="weekend-replay__actions">
+          <button
+            type="button"
+            className="training-button training-button--save"
+            onClick={onSaveReplay}
+            disabled={!snapshot.replay.finalDigest}
+          >
+            리플레이 JSON 저장
+          </button>
+          <label className="replay-file-button">
+            리플레이 JSON 불러오기
+            <input
+              type="file"
+              accept="application/json,.json"
+              aria-label="리플레이 JSON 불러오기"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onLoadReplay(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+        <p>
+          동일한 120Hz 입력과 RaceSession digest를 저장해 결정적 재생의 기준 파일로 사용합니다.
+          {replayError ? " " + replayError : ""}
+        </p>
+      </section>
 
       <div className="weekend-strategy" aria-label="타이어 및 피트 전략">
         <label>

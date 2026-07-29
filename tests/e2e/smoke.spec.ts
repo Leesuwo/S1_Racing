@@ -1,4 +1,5 @@
 import { expect, Page, test } from "@playwright/test";
+import { releaseWebGLContexts } from "./webglCleanup";
 
 /** 사용자에게 보이는 브라우저 흐름과 모드 전환의 완료 상태를 검증하는 E2E 모음이다. */
 
@@ -9,6 +10,12 @@ async function openRaceWeekend(page: Page) {
   await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 20_000 });
   await expect(page.getByRole("heading", { name: "Race Weekend" })).toBeVisible({ timeout: 20_000 });
 }
+
+// 각 테스트의 Canvas를 먼저 잃게 해 Chromium이 다음 R3F 장면을 같은 GPU 컨텍스트로
+// 보류하지 않게 한다. 사용자가 보는 런타임 동작이 아니라 E2E 격리 경계다.
+test.afterEach(async ({ page }) => {
+  await releaseWebGLContexts(page);
+});
 
 test("opens the AI Training Lab as the default visible screen", async ({ page }) => {
   await page.goto("/");
@@ -246,4 +253,17 @@ test("completes the visible race weekend through the results stage", async ({ pa
   await expect(page.locator("header").getByText("결과 확인", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "주말 리셋" })).toBeVisible();
   await expect(page.getByText("현재 레이스 순위", { exact: true })).toBeVisible();
+  await expect(page.getByText("M5 · DETERMINISTIC REPLAY", { exact: true })).toBeVisible();
+  await expect(page.locator(".weekend-replay strong")).toHaveText("READY");
+  await expect(page.locator(".weekend-replay em")).toHaveText(/\d+ frames · 120 Hz · [0-9a-f]{8}/u);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "리플레이 JSON 저장" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^s1-racing-replay-.*-\d+-steps\.json$/u);
+
+  const replayPath = await download.path();
+  expect(replayPath).toBeTruthy();
+  await page.locator('input[aria-label="리플레이 JSON 불러오기"]').setInputFiles(replayPath!);
+  await expect(page.locator(".weekend-replay strong")).toHaveText("LOADED");
 });

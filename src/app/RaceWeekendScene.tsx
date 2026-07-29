@@ -43,6 +43,7 @@ function RaceVehicleModel({ vehicle }: { vehicle: RaceVehicleRenderSnapshot }) {
         accentColor="#d8b96a"
         detail={vehicle.kind === "player" ? "hero" : "grid"}
         steeringAngleRad={snapshot.steeringAngleRad}
+        wheelSpinRad={snapshot.wheelSpinRad}
       />
     </group>
   );

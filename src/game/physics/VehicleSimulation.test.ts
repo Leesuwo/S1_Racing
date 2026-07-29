@@ -40,4 +40,55 @@ describe("VehicleSimulation track contract", () => {
       8,
     );
   });
+
+  it("exposes four-wheel visual spin and reverses its direction for reverse wheel speed", () => {
+    const simulation = new VehicleSimulation();
+    const forwardInput = { ...neutralVehicleControlInput(), throttle: 1 };
+
+    // 순수 AI 교육 경로도 Rapier 화면 경로와 같은 -Z 전방 회전 부호를 사용해야 한다.
+    for (let step = 0; step < 240; step += 1) simulation.step(forwardInput, 1 / 120);
+    const forwardSpin = simulation.getRenderSnapshot(1).wheelSpinRad;
+
+    expect(simulation.current.forwardSpeedMps).toBeGreaterThan(0);
+    expect(Object.values(forwardSpin).every((spinRad) => Number.isFinite(spinRad))).toBe(true);
+
+    const forwardSimulation = new VehicleSimulation();
+    forwardSimulation.synchronizeFromExternalPose({
+      position: forwardSimulation.current.position,
+      velocity: { x: 0, z: 0 },
+      yawRad: forwardSimulation.current.yawRad,
+      yawRateRadS: 0,
+      wheelAngularSpeedRadS: {
+        frontLeft: 20,
+        frontRight: 20,
+        rearLeft: 20,
+        rearRight: 20,
+      },
+    }, 1 / 120);
+    const forwardExternalSpin = forwardSimulation.getRenderSnapshot(1).wheelSpinRad;
+
+    const reverseSimulation = new VehicleSimulation();
+    reverseSimulation.synchronizeFromExternalPose({
+      position: reverseSimulation.current.position,
+      velocity: { x: 0, z: 0 },
+      yawRad: reverseSimulation.current.yawRad,
+      yawRateRadS: 0,
+      wheelAngularSpeedRadS: {
+        frontLeft: -20,
+        frontRight: -20,
+        rearLeft: -20,
+        rearRight: -20,
+      },
+    }, 1 / 120);
+    const reverseSpin = reverseSimulation.getRenderSnapshot(1).wheelSpinRad;
+
+    expect(forwardExternalSpin.frontLeft).toBeLessThan(0);
+    expect(forwardExternalSpin.frontRight).toBeLessThan(0);
+    expect(forwardExternalSpin.rearLeft).toBeLessThan(0);
+    expect(forwardExternalSpin.rearRight).toBeLessThan(0);
+    expect(reverseSpin.frontLeft).toBeGreaterThan(0);
+    expect(reverseSpin.frontRight).toBeGreaterThan(0);
+    expect(reverseSpin.rearLeft).toBeGreaterThan(0);
+    expect(reverseSpin.rearRight).toBeGreaterThan(0);
+  });
 });

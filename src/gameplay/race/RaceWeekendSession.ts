@@ -21,6 +21,13 @@ import {
   type RaceParticipantDefinition,
   type RaceSessionSnapshot,
 } from "./RaceSession";
+import {
+  getLoadedReplaySnapshot,
+  RaceReplayRecorder,
+  type RaceReplayRecording,
+  type RaceReplaySnapshot,
+  validateRaceReplayRecording,
+} from "./RaceReplay";
 
 /** 최소 한 번의 피트 정지를 표현하는 전략 계약이다. 랩 단위는 1부터 시작한다. */
 export interface RaceStrategy {
@@ -45,6 +52,7 @@ export interface RaceWeekendSnapshot {
   strategy: RaceStrategy;
   qualifying: QualifyingSnapshot;
   race: RaceSessionSnapshot;
+  replay: RaceReplaySnapshot;
 }
 
 /** M2D 초기 주말에서 사용하는 랩 수다. 실제 경기 규정 값이 아닌 initial_assumption이다. */
@@ -98,6 +106,17 @@ export class RaceWeekendSession {
   private selectedCompound: TyreCompound = DEFAULT_RACE_STRATEGY.startCompound;
   private strategy: RaceStrategy = { ...DEFAULT_RACE_STRATEGY };
   private practiceCompleted = false;
+  // RaceSession의 입력·digest 기록을 소유하며 React가 기록 배열을 직접 변경하지 않게 한다.
+  private replayRecorder: RaceReplayRecorder | undefined;
+  // 종료되거나 파일에서 불러온 immutable replay 문서다.
+  private replayRecording: RaceReplayRecording | undefined;
+  // Race Weekend UI가 현재 캡처 상태를 읽는 복사본이다.
+  private replaySnapshot: RaceReplaySnapshot = {
+    status: "idle",
+    frameCount: 0,
+    fixedStepHz: 120,
+    verification: "not-run",
+  };
 
   constructor(
     track: TestTrackDefinition = TEST_TRACK_DATA,
@@ -206,9 +225,13 @@ export class RaceWeekendSession {
       pitStopCompound: this.strategy.pitStopCompound,
     };
     this.raceSession = new RaceSession(definitions, this.track, this.totalLaps, undefined, tyrePlan);
+    // grid digest를 먼저 보존해야 start 이후 첫 입력부터 동일한 초기 상태를 검증할 수 있다.
+    this.replayRecorder = new RaceReplayRecorder(this.raceSession.getSnapshot());
+    this.replayRecording = undefined;
     this.raceSession.start();
     this.stage = "race";
     this.status = "running";
+    this.replaySnapshot = this.replayRecorder.getSnapshot();
     return this.getSnapshot();
   }
 
@@ -218,10 +241,44 @@ export class RaceWeekendSession {
     maxSteps = 2,
   ): RaceWeekendSnapshot {
     if (this.stage !== "race" || this.status !== "running") return this.getSnapshot();
-    const raceSnapshot = this.raceSession.advance(maxSteps, playerInput);
-    if (raceSnapshot.status === "finished") this.status = "complete";
-    if (raceSnapshot.status === "finished") this.stage = "results";
+    const safeSteps = Math.max(1, Math.min(12, Math.floor(maxSteps)));
+    let raceSnapshot = this.raceSession.getSnapshot();
+    for (let index = 0; index < safeSteps && raceSnapshot.status === "running"; index += 1) {
+      raceSnapshot = this.raceSession.step(playerInput);
+      this.replayRecorder?.recordStep(playerInput, raceSnapshot);
+      if (raceSnapshot.status === "finished") {
+        this.status = "complete";
+        this.stage = "results";
+        if (this.replayRecorder) {
+          this.replayRecording = this.replayRecorder.finish(raceSnapshot);
+          this.replaySnapshot = this.replayRecorder.getSnapshot();
+        }
+      }
+    }
+    if (this.replayRecorder?.getSnapshot().status === "recording") {
+      this.replaySnapshot = this.replayRecorder.getSnapshot();
+    }
     return this.getSnapshot();
+  }
+
+  /** 현재 주말에 기록된 완료 replay를 저장·다운로드 계층에 전달한다. */
+  getReplayRecording(): RaceReplayRecording | undefined {
+    return this.replayRecording;
+  }
+
+  /** 현재 트랙·랩·그리드와 호환되는 replay JSON을 불러온다. */
+  loadReplay(recording: RaceReplayRecording): void {
+    validateRaceReplayRecording(recording);
+    if (
+      recording.metadata.trackName !== this.track.name
+      || recording.metadata.totalLaps !== this.totalLaps
+      || recording.metadata.participantCount !== this.participantCount
+    ) {
+      throw new Error("Replay metadata does not match the current Race Weekend");
+    }
+    this.replayRecorder = undefined;
+    this.replayRecording = recording;
+    this.replaySnapshot = getLoadedReplaySnapshot(recording);
   }
 
   /** Practice부터 그리드·전략·타이머를 초기 상태로 돌린다. */
@@ -236,6 +293,14 @@ export class RaceWeekendSession {
       pitStopLap: Math.min(DEFAULT_RACE_STRATEGY.pitStopLap, this.totalLaps - 1),
     };
     this.practiceCompleted = false;
+    this.replayRecorder = undefined;
+    this.replayRecording = undefined;
+    this.replaySnapshot = {
+      status: "idle",
+      frameCount: 0,
+      fixedStepHz: 120,
+      verification: "not-run",
+    };
   }
 
   /** 렌더러가 레이스 차량의 읽기 전용 포즈를 구독할 수 있게 한다. */
@@ -256,6 +321,7 @@ export class RaceWeekendSession {
       strategy: { ...this.strategy },
       qualifying: this.qualifying.getSnapshot(),
       race: this.raceSession.getSnapshot(),
+      replay: { ...this.replaySnapshot },
     };
   }
 }

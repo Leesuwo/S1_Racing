@@ -39,6 +39,7 @@ import {
   type RaceWeekendSnapshot,
   type TyreCompound,
 } from "../gameplay/race/RaceWeekendSession";
+import { parseRaceReplay, serializeRaceReplay } from "../gameplay/race/RaceReplay";
 
 /** M3B 타이어 HUD가 물리 초기화 전에도 유한한 상태를 표시하도록 하는 시작값이다. */
 const INITIAL_TYRE_CONDITION: TyreConditionSnapshot = getTyreConditionSnapshot(createInitialTyreCondition());
@@ -472,6 +473,8 @@ export function App() {
   const [raceWeekendSnapshot, setRaceWeekendSnapshot] = useState<RaceWeekendSnapshot>(
     () => raceWeekendSession.getSnapshot(),
   );
+  // replay JSON 파싱·트랙 호환성 오류를 Race Weekend 조작 패널에 표시한다.
+  const [raceReplayError, setRaceReplayError] = useState<string | null>(null);
   // 새 에피소드가 끝난 뒤에만 한 번 자동 튜닝하도록 시작·일시정지·HUD 콜백 사이의 의도를 보존한다.
   const automaticTuningPendingRef = useRef(false);
 
@@ -560,6 +563,7 @@ export function App() {
 
   // 버튼 한 번으로 Practice 완료와 결정적 Q1/Q2/Q3 기록을 실행한다.
   const runWeekendQualifying = useCallback(() => {
+    setRaceReplayError(null);
     setRaceWeekendSnapshot(raceWeekendSession.runDeterministicQualifying());
   }, [raceWeekendSession]);
 
@@ -585,13 +589,41 @@ export function App() {
 
   // 퀄리파잉 결과가 확정된 뒤 순서를 레이스 그리드에 반영한다.
   const startWeekendRace = useCallback(() => {
+    setRaceReplayError(null);
     setRaceWeekendSnapshot(raceWeekendSession.beginRace());
   }, [raceWeekendSession]);
 
   // 주말의 모든 단계와 차량을 초기 그리드로 되돌린다.
   const resetWeekend = useCallback(() => {
     raceWeekendSession.reset();
+    setRaceReplayError(null);
     setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
+  }, [raceWeekendSession]);
+
+  // 완료된 RaceSession의 fixed-step 입력과 digest를 버전 있는 JSON 파일로 저장한다.
+  const saveWeekendReplay = useCallback(() => {
+    const recording = raceWeekendSession.getReplayRecording();
+    if (!recording) return;
+    const blob = new Blob([serializeRaceReplay(recording)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = window.document.createElement("a");
+    const safeTrackName = recording.metadata.trackName.toLowerCase().replace(/[^a-z0-9]+/gu, "-");
+    anchor.href = url;
+    anchor.download = "s1-racing-replay-" + safeTrackName + "-" + recording.frames.length + "-steps.json";
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }, [raceWeekendSession]);
+
+  // 사용자가 불러온 replay는 현재 Race Weekend의 트랙·랩·그리드 계약과 먼저 대조한다.
+  const loadWeekendReplay = useCallback(async (file: File) => {
+    try {
+      const recording = parseRaceReplay(await file.text());
+      raceWeekendSession.loadReplay(recording);
+      setRaceReplayError(null);
+      setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
+    } catch (error) {
+      setRaceReplayError(error instanceof Error ? error.message : "Replay JSON을 불러오지 못했습니다.");
+    }
   }, [raceWeekendSession]);
 
   useEffect(() => {
@@ -788,6 +820,9 @@ export function App() {
           onReset={resetWeekend}
           onSelectTyre={selectWeekendTyre}
           onStrategy={updateWeekendStrategy}
+          onSaveReplay={saveWeekendReplay}
+          onLoadReplay={loadWeekendReplay}
+          replayError={raceReplayError}
         />
       ) : (
         <section className="telemetry-grid" aria-label="차량 상태">

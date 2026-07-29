@@ -21,7 +21,7 @@ import { sampleTestTrackSurface } from "../game/physics/TrackSurface";
 import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "../gameplay/race/TrackLimits";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
-import { LowPolyCar, type LowPolyCarFrontWheelRefs } from "../world/LowPolyCar";
+import { LowPolyCar, type LowPolyCarWheelRefs } from "../world/LowPolyCar";
 import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 
@@ -39,18 +39,18 @@ interface DrivingSceneProps {
 
 /** 물리 스냅샷을 표시하는 단순 차량 모델이며 물리 상태를 소유하지 않는다. */
 function VehicleModel({
-  frontWheelRefs,
   groupRef,
+  wheelRefs,
   color,
 }: {
-  frontWheelRefs: LowPolyCarFrontWheelRefs;
   groupRef: RefObject<THREE.Group | null>;
+  wheelRefs: LowPolyCarWheelRefs;
   color: string;
 }) {
   return (
     <LowPolyCar
       groupRef={groupRef}
-      frontWheelRefs={frontWheelRefs}
+      wheelRefs={wheelRefs}
       bodyColor={color}
       accentColor="#d8b96a"
     />
@@ -123,13 +123,19 @@ function stepSimulationWithRig(
     yawRad: rapierRotationToPhysicsYaw(updatedRapierSnapshot.rotation),
     yawRateRadS: -updatedRapierSnapshot.angularVelocity.y,
     drivenWheelAngularSpeedRadS,
+    wheelAngularSpeedRadS: {
+      frontLeft: tireStates.frontLeft.wheelAngularSpeedRadS,
+      frontRight: tireStates.frontRight.wheelAngularSpeedRadS,
+      rearLeft: tireStates.rearLeft.wheelAngularSpeedRadS,
+      rearRight: tireStates.rearRight.wheelAngularSpeedRadS,
+    },
   }, dtSeconds);
 }
 
 /** Rapier 차체 높이와 보간된 평면 포즈를 Three.js 차량 그룹에 반영한다. */
 function updateVehicleModel(
   vehicleRef: RefObject<THREE.Group | null>,
-  frontWheelRefs: LowPolyCarFrontWheelRefs,
+  wheelRefs: LowPolyCarWheelRefs,
   snapshot: ReturnType<VehicleSimulation["getRenderSnapshot"]>,
   rig: RapierChassisSuspension | null,
 ): void {
@@ -147,8 +153,17 @@ function updateVehicleModel(
   vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
   // 차체 yaw와 분리해 앞축만 시각 조향한다. 차량 포즈·타이어 힘·입력 상태는 이 함수가 소유하지 않는다.
   const steeringAngleRad = Number.isFinite(snapshot.steeringAngleRad) ? snapshot.steeringAngleRad : 0;
-  frontWheelRefs.left.current && (frontWheelRefs.left.current.rotation.y = steeringAngleRad);
-  frontWheelRefs.right.current && (frontWheelRefs.right.current.rotation.y = steeringAngleRad);
+  wheelRefs.frontLeft.steering.current && (wheelRefs.frontLeft.steering.current.rotation.y = steeringAngleRad);
+  wheelRefs.frontRight.steering.current && (wheelRefs.frontRight.steering.current.rotation.y = steeringAngleRad);
+  // Rapier 우선 또는 평면 fallback으로 계산된 누적 회전량을 네 바퀴의 X축에 적용한다.
+  for (const [ref, spinRad] of [
+    [wheelRefs.frontLeft.rolling, snapshot.wheelSpinRad.frontLeft],
+    [wheelRefs.frontRight.rolling, snapshot.wheelSpinRad.frontRight],
+    [wheelRefs.rearLeft.rolling, snapshot.wheelSpinRad.rearLeft],
+    [wheelRefs.rearRight.rolling, snapshot.wheelSpinRad.rearRight],
+  ] as const) {
+    if (ref.current) ref.current.rotation.x = Number.isFinite(spinRad) ? spinRad : 0;
+  }
 }
 
 /** Rapier quaternion을 프로젝트 물리 좌표계의 yaw(rad)로 변환한다. */
@@ -195,19 +210,18 @@ export function DrivingScene({
   const vehicleRef = useRef<THREE.Group>(null);
   // 두 번째 차량 모델의 Three.js 표시 그룹 참조다.
   const opponentVehicleRef = useRef<THREE.Group>(null);
-  // 플레이어 앞 타이어를 각 허브 중심에서 시각 조향하는 참조다.
-  const frontLeftWheelRef = useRef<THREE.Group>(null);
-  const frontRightWheelRef = useRef<THREE.Group>(null);
-  // AI 차량 앞 타이어도 차체 원점이 아닌 각 허브를 중심으로 회전시킨다.
-  const opponentFrontLeftWheelRef = useRef<THREE.Group>(null);
-  const opponentFrontRightWheelRef = useRef<THREE.Group>(null);
-  const frontWheelRefs: LowPolyCarFrontWheelRefs = {
-    left: frontLeftWheelRef,
-    right: frontRightWheelRef,
+  // 플레이어와 AI가 각각 조향축과 구름축을 독립적으로 표시하도록 네 바퀴 참조를 만든다.
+  const wheelRefs: LowPolyCarWheelRefs = {
+    frontLeft: { steering: useRef<THREE.Group>(null), rolling: useRef<THREE.Group>(null) },
+    frontRight: { steering: useRef<THREE.Group>(null), rolling: useRef<THREE.Group>(null) },
+    rearLeft: { rolling: useRef<THREE.Group>(null) },
+    rearRight: { rolling: useRef<THREE.Group>(null) },
   };
-  const opponentFrontWheelRefs: LowPolyCarFrontWheelRefs = {
-    left: opponentFrontLeftWheelRef,
-    right: opponentFrontRightWheelRef,
+  const opponentWheelRefs: LowPolyCarWheelRefs = {
+    frontLeft: { steering: useRef<THREE.Group>(null), rolling: useRef<THREE.Group>(null) },
+    frontRight: { steering: useRef<THREE.Group>(null), rolling: useRef<THREE.Group>(null) },
+    rearLeft: { rolling: useRef<THREE.Group>(null) },
+    rearRight: { rolling: useRef<THREE.Group>(null) },
   };
   // 매 프레임 할당을 피하는 카메라 목표·바라보기·전방 벡터 버퍼다.
   const target = useMemo(() => new THREE.Vector3(), []);
@@ -313,8 +327,8 @@ export function DrivingScene({
     const snapshot = simulation.getRenderSnapshot(alpha);
     // AI 차량도 동일한 보간 계수로 렌더링해 두 차량의 시간축을 일치시킨다.
     const opponentSnapshot = opponentSimulation.getRenderSnapshot(alpha);
-    updateVehicleModel(vehicleRef, frontWheelRefs, snapshot, suspensionRig.current);
-    updateVehicleModel(opponentVehicleRef, opponentFrontWheelRefs, opponentSnapshot, opponentSuspensionRig.current);
+    updateVehicleModel(vehicleRef, wheelRefs, snapshot, suspensionRig.current);
+    updateVehicleModel(opponentVehicleRef, opponentWheelRefs, opponentSnapshot, opponentSuspensionRig.current);
 
     // 차량 전방을 기준으로 후방 카메라 위치와 바라볼 점을 계산한다.
     forward.set(Math.sin(snapshot.yawRad), 0, -Math.cos(snapshot.yawRad));
@@ -347,8 +361,8 @@ export function DrivingScene({
     <>
       <SceneLighting variant="driving" />
       <TestTrackVisual track={simulation.track} />
-      <VehicleModel groupRef={vehicleRef} frontWheelRefs={frontWheelRefs} color="#d92f4f" />
-      <VehicleModel groupRef={opponentVehicleRef} frontWheelRefs={opponentFrontWheelRefs} color="#27b8d6" />
+      <VehicleModel groupRef={vehicleRef} wheelRefs={wheelRefs} color="#d92f4f" />
+      <VehicleModel groupRef={opponentVehicleRef} wheelRefs={opponentWheelRefs} color="#27b8d6" />
     </>
   );
 }

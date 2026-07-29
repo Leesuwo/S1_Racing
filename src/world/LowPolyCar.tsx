@@ -10,8 +10,8 @@ import * as THREE from "three";
 export interface LowPolyCarProps {
   /** 물리 포즈를 표시 그룹에 반영하기 위한 선택적 참조다. */
   groupRef?: RefObject<THREE.Group | null>;
-  /** 앞 타이어 각각의 허브 그룹을 장면의 fixed-step 렌더 루프에서 직접 회전시키기 위한 참조다. */
-  frontWheelRefs?: LowPolyCarFrontWheelRefs;
+  /** 네 바퀴의 조향·구름 그룹을 장면의 fixed-step 렌더 루프에서 직접 회전시키기 위한 참조다. */
+  wheelRefs?: LowPolyCarWheelRefs;
   /** 차체 기본 도장 색상이며 물리나 차량 성능에는 영향을 주지 않는다. */
   bodyColor: string;
   /** 림과 무표식 차체 그래픽에 사용할 대비 색상이다. */
@@ -22,12 +22,24 @@ export interface LowPolyCarProps {
   detail?: "hero" | "grid";
   /** 렌더 스냅샷이 전달하는 앞축 시각 조향각(rad)이다. */
   steeringAngleRad?: number;
+  /** 렌더 스냅샷이 전달하는 네 바퀴의 누적 구름 회전량(rad)이다. */
+  wheelSpinRad?: LowPolyCarWheelSpin;
 }
 
-/** 앞 타이어를 각 허브 중심으로 조향하기 위한 렌더링 참조 묶음이다. */
-export interface LowPolyCarFrontWheelRefs {
-  left: RefObject<THREE.Group | null>;
-  right: RefObject<THREE.Group | null>;
+/** 앞바퀴 조향과 모든 바퀴 구름을 서로 다른 회전축으로 표시하는 참조 묶음이다. */
+export interface LowPolyCarWheelRefs {
+  frontLeft: { steering: RefObject<THREE.Group | null>; rolling: RefObject<THREE.Group | null> };
+  frontRight: { steering: RefObject<THREE.Group | null>; rolling: RefObject<THREE.Group | null> };
+  rearLeft: { rolling: RefObject<THREE.Group | null> };
+  rearRight: { rolling: RefObject<THREE.Group | null> };
+}
+
+/** 차량 로컬 이름을 유지해 물리 스냅샷과 시각 휠을 안정적으로 매핑한다. */
+export interface LowPolyCarWheelSpin {
+  frontLeft: number;
+  frontRight: number;
+  rearLeft: number;
+  rearRight: number;
 }
 
 /** 2012년형 외관을 위한 정규화 치수이며 물리 설정을 덮어쓰지 않는 초기 가정이다. */
@@ -407,41 +419,45 @@ function DriverCockpit({ accentColor }: { accentColor: string }) {
 /** 앞뒤 휠의 폭과 지름 차이를 드러내는 노출 타이어·허브·브레이크 덕트다. */
 function Wheel({
   accentColor,
-  groupRef,
+  rollingGroupRef,
   position,
   radius,
   side,
+  steeringGroupRef,
   width,
 }: {
   accentColor: string;
-  groupRef?: RefObject<THREE.Group | null>;
+  rollingGroupRef: RefObject<THREE.Group | null>;
   position: Point3;
   radius: number;
   side: -1 | 1;
+  steeringGroupRef?: RefObject<THREE.Group | null>;
   width: number;
 }) {
   return (
-    <group ref={groupRef} position={position}>
-      <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[radius, radius, width, 12]} />
-        <meshStandardMaterial color="#111216" roughness={0.96} flatShading />
-      </mesh>
-      <mesh position={[side * (width * 0.5 + 0.015), 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[radius * 0.56, radius * 0.56, 0.035, 10]} />
-        <meshStandardMaterial color="#b9b5aa" metalness={0.55} roughness={0.38} flatShading />
-      </mesh>
-      <mesh position={[side * (width * 0.5 + 0.038), 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[radius * 0.27, radius * 0.27, 0.042, 8]} />
-        <meshStandardMaterial color={accentColor} metalness={0.46} roughness={0.34} flatShading />
-      </mesh>
-      <mesh position={[side * (width * 0.5 + 0.052), 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[radius * 0.09, radius * 0.09, 0.05, 8]} />
-        <meshStandardMaterial color="#0a0b0e" roughness={0.84} flatShading />
-      </mesh>
-      <mesh position={[side * (width * 0.5 - 0.02), 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <cylinderGeometry args={[radius * 0.38, radius * 0.43, 0.06, 8]} />
-        <meshStandardMaterial color="#252832" roughness={0.78} flatShading />
-      </mesh>
+    <group ref={steeringGroupRef} position={steeringGroupRef ? position : undefined}>
+      <group ref={rollingGroupRef} position={steeringGroupRef ? undefined : position}>
+        <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[radius, radius, width, 12]} />
+          <meshStandardMaterial color="#111216" roughness={0.96} flatShading />
+        </mesh>
+        <mesh position={[side * (width * 0.5 + 0.015), 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[radius * 0.56, radius * 0.56, 0.035, 10]} />
+          <meshStandardMaterial color="#b9b5aa" metalness={0.55} roughness={0.38} flatShading />
+        </mesh>
+        <mesh position={[side * (width * 0.5 + 0.038), 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[radius * 0.27, radius * 0.27, 0.042, 8]} />
+          <meshStandardMaterial color={accentColor} metalness={0.46} roughness={0.34} flatShading />
+        </mesh>
+        <mesh position={[side * (width * 0.5 + 0.052), 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[radius * 0.09, radius * 0.09, 0.05, 8]} />
+          <meshStandardMaterial color="#0a0b0e" roughness={0.84} flatShading />
+        </mesh>
+        <mesh position={[side * (width * 0.5 - 0.02), 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <cylinderGeometry args={[radius * 0.38, radius * 0.43, 0.06, 8]} />
+          <meshStandardMaterial color="#252832" roughness={0.78} flatShading />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -449,18 +465,32 @@ function Wheel({
 /** 2012년형 전후 축 위치에 맞춰 바퀴와 얇은 브레이크 덕트를 배치한다. */
 function Wheels({
   accentColor,
-  frontWheelRefs,
+  wheelRefs,
+  wheelSpinRad,
   steeringAngleRad = 0,
 }: {
   accentColor: string;
-  frontWheelRefs?: LowPolyCarFrontWheelRefs;
+  wheelRefs?: LowPolyCarWheelRefs;
+  wheelSpinRad?: LowPolyCarWheelSpin;
   steeringAngleRad?: number;
 }) {
-  // grid 차량은 외부 참조가 없으므로 내부 허브 참조로 초기 조향각을 한 번 적용한다.
-  const internalFrontLeftWheelRef = useRef<THREE.Group>(null);
-  const internalFrontRightWheelRef = useRef<THREE.Group>(null);
-  const resolvedFrontLeftWheelRef = frontWheelRefs?.left ?? internalFrontLeftWheelRef;
-  const resolvedFrontRightWheelRef = frontWheelRefs?.right ?? internalFrontRightWheelRef;
+  // 외부 참조가 없는 grid 차량도 초기 렌더에서 동일한 회전 구조를 갖도록 내부 참조를 만든다.
+  const internalFrontLeftSteeringRef = useRef<THREE.Group>(null);
+  const internalFrontLeftRollingRef = useRef<THREE.Group>(null);
+  const internalFrontRightSteeringRef = useRef<THREE.Group>(null);
+  const internalFrontRightRollingRef = useRef<THREE.Group>(null);
+  const internalRearLeftRollingRef = useRef<THREE.Group>(null);
+  const internalRearRightRollingRef = useRef<THREE.Group>(null);
+  const resolvedFrontLeft = wheelRefs?.frontLeft ?? {
+    steering: internalFrontLeftSteeringRef,
+    rolling: internalFrontLeftRollingRef,
+  };
+  const resolvedFrontRight = wheelRefs?.frontRight ?? {
+    steering: internalFrontRightSteeringRef,
+    rolling: internalFrontRightRollingRef,
+  };
+  const resolvedRearLeft = wheelRefs?.rearLeft ?? { rolling: internalRearLeftRollingRef };
+  const resolvedRearRight = wheelRefs?.rearRight ?? { rolling: internalRearRightRollingRef };
   const halfTrackM = S1_2012_OPEN_WHEEL_DIMENSIONS.trackWidthM * 0.5;
   const frontZ = -S1_2012_OPEN_WHEEL_DIMENSIONS.wheelbaseM * (1.815 / 3.3);
   const rearZ = S1_2012_OPEN_WHEEL_DIMENSIONS.wheelbaseM * (1.485 / 3.3);
@@ -468,20 +498,36 @@ function Wheels({
   const rearRadius = frontRadius * 1.015;
 
   useEffect(() => {
-    // Race Weekend처럼 React 스냅샷으로 갱신되는 차량은 차량 원점이 아닌 각 허브만 돌린다.
+    // 조향과 구름을 다른 그룹에 적용해 차체 yaw가 휠 회전축을 오염시키지 않게 한다.
     const safeSteeringAngleRad = Number.isFinite(steeringAngleRad) ? steeringAngleRad : 0;
-    if (resolvedFrontLeftWheelRef.current) {
-      resolvedFrontLeftWheelRef.current.rotation.y = safeSteeringAngleRad;
+    const safeWheelSpinRad = wheelSpinRad ?? {
+      frontLeft: 0,
+      frontRight: 0,
+      rearLeft: 0,
+      rearRight: 0,
+    };
+    if (resolvedFrontLeft.steering.current) {
+      resolvedFrontLeft.steering.current.rotation.y = safeSteeringAngleRad;
     }
-    if (resolvedFrontRightWheelRef.current) {
-      resolvedFrontRightWheelRef.current.rotation.y = safeSteeringAngleRad;
+    if (resolvedFrontRight.steering.current) {
+      resolvedFrontRight.steering.current.rotation.y = safeSteeringAngleRad;
     }
-  }, [resolvedFrontLeftWheelRef, resolvedFrontRightWheelRef, steeringAngleRad]);
+    const rollingRefs = [
+      [resolvedFrontLeft.rolling, safeWheelSpinRad.frontLeft],
+      [resolvedFrontRight.rolling, safeWheelSpinRad.frontRight],
+      [resolvedRearLeft.rolling, safeWheelSpinRad.rearLeft],
+      [resolvedRearRight.rolling, safeWheelSpinRad.rearRight],
+    ] as const;
+    for (const [ref, spinRad] of rollingRefs) {
+      if (ref.current) ref.current.rotation.x = Number.isFinite(spinRad) ? spinRad : 0;
+    }
+  }, [resolvedFrontLeft, resolvedFrontRight, resolvedRearLeft, resolvedRearRight, steeringAngleRad, wheelSpinRad]);
 
   return (
     <>
       <Wheel
-        groupRef={resolvedFrontLeftWheelRef}
+        steeringGroupRef={resolvedFrontLeft.steering}
+        rollingGroupRef={resolvedFrontLeft.rolling}
         accentColor={accentColor}
         position={[-halfTrackM, frontRadius, frontZ]}
         radius={frontRadius}
@@ -489,7 +535,8 @@ function Wheels({
         width={S1_2012_OPEN_WHEEL_DIMENSIONS.frontTyreWidthM}
       />
       <Wheel
-        groupRef={resolvedFrontRightWheelRef}
+        steeringGroupRef={resolvedFrontRight.steering}
+        rollingGroupRef={resolvedFrontRight.rolling}
         accentColor={accentColor}
         position={[halfTrackM, frontRadius, frontZ]}
         radius={frontRadius}
@@ -499,6 +546,7 @@ function Wheels({
       {([-1, 1] as const).map((side) => (
         <Wheel
           key={`rear-wheel-${side}`}
+          rollingGroupRef={side < 0 ? resolvedRearLeft.rolling : resolvedRearRight.rolling}
           accentColor={accentColor}
           position={[side * halfTrackM, rearRadius, rearZ]}
           radius={rearRadius}
@@ -537,10 +585,11 @@ function SuspensionArms({ color }: { color: string }) {
 function GridCar({
   accentColor,
   bodyColor,
-  frontWheelRefs,
   groupRef,
+  wheelRefs,
+  wheelSpinRad,
   steeringAngleRad,
-}: Pick<LowPolyCarProps, "accentColor" | "bodyColor" | "frontWheelRefs" | "groupRef" | "steeringAngleRad">) {
+}: Pick<LowPolyCarProps, "accentColor" | "bodyColor" | "groupRef" | "steeringAngleRad" | "wheelRefs" | "wheelSpinRad">) {
   const carbonColor = "#12151a";
   const aeroColor = "#20252b";
   const resolvedAccentColor = accentColor ?? "#d6b46a";
@@ -570,7 +619,8 @@ function GridCar({
       </mesh>
       <Wheels
         accentColor={resolvedAccentColor}
-        frontWheelRefs={frontWheelRefs}
+        wheelRefs={wheelRefs}
+        wheelSpinRad={wheelSpinRad}
         steeringAngleRad={steeringAngleRad}
       />
     </group>
@@ -579,21 +629,23 @@ function GridCar({
 
 /** 외부 참조 사진에서 반복적으로 보이는 2012년형 공력·차체 층을 조합한다. */
 export function LowPolyCar({
-  frontWheelRefs,
   groupRef,
   bodyColor,
   accentColor = "#d6b46a",
   emissiveColor = "#000000",
   detail = "hero",
   steeringAngleRad = 0,
+  wheelRefs,
+  wheelSpinRad,
 }: LowPolyCarProps) {
   if (detail === "grid") {
     return (
       <GridCar
         groupRef={groupRef}
-        frontWheelRefs={frontWheelRefs}
+        wheelRefs={wheelRefs}
         bodyColor={bodyColor}
         accentColor={accentColor}
+        wheelSpinRad={wheelSpinRad}
         steeringAngleRad={steeringAngleRad}
       />
     );
@@ -642,6 +694,22 @@ export function LowPolyCar({
         <meshStandardMaterial color={carbonColor} roughness={0.72} flatShading />
       </mesh>
       <DriverCockpit accentColor={accentColor} />
+
+      {/* 콕핏 가장자리를 얇은 탄소 섬유 림으로 분리해 낮은 시점에서도 운전석 깊이를 읽게 한다. */}
+      {([-1, 1] as const).map((side) => (
+        <group key={`cockpit-rim-${side}`}>
+          <mesh position={[side * 0.27, 0.95, -0.22]}>
+            <boxGeometry args={[0.045, 0.055, 0.72]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
+          </mesh>
+          {/* 거울은 차체 색을 복제하지 않고 작은 반사면으로만 표시한다. */}
+          <Link color={carbonColor} start={[side * 0.3, 0.87, -0.48]} end={[side * 0.47, 0.96, -0.58]} width={0.035} />
+          <mesh position={[side * 0.51, 0.98, -0.6]}>
+            <boxGeometry args={[0.095, 0.045, 0.13]} />
+            <meshStandardMaterial color={highlightColor} metalness={0.48} roughness={0.3} flatShading />
+          </mesh>
+        </group>
+      ))}
 
       {/* 에어박스와 검은 흡입구는 엔진 커버의 중앙 능선을 명확히 한다. */}
       <mesh position={[0, 1.2, 0.6]} castShadow>
@@ -708,6 +776,13 @@ export function LowPolyCar({
           <Link color={carbonColor} end={[side * 0.18, 0.66, -1.67]} start={[side * 0.18, 0.34, -2.51]} width={0.07} />
         </group>
       ))}
+      {/* 메인 플레인 사이의 수직 스트레이크로 2012년형 다층 프런트 윙의 방향성을 강조한다. */}
+      {([-0.72, -0.32, 0.32, 0.72] as const).map((x) => (
+        <mesh key={`front-wing-strake-${x}`} position={[x, 0.34, frontWingZ + 0.03]}>
+          <boxGeometry args={[0.035, 0.13, 0.3]} />
+          <meshStandardMaterial color={carbonColor} roughness={0.8} flatShading />
+        </mesh>
+      ))}
 
       {/* 리어 윙, DRS 플랩, 빔 윙, 중앙 지지대를 높이 계층으로 배치한다. */}
       <PlanformPanel color={aeroColor} points={REAR_WING_MAIN_PLANFORM} position={[0, 1.06, 0]} thickness={0.08} />
@@ -735,6 +810,13 @@ export function LowPolyCar({
           <Link color={carbonColor} end={[side * 0.36, 0.76, 1.62]} start={[side * 0.76, 0.76, 2.15]} width={0.055} />
         </group>
       ))}
+      {/* 리어 윙 끝판은 날개 폭과 차체 중심선을 분리해 후면 실루엣을 강화한다. */}
+      {([-1, 1] as const).map((side) => (
+        <mesh key={`rear-wing-endplate-${side}`} position={[side * 0.91, 1.13, rearWingZ]}>
+          <boxGeometry args={[0.055, 0.48, 0.18]} />
+          <meshStandardMaterial color={aeroColor} roughness={0.76} flatShading />
+        </mesh>
+      ))}
       <mesh position={[0, 1.32, 2.39]}>
         <boxGeometry args={[0.62, 0.035, 0.04]} />
         <meshStandardMaterial color={accentColor} roughness={0.6} flatShading />
@@ -751,7 +833,8 @@ export function LowPolyCar({
       <SuspensionArms color={carbonColor} />
       <Wheels
         accentColor={accentColor}
-        frontWheelRefs={frontWheelRefs}
+        wheelRefs={wheelRefs}
+        wheelSpinRad={wheelSpinRad}
         steeringAngleRad={steeringAngleRad}
       />
       <mesh position={[0, 0.48, 1.88]}>

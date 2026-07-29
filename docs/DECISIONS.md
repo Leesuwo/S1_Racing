@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-07-29 — D-040
+
+**결정:** 차량 렌더 스냅샷은 물리 위치·속도와 별도로 네 바퀴의 `wheelSpinRad`를 제공한다. 앞바퀴 조향은 부모 그룹의 Y축 회전, 구름은 자식 그룹의 X축 회전으로 분리한다. Rapier 경로에서는 네 바퀴 각속도를 우선 사용하고 순수 AI 교육 경로에서는 속도·휠 반지름 fallback을 사용한다.
+
+**이유:** 기존 앞축 조향은 표시됐지만 네 바퀴의 구름이 렌더링되지 않아 차량이 지면 위에서 미끄러지는 모형처럼 보였다. 물리 포즈를 렌더러가 직접 수정하면 입력·물리 소유권이 깨지므로, fixed-step에서 만든 읽기 전용 회전 상태를 스냅샷으로 전달하는 방식을 선택한다.
+
+**범위:** `VehicleSimulation`의 렌더 스냅샷·외부 Rapier 포즈 계약, `LowPolyCar`의 네 바퀴 회전 그룹, Driving·Training·Race Weekend 연결과 회귀 테스트를 포함한다. 바퀴 회전은 시각 상태이며 타이어 힘·접지·차체 위치를 직접 변경하지 않는다.
+
+**검증:** `VehicleSimulation.test.ts`의 전진·역방향 회전 부호, 물리 집중 테스트, Driving·Training·Race Weekend 렌더 확인, 키보드 가속·조향 E2E를 사용한다. Rapier 초기화 deprecated 경고와 기존 Race Weekend 결과 전환 타이밍 이슈는 별도 위험으로 기록한다.
+
+## 2026-07-29 — D-038
+
+**결정:** M5의 replay는 `VehicleControlInput`을 매 120Hz fixed-step마다 복사하고 입력 직후 `createRaceDeterminismDigest`를 기록하는 순수 `RaceReplay` 모듈로 고정한다. JSON schema는 `s1-racing-replay-v1`로 버전 관리하며 Race Weekend UI는 완료된 recording만 저장하고, 불러온 파일은 현재 트랙·랩·참가자 수와 먼저 대조한다.
+
+**이유:** 렌더 프레임이나 React 상태를 기록하면 브라우저 성능·UI 타이밍이 replay 결과를 오염시킨다. 물리 계층과 같은 입력 경계를 그대로 기록하고 성능 측정값을 제외한 digest를 비교해야, M4 운영 상태까지 포함한 결정성 회귀와 파일 변조를 fixed-step 단위로 재현할 수 있다.
+
+**범위:** `RaceReplayRecorder`, JSON serialize/parse/validate, step별·최종 digest 검증, Race Weekend 저장·불러오기 UI와 단위·E2E를 포함한다. 독립 재생에 필요한 차량 정의·AI 설정 manifest, 온라인 동기화, 연료·DRS·KERS·날씨는 M6 이후로 남긴다.
+
+**검증:** `RaceReplay.test.ts`, `RaceWeekendSession.test.ts`, Race Weekend 저장·불러오기 E2E, `npm run architecture:check`, `npm run verify`와 Codex 앱 브라우저 실제 플레이를 완료 게이트로 사용한다.
+
 ## 2026-07-29 — D-037
 
 **결정:** M4는 공유 `RaceCollisionWorld`, 데이터 기반 `pitLane`, 순수 `RaceRegulations` 세 경계로 구현한다. `RaceSession`은 공통 `VehicleControlInput`과 `VehicleSimulation`을 계속 소유하고, Rapier 공유 세계는 다차량 cuboid 차체의 shape solver 후 포즈·접촉 이벤트만 반환한다. 피트 레인은 본선과 같은 트랙 데이터에서 중심선·게이트·박스·속도 제한을 읽으며, 규정 엔진은 황색기·세이프티카·레드 플래그·시간 패널티를 상태 스냅샷으로 제공한다.

@@ -91,3 +91,9 @@ TestTrackDefinition의 정적 벽·연석을 렌더링·Rapier가 공유하고, 
 `RaceRegulations`가 접촉 강도에 따른 황색기·세이프티카, 레드 플래그 중단·재시작, 피트 속도 시간 패널티와 체커드 전이를 관리한다. 이는 전체 FIA 규정의 복제가 아니라 현재 오프라인 프로토타입에서 검증 가능한 S1 규정 v1이며, 규정 스냅샷은 Race Weekend UI와 결정성 digest에 포함된다.
 
 상세 범위와 검증 결과는 [Milestone 4 상세 문서](./MILESTONE_4.md)에 기록한다.
+
+## Milestone 5 — Deterministic race replay (진행 중)
+
+RaceSession의 120Hz 입력과 물리·전략·운영 digest를 기록하고, 동일한 초기 grid에서 step별 결정성을 검증한다. Race Weekend는 완료된 리플레이를 `s1-racing-replay-v1` JSON으로 저장·불러오며, 현재 트랙·랩·참가자 수와 파일 호환성을 확인한다. 온라인 동기화와 연료·DRS·KERS·날씨는 이 기록 계약을 기반으로 하는 후속 범위다.
+
+상세 범위와 검증 결과는 [M5 상세 문서](./MILESTONE_5.md)에 기록한다.

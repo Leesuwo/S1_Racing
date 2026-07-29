@@ -2,8 +2,8 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S1 Racing — Milestone 2B~3E",
-    "subtitle": "다차량 세션·타이어·레이스크래프트·운영·1차 완성 검증",
+    "title": "S1 Racing — Milestone 2B~5",
+    "subtitle": "다차량 세션·타이어·레이스크래프트·운영·결정적 리플레이",
     "output": "s1-racing-foundation.html"
   },
   "components": [
@@ -16,7 +16,7 @@
     { "id": "ai_controller", "type": "backend", "label": "단일 AI 제어기", "sublabel": "레이싱 라인·목표 속도·Pure Pursuit", "pos": [250, 200], "size": [190, 64], "tag": "M2A" },
     { "id": "race_session", "type": "backend", "label": "다차량 레이스 세션", "sublabel": "랩·순위·타이어·racecraft·운영", "pos": [690, 360], "size": [180, 64], "tag": "M2B~3D" },
     { "id": "qualifying_session", "type": "backend", "label": "퀄리파잉 세션", "sublabel": "유효 랩·Q1/Q2/Q3 컷·그리드", "pos": [470, 600], "size": [190, 64], "tag": "M2C" },
-    { "id": "race_weekend_session", "type": "backend", "label": "레이스 주말 상태", "sublabel": "Practice·Qualifying·Race·전략 경계", "pos": [900, 600], "size": [190, 64], "tag": "M2D" },
+    { "id": "race_weekend_session", "type": "backend", "label": "레이스 주말 상태", "sublabel": "Practice·Qualifying·Race·전략 경계", "pos": [900, 600], "size": [190, 64], "tag": "M2D~M5" },
     { "id": "race_weekend_ui", "type": "frontend", "label": "Race Weekend UI", "sublabel": "단계·타이어·피트·결과·운영", "pos": [250, 600], "size": [180, 64], "tag": "M2B~3D" },
     { "id": "training_runner", "type": "backend", "label": "AI 교육 실행기", "sublabel": "120Hz 에피소드·결정성 해시", "pos": [40, 420], "size": [185, 64], "tag": "M2A-0" },
     { "id": "training_lab", "type": "frontend", "label": "Training Lab UI", "sublabel": "시나리오·추적 카메라·목표점 관찰", "pos": [250, 420], "size": [180, 64], "tag": "M2A-0" },
@@ -31,7 +31,7 @@
     { "id": "racecraft", "type": "backend", "label": "Racecraft 상태 머신", "sublabel": "추종·추월·방어·회피", "pos": [1120, 500], "size": [180, 64], "tag": "M3C" },
     { "id": "race_operations", "type": "backend", "label": "레이스 운영 상태", "sublabel": "손상·플래그·피트 서비스", "pos": [1340, 600], "size": [180, 64], "tag": "M3D" },
     { "id": "aero_model", "type": "backend", "label": "공력 모델", "sublabel": "전후 다운포스·속도 반대 드래그", "pos": [1340, 200], "size": [170, 64], "tag": "M1E 완료" },
-    { "id": "render_snapshot", "type": "messagebus", "label": "렌더링 스냅샷", "sublabel": "다차량 pose + 보간 상태", "pos": [1340, 120], "size": [170, 64] },
+    { "id": "render_snapshot", "type": "messagebus", "label": "렌더링 스냅샷", "sublabel": "pose + 보간 + 휠 회전 상태", "pos": [1340, 120], "size": [170, 64] },
     { "id": "telemetry", "type": "database", "label": "텔레메트리 HUD", "sublabel": "차량·타이어·운영·fixed-step 비용", "pos": [1330, 280], "size": [170, 64] },
     { "id": "training_metrics", "type": "database", "label": "교육 평가 지표", "sublabel": "횡오차·이탈·채터링·해시", "pos": [1120, 420], "size": [180, 64], "tag": "M2A-0" },
     { "id": "track_data", "type": "backend", "label": "공유 트랙 데이터", "sublabel": "중심선·폭·곡률·섹터·노면·체크포인트", "pos": [470, 420], "size": [190, 64], "tag": "M2A-0" },
@@ -43,14 +43,15 @@
     { "id": "track_world", "type": "frontend", "label": "트랙 월드 표시", "sublabel": "중심선 도로 + 추적 시점 + 마커", "pos": [690, 120], "size": [165, 64], "tag": "M2A-0" },
     { "id": "visual_palette", "type": "frontend", "label": "공통 시각 팔레트", "sublabel": "도로·잔디·연석·HUD 토큰", "pos": [40, 700], "size": [180, 64], "tag": "G3" },
     { "id": "scene_lighting", "type": "frontend", "label": "공통 장면 조명", "sublabel": "노을·안개·환경광·그림자", "pos": [250, 700], "size": [180, 64], "tag": "G3" },
-    { "id": "vehicle_visuals", "type": "frontend", "label": "공통 차량 렌더", "sublabel": "LowPolyCar + 읽기 전용 pose", "pos": [470, 700], "size": [180, 64], "tag": "G2" },
+    { "id": "vehicle_visuals", "type": "frontend", "label": "공통 차량 렌더", "sublabel": "LowPolyCar + pose + wheel spin", "pos": [470, 700], "size": [180, 64], "tag": "G2/G5" },
     { "id": "determinism_digest", "type": "database", "label": "레이스 결정성 digest", "sublabel": "물리·전략·운영 상태 해시", "pos": [1120, 680], "size": [180, 64], "tag": "M3E" },
+    { "id": "race_replay", "type": "backend", "label": "결정적 리플레이 코어", "sublabel": "120Hz 입력 기록·digest 재생·JSON v1", "pos": [1550, 760], "size": [190, 64], "tag": "M5" },
     { "id": "test_harness", "type": "cloud", "label": "테스트 하네스", "sublabel": "PhysicsValidation + Vitest + Playwright", "pos": [690, 500], "size": [165, 64], "tag": "M1F~3E" },
     { "id": "project_docs", "type": "cloud", "label": "프로젝트 계약", "sublabel": "AGENTS.md + docs/", "pos": [900, 500], "size": [160, 64] }
   ],
   "boundaries": [
-    { "kind": "region", "label": "브라우저 런타임", "wraps": ["browser", "app_shell", "renderer", "input_boundary", "input_presets", "ai_controller", "training_lab", "race_weekend_ui", "race_weekend_session", "qualifying_session", "race_session", "track_limits", "vehicle_contact", "multi_car_collision", "pit_lane", "race_regulations", "vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "tyre_condition", "racecraft", "race_operations", "aero_model", "render_snapshot", "telemetry", "track_world", "visual_palette", "scene_lighting", "vehicle_visuals"] },
-    { "kind": "security-group", "label": "순수 도메인 경계", "wraps": ["vehicle_input", "ai_controller", "training_runner", "training_evaluator", "qualifying_session", "race_session", "race_weekend_session", "track_limits", "vehicle_contact", "pit_lane", "race_regulations", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "tyre_condition", "racecraft", "race_operations", "aero_model", "render_snapshot", "telemetry", "training_metrics", "track_data", "determinism_digest"] }
+    { "kind": "region", "label": "브라우저 런타임", "wraps": ["browser", "app_shell", "renderer", "input_boundary", "input_presets", "ai_controller", "training_lab", "race_weekend_ui", "race_weekend_session", "qualifying_session", "race_session", "race_replay", "track_limits", "vehicle_contact", "multi_car_collision", "pit_lane", "race_regulations", "vehicle_input", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "tyre_condition", "racecraft", "race_operations", "aero_model", "render_snapshot", "telemetry", "track_world", "visual_palette", "scene_lighting", "vehicle_visuals"] },
+    { "kind": "security-group", "label": "순수 도메인 경계", "wraps": ["vehicle_input", "ai_controller", "training_runner", "training_evaluator", "qualifying_session", "race_session", "race_weekend_session", "race_replay", "track_limits", "vehicle_contact", "pit_lane", "race_regulations", "fixed_loop", "physics_domain", "rapier_suspension", "wheel_kinematics", "drivetrain", "tire_model", "tyre_condition", "racecraft", "race_operations", "aero_model", "render_snapshot", "telemetry", "training_metrics", "track_data", "determinism_digest"] }
   ],
   "connections": [
     { "from": "browser", "to": "app_shell", "label": "페이지 로드", "variant": "emphasis", "labelDy": -26 },
@@ -88,7 +89,7 @@
     { "from": "race_session", "to": "pit_lane", "label": "전략 요청·차량 포즈", "variant": "security", "fromSide": "right", "toSide": "left", "labelAt": [1420, 678] },
     { "from": "pit_lane", "to": "race_operations", "label": "박스 진입·속도 위반", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [1530, 678] },
     { "from": "race_session", "to": "race_regulations", "label": "접촉·플래그 이벤트", "variant": "security", "fromSide": "right", "toSide": "left", "labelAt": [1450, 740] },
-    { "from": "race_regulations", "to": "race_operations", "label": "차량별 규정 플래그", "variant": "dashed", "fromSide": "left", "toSide": "right", "labelAt": [1510, 785] },
+    { "from": "race_regulations", "to": "race_operations", "label": "차량별 규정 플래그", "variant": "dashed", "fromSide": "left", "toSide": "right", "labelAt": [1510, 838] },
     { "from": "race_regulations", "to": "telemetry", "label": "규정·패널티 HUD", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [1640, 400] },
     { "from": "race_session", "to": "racecraft", "label": "상대·랩·황색기 상태", "variant": "security", "fromSide": "right", "toSide": "left", "labelAt": [930, 578] },
     { "from": "racecraft", "to": "ai_controller", "label": "조향·가감속 편향", "variant": "security", "fromSide": "left", "toSide": "right", "labelAt": [900, 578] },
@@ -104,7 +105,7 @@
     { "from": "visual_palette", "to": "track_world", "label": "트랙 색상 토큰", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [610, 678] },
     { "from": "visual_palette", "to": "scene_lighting", "label": "공통 환경 기준", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [235, 778] },
     { "from": "scene_lighting", "to": "renderer", "label": "안개·광원 구성", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [545, 596] },
-    { "from": "render_snapshot", "to": "vehicle_visuals", "label": "읽기 전용 pose", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [1400, 198] },
+    { "from": "render_snapshot", "to": "vehicle_visuals", "label": "읽기 전용 pose·휠 회전", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [1400, 198] },
     { "from": "vehicle_visuals", "to": "renderer", "label": "차량 표시", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [555, 596] },
     { "from": "vehicle_input", "to": "fixed_loop", "label": "고정 스텝 입력", "fromSide": "right", "toSide": "top", "labelAt": [711, 198] },
     { "from": "fixed_loop", "to": "physics_domain", "label": "120Hz 스텝", "variant": "emphasis", "labelDy": -26 },
@@ -127,11 +128,15 @@
     { "from": "test_harness", "to": "training_runner", "label": "교육 시나리오 재현", "variant": "dashed", "fromSide": "left", "toSide": "bottom", "labelAt": [565, 496] },
     { "from": "test_harness", "to": "determinism_digest", "label": "동일 입력 리플레이", "variant": "dashed", "fromSide": "right", "toSide": "bottom", "labelAt": [940, 690] },
     { "from": "race_session", "to": "determinism_digest", "label": "물리·전략·운영 스냅샷", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [940, 678] },
+    { "from": "race_session", "to": "race_replay", "label": "fixed-step 입력·상태 기록", "variant": "security", "fromSide": "right", "toSide": "left", "labelAt": [1450, 760] },
+    { "from": "race_weekend_session", "to": "race_replay", "label": "Race Weekend recording 상태", "variant": "dashed", "fromSide": "right", "toSide": "left", "labelAt": [1320, 758] },
+    { "from": "race_replay", "to": "determinism_digest", "label": "step별 digest 비교", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [1420, 700] },
+    { "from": "race_replay", "to": "race_weekend_ui", "label": "JSON 저장·불러오기 상태", "variant": "dashed", "fromSide": "left", "toSide": "right", "labelAt": [920, 820] },
     { "from": "project_docs", "to": "physics_domain", "label": "계약 적용", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelAt": [975, 578] }
   ],
   "cards": [
-    { "dot": "cyan", "title": "Milestone 2B~4C", "items": ["다차량 그리드·퀄리파잉·주말 운영", "Rapier 차체 충돌·실제 피트 레인", "세이프티카·레드 플래그·시간 패널티"] },
+    { "dot": "cyan", "title": "Milestone 2B~5", "items": ["다차량 그리드·퀄리파잉·주말 운영", "Rapier 차체 충돌·실제 피트 레인·규정", "120Hz 입력·digest 리플레이 JSON"] },
     { "dot": "emerald", "title": "아키텍처 규칙", "items": ["AI는 VehicleControlInput만 생성", "RaceSession이 차량별 VehicleSimulation을 소유", "UI는 주말·차량 읽기 전용 스냅샷만 표시"] },
-    { "dot": "rose", "title": "다음 경계", "items": ["온라인 동기화와 리플레이", "연료·DRS·KERS·날씨", "전체 대회 규정과 콘텐츠 확장"] }
+    { "dot": "rose", "title": "다음 경계", "items": ["독립 replay manifest·검증 도구", "연료·DRS·KERS·날씨 중 선택", "온라인 동기화와 콘텐츠 확장"] }
   ]
 }

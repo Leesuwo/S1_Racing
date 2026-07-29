@@ -30,3 +30,9 @@ practice → qualifying(Q1 → Q2 → Q3) → race → results
 
 RaceSession은 차량별 컴파운드·온도·마모·압력, racecraft 의도, 손상·피트 상태를 읽기 전용으로 제공한다. 접촉이 발생하면 황색기를 일정 시간 유지하고, 손상 임계치 퇴역은 적색기, 세션 종료는 체커 플래그로 표시한다. 모든 상태 전이는 120Hz fixed-step에서 수행한다.
 트랙 밖·정지 상태가 지속되는 차량은 퇴역하며, 세션은 45초 시뮬레이션 상한 안에서 완주·퇴역 결과로 수렴한다. 이 상한은 결과 흐름을 보장하는 프로토타입 방어값이며 실제 경기 시간 규정이 아니다.
+
+## 결정적 리플레이
+
+M5부터 Race Weekend의 RaceSession fixed-step 입력과 각 입력 직후의 결정성 digest를 `s1-racing-replay-v1` JSON으로 기록한다. 저장 문서는 트랙 이름·랩 수·참가 차량 수·120Hz 계약·초기 digest·프레임별 입력·digest·최종 digest를 포함한다. digest에는 렌더링 성능 측정값을 넣지 않아 같은 입력의 물리·전략·운영 결과만 비교한다.
+
+불러오기 경계에서는 schema, 수치 범위, 프레임 순서와 현재 Race Weekend의 트랙·랩·참가자 수를 검증한다. 실제 step별 재생 검증은 순수 `verifyRaceReplay`에 새 `RaceSession`을 주입하는 방식으로 수행하며, 첫 불일치 fixed-step에서 중단해 변조 또는 결정성 회귀 위치를 명확히 보고한다.

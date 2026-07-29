@@ -1,5 +1,5 @@
 /**
- * M2D~M3D 주말 단계 전이와 전략·타이어·운영 입력 경계를 검증한다.
+ * M2D~M5 주말 단계 전이와 전략·타이어·운영·리플레이 입력 경계를 검증한다.
  * 실제 피트 시각 효과가 아니라 순수 fixed-step 상태 계약과 결과 수렴을 검사한다.
  */
 import { describe, expect, it } from "vitest";
@@ -43,6 +43,10 @@ describe("RaceWeekendSession", () => {
     expect(snapshot.race.finishedCount + snapshot.race.standings.filter((participant) => participant.retired).length)
       .toBe(snapshot.race.participantCount);
     expect(snapshot.race.tyreChangeCount).toBeGreaterThanOrEqual(1);
+    expect(snapshot.replay.status).toBe("ready");
+    expect(snapshot.replay.frameCount).toBeGreaterThan(0);
+    expect(snapshot.replay.finalDigest).toMatch(/^[0-9a-f]{8}$/u);
+    expect(weekend.getReplayRecording()?.finalDigest).toBe(snapshot.replay.finalDigest);
   });
 
   it("enforces a different compound and a valid minimum pit-stop lap", () => {
@@ -73,5 +77,7 @@ describe("RaceWeekendSession", () => {
     expect(reset.qualifying.phase).toBe("Q1");
     expect(reset.race.status).toBe("grid");
     expect(reset.race.stepIndex).toBe(0);
+    expect(reset.replay.status).toBe("idle");
+    expect(reset.replay.frameCount).toBe(0);
   });
 });

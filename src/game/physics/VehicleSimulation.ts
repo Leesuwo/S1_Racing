@@ -14,7 +14,7 @@ import {
   type VehiclePhysicsConfig,
   type VehicleState,
 } from "./VehiclePhysics";
-import type { WheelValues } from "./Suspension";
+import { zeroWheelValues, type WheelValues } from "./Suspension";
 import {
   sampleTestTrackLocation,
   TEST_TRACK_DATA,
@@ -39,6 +39,8 @@ export interface VehicleRenderSnapshot {
   yawRateRadS: number;
   /** 현재 입력과 차량 설정으로 계산한 앞축 시각 조향각(rad)이다. 물리 포즈를 변경하지 않는다. */
   steeringAngleRad: number;
+  /** 각 바퀴의 누적 시각 회전량(rad)이다. 차량 포즈와 분리된 렌더링 상태다. */
+  wheelSpinRad: WheelValues;
   speedMps: number;
   rpm: number;
   gear: number;
@@ -78,6 +80,21 @@ export interface ExternalPlanarVehiclePose {
   yawRad: number;
   yawRateRadS: number;
   drivenWheelAngularSpeedRadS?: number;
+  /** Rapier가 계산한 바퀴별 각속도(rad/s)이며 시각 회전 보정에만 사용한다. */
+  wheelAngularSpeedRadS?: Partial<WheelValues>;
+}
+
+/** 차량의 네 바퀴를 고정 순서로 순회해 좌우 회전 상태를 동일하게 갱신한다. */
+const WHEEL_POSITIONS: readonly (keyof WheelValues)[] = [
+  "frontLeft",
+  "frontRight",
+  "rearLeft",
+  "rearRight",
+];
+
+/** 누적 회전량이 장시간 주행에서 불필요하게 커지지 않도록 시각 각도를 정규화한다. */
+function wrapAngleRad(angleRad: number): number {
+  return Math.atan2(Math.sin(angleRad), Math.cos(angleRad));
 }
 
 /** 두 평면 벡터의 내적을 속도 성분 투영에 사용한다. */
@@ -109,6 +126,10 @@ export class VehicleSimulation {
   private tyreCondition: TyreConditionState;
   /** 손상으로 인한 그립 저하는 레이스 세션이 설정하는 읽기 전용 배율이다. */
   private damagePerformanceMultiplier = 1;
+  /** 각 바퀴의 화면 회전량이며 물리 위치·속도와 별도로 렌더러에 전달한다. */
+  private wheelSpinRad = zeroWheelValues();
+  /** Rapier 각속도로 대체하기 전 fixed step의 fallback 회전량을 보관한다. */
+  private lastFallbackWheelSpinDeltaRad = zeroWheelValues();
 
   constructor(
     config: VehiclePhysicsConfig = DEFAULT_VEHICLE_CONFIG,
@@ -161,6 +182,8 @@ export class VehicleSimulation {
         * tyreCondition.gripMultiplier
         * this.damagePerformanceMultiplier,
     });
+    // Rapier가 없는 AI 교육·순수 단위 테스트에서도 속도에 비례한 바퀴 회전을 제공한다.
+    this.advanceFallbackWheelSpin(dt);
   }
 
   reset(): void {
@@ -169,6 +192,8 @@ export class VehicleSimulation {
     this.previous = cloneVehicleState(this.current);
     this.tyreCondition = createInitialTyreCondition(this.tyreCondition.compound);
     this.damagePerformanceMultiplier = 1;
+    this.wheelSpinRad = zeroWheelValues();
+    this.lastFallbackWheelSpinDeltaRad = zeroWheelValues();
   }
 
   /** 피트 정지나 전략 전환에서 타이어 세트를 새 컴파운드로 교체한다. */
@@ -214,6 +239,24 @@ export class VehicleSimulation {
     this.current.lateralAccelerationMps2 = (
       this.current.lateralSpeedMps - previousLateralSpeedMps
     ) / safeDtSeconds;
+    // 한 fixed step에서 먼저 계산한 속도 fallback을 제거하고, Rapier 바퀴 각속도를 우선 반영한다.
+    // 이렇게 해야 AI·플레이어의 화면 회전이 실제 접지 슬립과 같은 시간축을 사용한다.
+    if (pose.wheelAngularSpeedRadS) {
+      for (const id of WHEEL_POSITIONS) {
+        const fallbackDeltaRad = this.lastFallbackWheelSpinDeltaRad[id];
+        const externalAngularSpeedRadS = pose.wheelAngularSpeedRadS[id];
+        this.wheelSpinRad[id] = wrapAngleRad(this.wheelSpinRad[id] - fallbackDeltaRad);
+        if (externalAngularSpeedRadS !== undefined && Number.isFinite(externalAngularSpeedRadS)) {
+          // 차량 전방이 -Z이므로 Three.js X축 회전은 물리 각속도의 반대 부호로 표시한다.
+          this.wheelSpinRad[id] = wrapAngleRad(
+            this.wheelSpinRad[id] - externalAngularSpeedRadS * safeDtSeconds,
+          );
+        } else {
+          this.wheelSpinRad[id] = wrapAngleRad(this.wheelSpinRad[id] + fallbackDeltaRad);
+        }
+        this.lastFallbackWheelSpinDeltaRad[id] = 0;
+      }
+    }
     // 후륜 각속도가 전달된 경우에만 구동계 RPM 피드백을 교체한다.
     if (pose.drivenWheelAngularSpeedRadS !== undefined && Number.isFinite(pose.drivenWheelAngularSpeedRadS)) {
       this.current.drivenWheelAngularSpeedRadS = pose.drivenWheelAngularSpeedRadS;
@@ -247,11 +290,24 @@ export class VehicleSimulation {
       yawRateRadS: this.current.yawRateRadS,
       // 앞축 표시 방향은 같은 차량 설정의 최대 조향각을 사용해 물리 입력과 시각 모델을 일치시킨다.
       steeringAngleRad: this.current.steeringInput * this.config.maxSteeringAngleRad,
+      wheelSpinRad: { ...this.wheelSpinRad },
       speedMps: this.current.speedMps,
       rpm: this.current.rpm,
       gear: this.current.gear,
       surface: this.current.surface,
     };
+  }
+
+  /** 순수 평면 물리에서 속도 기반 fallback 휠 회전을 fixed step마다 누적한다. */
+  private advanceFallbackWheelSpin(dtSeconds: number): void {
+    const safeDtSeconds = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : 1 / 120;
+    const fallbackAngularSpeedRadS = this.current.forwardSpeedMps / Math.max(this.config.wheelRadiusM, 0.01);
+
+    for (const id of WHEEL_POSITIONS) {
+      const deltaRad = -fallbackAngularSpeedRadS * safeDtSeconds;
+      this.wheelSpinRad[id] = wrapAngleRad(this.wheelSpinRad[id] + deltaRad);
+      this.lastFallbackWheelSpinDeltaRad[id] = deltaRad;
+    }
   }
 
   getTelemetry(): VehicleTelemetry {

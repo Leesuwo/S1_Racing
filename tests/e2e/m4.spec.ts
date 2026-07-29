@@ -1,4 +1,10 @@
 import { expect, Page, test } from "@playwright/test";
+import { releaseWebGLContexts } from "./webglCleanup";
+
+// M4의 Rapier 장면도 같은 Chromium 프로세스에서 순차 실행되므로 테스트 직후 WebGL을 해제한다.
+test.afterEach(async ({ page }) => {
+  await releaseWebGLContexts(page);
+});
 
 /** M4A~M4C의 사용자 표시 경계와 레이스 시작 후 상태 갱신을 검증한다. */
 test.describe("M4 race systems", () => {

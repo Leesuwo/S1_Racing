@@ -12,7 +12,7 @@ import {
 } from "../gameplay/training/AITrainingRunner";
 import type { VehicleRenderSnapshot } from "../game/physics/VehicleSimulation";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
-import { LowPolyCar, type LowPolyCarFrontWheelRefs } from "../world/LowPolyCar";
+import { LowPolyCar, type LowPolyCarWheelRefs } from "../world/LowPolyCar";
 import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 
@@ -51,17 +51,17 @@ function getTrainingCameraPose(snapshot: VehicleRenderSnapshot): {
 
 /** 교육 중인 AI 차량을 데이터 스냅샷으로만 표시하는 렌더 모델이다. */
 function TrainingVehicleModel({
-  frontWheelRefs,
+  wheelRefs,
   groupRef,
 }: {
-  frontWheelRefs: LowPolyCarFrontWheelRefs;
+  wheelRefs: LowPolyCarWheelRefs;
   groupRef: RefObject<THREE.Group | null>;
 }) {
   // 교육 카메라는 차량에서 11 m 떨어져 레이싱 라인과 마커를 함께 보여 주므로, 공통 실루엣 LOD로 120 Hz 관찰 루프를 보호한다.
   return (
     <LowPolyCar
       groupRef={groupRef}
-      frontWheelRefs={frontWheelRefs}
+      wheelRefs={wheelRefs}
       bodyColor="#32c8e8"
       accentColor="#ffbe55"
       emissiveColor="#075e75"
@@ -167,12 +167,12 @@ function TrainingTargetMarker({ snapshot }: { snapshot: AITrainingSnapshot }) {
 export function TrainingScene({ runner, paused, onSnapshot }: TrainingSceneProps) {
   const { camera } = useThree();
   const vehicleRef = useRef<THREE.Group>(null);
-  // AI 렌더 스냅샷의 조향각만 각 앞 허브에 반영하고 차량 위치·자세는 부모 그룹이 소유한다.
-  const frontLeftWheelRef = useRef<THREE.Group>(null);
-  const frontRightWheelRef = useRef<THREE.Group>(null);
-  const frontWheelRefs: LowPolyCarFrontWheelRefs = {
-    left: frontLeftWheelRef,
-    right: frontRightWheelRef,
+  // AI 렌더 스냅샷의 조향각과 누적 구름 회전만 바퀴 그룹에 반영하고 차량 포즈는 부모가 소유한다.
+  const wheelRefs: LowPolyCarWheelRefs = {
+    frontLeft: { steering: useRef<THREE.Group>(null), rolling: useRef<THREE.Group>(null) },
+    frontRight: { steering: useRef<THREE.Group>(null), rolling: useRef<THREE.Group>(null) },
+    rearLeft: { rolling: useRef<THREE.Group>(null) },
+    rearRight: { rolling: useRef<THREE.Group>(null) },
   };
   const snapshotRef = useRef<AITrainingSnapshot>(runner.getSnapshot());
   const snapshotClock = useRef(0);
@@ -204,8 +204,16 @@ export function TrainingScene({ runner, paused, onSnapshot }: TrainingSceneProps
       vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
     }
     const steeringAngleRad = Number.isFinite(snapshot.steeringAngleRad) ? snapshot.steeringAngleRad : 0;
-    if (frontWheelRefs.left.current) frontWheelRefs.left.current.rotation.y = steeringAngleRad;
-    if (frontWheelRefs.right.current) frontWheelRefs.right.current.rotation.y = steeringAngleRad;
+    if (wheelRefs.frontLeft.steering.current) wheelRefs.frontLeft.steering.current.rotation.y = steeringAngleRad;
+    if (wheelRefs.frontRight.steering.current) wheelRefs.frontRight.steering.current.rotation.y = steeringAngleRad;
+    for (const [ref, spinRad] of [
+      [wheelRefs.frontLeft.rolling, snapshot.wheelSpinRad.frontLeft],
+      [wheelRefs.frontRight.rolling, snapshot.wheelSpinRad.frontRight],
+      [wheelRefs.rearLeft.rolling, snapshot.wheelSpinRad.rearLeft],
+      [wheelRefs.rearRight.rolling, snapshot.wheelSpinRad.rearRight],
+    ] as const) {
+      if (ref.current) ref.current.rotation.x = Number.isFinite(spinRad) ? spinRad : 0;
+    }
 
     // AI 뒤쪽·위쪽의 추적 카메라를 사용해 차체와 전방 레이싱 라인이 항상 프레임에 들어오게 한다.
     const desiredCameraPose = getTrainingCameraPose(snapshot);
@@ -231,7 +239,7 @@ export function TrainingScene({ runner, paused, onSnapshot }: TrainingSceneProps
       <TrainingRacingLine runner={runner} />
       <TrainingRacingReferenceMarkers runner={runner} />
       <TrainingTargetMarker snapshot={snapshotRef.current} />
-      <TrainingVehicleModel groupRef={vehicleRef} frontWheelRefs={frontWheelRefs} />
+      <TrainingVehicleModel groupRef={vehicleRef} wheelRefs={wheelRefs} />
     </>
   );
 }
