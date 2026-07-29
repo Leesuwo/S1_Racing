@@ -17,6 +17,9 @@ import {
 import { type TyreCompound, type TyreConditionSnapshot } from "../../game/physics/TyreCondition";
 import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "./TrackLimits";
 import { resolveVehicleContacts } from "./VehicleContact";
+import type { RaceCollisionBodyInput, RaceCollisionWorld, RaceCollisionStepResult } from "./RaceCollisionWorld";
+import { PitLaneMonitor, type PitLaneSnapshot } from "./PitLane";
+import { RaceRegulations, PIT_SPEED_PENALTY_SECONDS, type RaceRegulationSnapshot } from "./RaceRegulations";
 import { RacecraftStateMachine, type RacecraftSnapshot } from "./Racecraft";
 import {
   RaceOperations,
@@ -67,6 +70,8 @@ export interface RaceParticipantSnapshot {
   tyreCondition: TyreConditionSnapshot;
   racecraft: RacecraftSnapshot;
   operations: RaceOperationsSnapshot;
+  pitLane: PitLaneSnapshot;
+  regulationPenaltySeconds: number;
   finishTimeSeconds?: number;
 }
 
@@ -84,7 +89,9 @@ export interface RaceSessionSnapshot {
   maximumFixedStepDurationMs: number;
   contactCount: number;
   tyreChangeCount: number;
+  pitLaneViolationCount: number;
   flag: RaceFlag;
+  regulations: RaceRegulationSnapshot;
   standings: readonly RaceParticipantSnapshot[];
 }
 
@@ -141,6 +148,10 @@ export function createRaceDeterminismDigest(snapshot: RaceSessionSnapshot): stri
       String(participant.operations.pitStop.stopCount),
       String(participant.trackLimits.violationCount),
       String(participant.trackLimits.lapValid),
+      participant.pitLane.status,
+      number(participant.pitLane.laneProgressM, 3),
+      String(participant.pitLane.speedViolationCount),
+      number(participant.regulationPenaltySeconds, 3),
     ].join("|"));
   });
   return hash.toString(16).padStart(8, "0");
@@ -173,6 +184,7 @@ interface RaceParticipantState {
   tyreChangeApplied: boolean;
   racecraft: RacecraftStateMachine;
   operations: RaceOperations;
+  pitLane: PitLaneMonitor;
   noProgressSeconds: number;
 }
 
@@ -284,6 +296,7 @@ export class RaceSession {
   /** 에피소드가 무한히 실행되지 않도록 하는 fixed-step 상한이다. */
   private readonly maxSteps: number;
   private readonly distanceMap: TrackDistanceMap;
+  private readonly regulations = new RaceRegulations();
   private status: RaceSessionSnapshot["status"] = "grid";
   private stepIndex = 0;
   private elapsedSeconds = 0;
@@ -292,8 +305,8 @@ export class RaceSession {
   private maximumFixedStepDurationMs = 0;
   private contactCount = 0;
   private tyreChangeCount = 0;
+  private collisionWorld: RaceCollisionWorld | undefined;
   private raceFlag: RaceFlag = "green";
-  private yellowFlagRemainingSeconds = 0;
   private readonly tyrePlan: RaceTyrePlan;
 
   constructor(
@@ -329,9 +342,31 @@ export class RaceSession {
         tyreChangeApplied: false,
         racecraft: new RacecraftStateMachine(),
         operations: new RaceOperations(),
+        pitLane: new PitLaneMonitor(track),
         noProgressSeconds: 0,
       };
     });
+  }
+
+  /** M4A 공유 Rapier 충돌 세계를 연결하거나 테스트용으로 해제한다. */
+  setCollisionWorld(collisionWorld: RaceCollisionWorld | undefined): void {
+    this.collisionWorld = collisionWorld;
+  }
+
+  /** M4C 레드 플래그를 발생시켜 fixed-step 주행을 안전하게 일시정지한다. */
+  triggerRedFlag(): void {
+    if (this.status !== "running" && this.status !== "paused") return;
+    this.regulations.triggerRedFlag();
+    this.raceFlag = "red";
+    this.status = "paused";
+  }
+
+  /** M4C 레드 플래그 중단 이후 동일한 물리 상태에서 레이스를 재개한다. */
+  restartFromRedFlag(): void {
+    if (this.status !== "paused" || this.raceFlag !== "red") return;
+    this.regulations.restartFromRedFlag();
+    this.raceFlag = "green";
+    this.status = "running";
   }
 
   /** 레이스 시작 전 그리드 상태에서 주행을 시작한다. */
@@ -364,6 +399,7 @@ export class RaceSession {
       participant.tyreChangeApplied = false;
       participant.racecraft.reset();
       participant.operations.reset();
+      participant.pitLane.reset();
       participant.noProgressSeconds = 0;
     });
     this.status = "grid";
@@ -373,8 +409,9 @@ export class RaceSession {
     this.maximumFixedStepDurationMs = 0;
     this.contactCount = 0;
     this.tyreChangeCount = 0;
+    this.regulations.reset();
+    this.collisionWorld?.reset();
     this.raceFlag = "green";
-    this.yellowFlagRemainingSeconds = 0;
     this.resetCount += 1;
   }
 
@@ -383,16 +420,33 @@ export class RaceSession {
     if (this.status !== "running") return this.getSnapshot();
     const startTimeMs = typeof performance !== "undefined" ? performance.now() : 0;
     const dtSeconds = 1 / 120;
-    this.yellowFlagRemainingSeconds = Math.max(0, this.yellowFlagRemainingSeconds - dtSeconds);
-    if (this.yellowFlagRemainingSeconds === 0 && this.raceFlag === "yellow") this.raceFlag = "green";
+    this.raceFlag = this.regulations.tick(dtSeconds).raceControl;
     // 같은 fixed step에서 모든 AI가 동일한 이전 상태를 읽도록 의도를 먼저 계산한다.
     this.updateRacecraftStates();
     this.participants.forEach((participant) => {
       if (participant.finished || participant.retired) return;
-      participant.operations.tick(dtSeconds);
-      if (participant.operations.isServicing()) return;
+      const operationSnapshot = participant.operations.tick(dtSeconds);
+      if (participant.pitLane.getSnapshot().status === "servicing" && operationSnapshot.status === "completed") {
+        participant.pitLane.markServiceCompleted();
+      }
+      if (participant.operations.isServicing()) {
+        participant.pitLane.update(
+          participant.simulation.current.position,
+          participant.simulation.current.velocity,
+          participant.simulation.current.yawRad,
+          true,
+        );
+        return;
+      }
       const progressBeforeStepM = participant.progressM;
-      const input = participant.definition.kind === "player"
+      const pitLaneSnapshot = participant.pitLane.getSnapshot();
+      const input = pitLaneSnapshot.requested
+        ? participant.pitLane.createControlInput(
+          participant.simulation.current.position,
+          participant.simulation.current.velocity,
+          participant.simulation.current.yawRad,
+        )
+        : participant.definition.kind === "player"
         ? playerInput
         : participant.ai?.update(
           { ...participant.simulation.current, maxGear: participant.simulation.config.gearRatios.length },
@@ -404,6 +458,29 @@ export class RaceSession {
       participant.trackLimits.update(participant.simulation.current.position, dtSeconds);
       this.updateProgress(participant);
       const current = participant.simulation.current;
+      const pitUpdate = participant.pitLane.update(
+        current.position,
+        current.velocity,
+        current.yawRad,
+        participant.operations.isServicing(),
+      );
+      if (pitUpdate.speedViolationStarted) {
+        this.regulations.recordPitSpeedViolation();
+      }
+      if (
+        pitUpdate.enteredBox
+        && !participant.tyreChangeApplied
+        && this.tyrePlan.pitStopCompound !== undefined
+        && participant.operations.beginPitStop()
+      ) {
+        participant.simulation.changeTyre(this.tyrePlan.pitStopCompound);
+        participant.simulation.setDamagePerformanceMultiplier(
+          participant.operations.getSnapshot().damage.performanceMultiplier,
+        );
+        participant.tyreChangeApplied = true;
+        participant.pitLane.markServicing(current.position, current.speedMps);
+        this.tyreChangeCount += 1;
+      }
       const currentLocation = sampleTestTrackLocation(current.position, this.track);
       const progressDeltaM = Math.abs(participant.progressM - progressBeforeStepM);
       // 물리 발산이나 AI 정지로 진행이 영원히 멈추지 않도록 결과 수렴용 퇴역 경계를 둔다.
@@ -419,37 +496,43 @@ export class RaceSession {
       }
     });
 
-    // 차량 간 접촉은 AI 명령과 분리된 물리 응답으로만 적용해 위치 직접 조작 경계를 보존한다.
-    const contactResult = resolveVehicleContacts(
-      this.participants
-        .filter((participant) => !participant.finished && !participant.retired)
-        .map((participant) => ({
-          id: participant.definition.id,
-          position: participant.simulation.current.position,
-          velocity: participant.simulation.current.velocity,
-          massKg: participant.simulation.config.massKg,
-          radiusM: RACE_CONTACT_RADIUS_M,
-        })),
-    );
-    if (contactResult.contacts.length > 0) {
-      const contactedIds = new Set(contactResult.contacts.flatMap((contact) => [contact.firstId, contact.secondId]));
-      contactResult.responses.forEach((response) => {
-        if (!contactedIds.has(response.id)) return;
-        this.participants.find((participant) => participant.definition.id === response.id)
-          ?.simulation.applyContactResolution(response);
-      });
-      contactResult.contacts.forEach((contact) => {
-        [contact.firstId, contact.secondId].forEach((participantId) => {
-          const participant = this.participants.find((candidate) => candidate.definition.id === participantId);
-          if (!participant) return;
-          const damage = participant.operations.recordContact(contact.impactSpeedMps, contact.penetrationM);
-          participant.simulation.setDamagePerformanceMultiplier(damage.performanceMultiplier);
-          if (damage.retired) participant.retired = true;
+    // M4A Rapier 차체 형상 충돌을 우선 사용하고, WASM이 없는 순수 테스트에서는 M3A 원형 응답을 유지한다.
+    if (this.collisionWorld) {
+      const collisionResult = this.collisionWorld.step(
+        dtSeconds,
+        this.participants
+          .filter((participant) => !participant.finished && !participant.retired)
+          .map((participant): RaceCollisionBodyInput => ({
+            id: participant.definition.id,
+            position: participant.simulation.current.position,
+            velocity: participant.simulation.current.velocity,
+            yawRad: participant.simulation.current.yawRad,
+            yawRateRadS: participant.simulation.current.yawRateRadS,
+            massKg: participant.simulation.config.massKg,
+          })),
+      );
+      this.applyCollisionWorldResult(collisionResult);
+    } else {
+      const contactResult = resolveVehicleContacts(
+        this.participants
+          .filter((participant) => !participant.finished && !participant.retired)
+          .map((participant) => ({
+            id: participant.definition.id,
+            position: participant.simulation.current.position,
+            velocity: participant.simulation.current.velocity,
+            massKg: participant.simulation.config.massKg,
+            radiusM: RACE_CONTACT_RADIUS_M,
+          })),
+      );
+      if (contactResult.contacts.length > 0) {
+        const contactedIds = new Set(contactResult.contacts.flatMap((contact) => [contact.firstId, contact.secondId]));
+        contactResult.responses.forEach((response) => {
+          if (!contactedIds.has(response.id)) return;
+          this.participants.find((participant) => participant.definition.id === response.id)
+            ?.simulation.applyContactResolution(response);
         });
-      });
-      this.contactCount += contactResult.contacts.length;
-      this.raceFlag = "yellow";
-      this.yellowFlagRemainingSeconds = Math.max(this.yellowFlagRemainingSeconds, 2);
+        this.applyCollisionContacts(contactResult.contacts);
+      }
     }
 
     this.stepIndex += 1;
@@ -461,6 +544,7 @@ export class RaceSession {
     if (this.stepIndex >= this.maxSteps || this.participants.every((participant) => participant.finished || participant.retired)) {
       this.status = "finished";
       this.raceFlag = "checkered";
+      this.regulations.showCheckered();
     }
     return this.getSnapshot();
   }
@@ -473,6 +557,40 @@ export class RaceSession {
       snapshot = this.step(playerInput);
     }
     return snapshot;
+  }
+
+  /** Rapier가 반환한 충돌 후 포즈를 차량 상태에 복사한 뒤 접촉 운영을 갱신한다. */
+  private applyCollisionWorldResult(result: RaceCollisionStepResult): void {
+    result.bodies.forEach((body) => {
+      const participant = this.participants.find((candidate) => candidate.definition.id === body.id);
+      if (!participant) return;
+      participant.simulation.synchronizeFromExternalPose({
+        position: body.position,
+        velocity: body.velocity,
+        yawRad: body.yawRad,
+        yawRateRadS: body.yawRateRadS,
+      }, 1 / 120);
+    });
+    this.applyCollisionContacts(result.contacts);
+  }
+
+  /** 충돌 구현체와 무관하게 손상·세이프티카·결정성 카운트를 동일하게 갱신한다. */
+  private applyCollisionContacts(
+    contacts: readonly { firstId: string; secondId: string; impactSpeedMps: number; penetrationM: number }[],
+  ): void {
+    if (contacts.length === 0) return;
+    contacts.forEach((contact) => {
+      [contact.firstId, contact.secondId].forEach((participantId) => {
+        const participant = this.participants.find((candidate) => candidate.definition.id === participantId);
+        if (!participant) return;
+        const damage = participant.operations.recordContact(contact.impactSpeedMps, contact.penetrationM);
+        participant.simulation.setDamagePerformanceMultiplier(damage.performanceMultiplier);
+        if (damage.retired) participant.retired = true;
+      });
+    });
+    this.contactCount += contacts.length;
+    const maximumImpactSpeedMps = Math.max(...contacts.map((contact) => contact.impactSpeedMps));
+    this.raceFlag = this.regulations.recordContact(maximumImpactSpeedMps).raceControl;
   }
 
   /** 차량별 렌더 포즈를 내부 물리 객체와 분리해 반환한다. */
@@ -511,7 +629,9 @@ export class RaceSession {
       maximumFixedStepDurationMs: this.maximumFixedStepDurationMs,
       contactCount: this.contactCount,
       tyreChangeCount: this.tyreChangeCount,
+      pitLaneViolationCount: standings.reduce((sum, participant) => sum + participant.pitLane.speedViolationCount, 0),
       flag: this.raceFlag,
+      regulations: this.regulations.getSnapshot(),
       standings,
     };
   }
@@ -553,7 +673,7 @@ export class RaceSession {
   private getParticipantFlag(participant: RaceParticipantState): RaceFlag {
     if (participant.retired) return "red";
     if (participant.finished) return "checkered";
-    if (this.raceFlag === "yellow") return "yellow";
+    if (this.raceFlag === "yellow" || this.raceFlag === "safety-car") return this.raceFlag;
     const leaderProgressM = this.participants.reduce(
       (maximum, candidate) => Math.max(maximum, candidate.progressM),
       participant.progressM,
@@ -583,8 +703,10 @@ export class RaceSession {
       && currentLapIndex >= Math.max(0, this.tyrePlan.pitStopLap - 1)
       && this.tyrePlan.pitStopCompound !== participant.simulation.getTyreCondition().compound
     ) {
-      // 전략 랩은 1부터 세므로 랩 2 전략은 첫 랩을 끝낸 직후 피트 서비스에 들어간다.
-      if (participant.operations.beginPitStop()) {
+      // 전략 랩은 1부터 세며, M4B에서는 랩 경계에서 서비스하지 않고 실제 피트 차선 진입을 예약한다.
+      if (this.track.pitLane) participant.pitLane.request();
+      else if (participant.operations.beginPitStop()) {
+        // 피트 레인이 없는 오래된 테스트 정의는 기존 추상 서비스 경계를 유지한다.
         participant.simulation.changeTyre(this.tyrePlan.pitStopCompound);
         participant.simulation.setDamagePerformanceMultiplier(
           participant.operations.getSnapshot().damage.performanceMultiplier,
@@ -620,11 +742,15 @@ export class RaceSession {
       tyreCondition: participant.simulation.getTyreCondition(),
       racecraft: participant.racecraft.getSnapshot(),
       operations: participant.operations.getSnapshot(flag),
+      pitLane: participant.pitLane.getSnapshot(),
       trackLimits,
+      regulationPenaltySeconds: participant.pitLane.getSnapshot().speedViolationCount * PIT_SPEED_PENALTY_SECONDS,
       // 트랙 리밋 패널티는 완주 시각에 더해 최종 분류 순서에도 반영한다.
       finishTimeSeconds: participant.finishTimeSeconds === undefined
         ? undefined
-        : participant.finishTimeSeconds + trackLimits.penaltySeconds,
+        : participant.finishTimeSeconds
+          + trackLimits.penaltySeconds
+          + participant.pitLane.getSnapshot().speedViolationCount * PIT_SPEED_PENALTY_SECONDS,
     };
   }
 }

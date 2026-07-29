@@ -5,7 +5,7 @@
  */
 
 /** 레이스 운영 계층에서 사용할 최소 플래그 상태다. */
-export type RaceFlag = "green" | "yellow" | "blue" | "red" | "checkered";
+export type RaceFlag = "green" | "yellow" | "safety-car" | "blue" | "red" | "checkered";
 
 /** 접촉 누적 손상과 물리 성능 저하를 표시하는 읽기 전용 상태다. 비율은 0..1이다. */
 export interface DamageSnapshot {

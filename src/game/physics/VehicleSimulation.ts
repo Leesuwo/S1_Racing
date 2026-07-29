@@ -37,6 +37,8 @@ export interface VehicleRenderSnapshot {
   velocity: { x: number; z: number };
   yawRad: number;
   yawRateRadS: number;
+  /** 현재 입력과 차량 설정으로 계산한 앞축 시각 조향각(rad)이다. 물리 포즈를 변경하지 않는다. */
+  steeringAngleRad: number;
   speedMps: number;
   rpm: number;
   gear: number;
@@ -243,6 +245,8 @@ export class VehicleSimulation {
       velocity: { ...this.current.velocity },
       yawRad: this.previous.yawRad + (this.current.yawRad - this.previous.yawRad) * blend,
       yawRateRadS: this.current.yawRateRadS,
+      // 앞축 표시 방향은 같은 차량 설정의 최대 조향각을 사용해 물리 입력과 시각 모델을 일치시킨다.
+      steeringAngleRad: this.current.steeringInput * this.config.maxSteeringAngleRad,
       speedMps: this.current.speedMps,
       rpm: this.current.rpm,
       gear: this.current.gear,

@@ -19,8 +19,12 @@ export interface AeroForceState {
 }
 
 export const DEFAULT_AERO_MODEL_CONFIG: AeroModelConfig = {
-  downforceCoefficientNPerMps2: 1.25,
-  dragCoefficientNPerMps2: 0.42,
+  // 4.4 N/(m/s)^2는 150 km/h에서 약 6.9 kN의 다운포스를 만드는
+  // 2012 F1 범위의 initial_assumption이다. Mercedes-AMG의 기술 설명에서
+  // 언급한 "차량 무게와 비슷한 다운포스"를 640 kg 기준으로 환산했다.
+  downforceCoefficientNPerMps2: 4.4,
+  // 2012년형 고다운포스 패키지의 직선 저항을 반영하기 위한 initial_assumption이다.
+  dragCoefficientNPerMps2: 0.68,
   frontBalance: 0.43,
 };
 

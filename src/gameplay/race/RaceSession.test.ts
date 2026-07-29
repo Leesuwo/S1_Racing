@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { neutralVehicleControlInput } from "../../game/input/VehicleControlInput";
 import { createRaceDeterminismDigest, createRaceGrid, RaceSession } from "./RaceSession";
+import { RapierMultiCarCollision } from "./RapierMultiCarCollision";
 
 describe("RaceSession", () => {
   it("creates unique grid poses and keeps the requested participant count", () => {
@@ -86,5 +87,23 @@ describe("RaceSession", () => {
 
     expect(sawServicing).toBe(true);
     expect(sawCompleted).toBe(true);
+  });
+
+  it("accepts the shared Rapier chassis world without moving ownership into the renderer", async () => {
+    const grid = createRaceGrid(undefined, 2).map((participant) => ({
+      ...participant,
+      startPose: { ...participant.startPose, position: { x: -10, z: 10 } },
+    }));
+    const world = await RapierMultiCarCollision.create();
+    try {
+      const session = new RaceSession(grid, undefined, 1, 4);
+      session.setCollisionWorld(world);
+      session.start();
+      const snapshot = session.step(neutralVehicleControlInput());
+      expect(snapshot.contactCount).toBeGreaterThanOrEqual(1);
+      expect(snapshot.standings.every((participant) => Number.isFinite(participant.positionM.x))).toBe(true);
+    } finally {
+      world.dispose();
+    }
   });
 });

@@ -3,7 +3,7 @@
  * RaceWeekendSession이 소유한 VehicleSimulation 스냅샷을 그리며, AI나 렌더러가 위치를 직접 변경하지 않는다.
  */
 import { useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { BrowserVehicleInput } from "../game/input/BrowserVehicleInput";
 import { RaceWeekendSession, type RaceWeekendSnapshot } from "../gameplay/race/RaceWeekendSession";
@@ -12,6 +12,7 @@ import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
 import { LowPolyCar } from "../world/LowPolyCar";
 import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
+import { RapierMultiCarCollision } from "../gameplay/race/RapierMultiCarCollision";
 
 /** 레이스 주말 장면이 앱 셸과 공유하는 입력·일시정지·스냅샷 경계다. */
 export interface RaceWeekendSceneProps {
@@ -37,7 +38,12 @@ function RaceVehicleModel({ vehicle }: { vehicle: RaceVehicleRenderSnapshot }) {
       position={[snapshot.position.x, 0.24, snapshot.position.z]}
       rotation={[0, physicsYawToThreeYaw(snapshot.yawRad), 0]}
     >
-      <LowPolyCar bodyColor={vehicleColor(vehicle)} accentColor="#d8b96a" />
+      <LowPolyCar
+        bodyColor={vehicleColor(vehicle)}
+        accentColor="#d8b96a"
+        detail={vehicle.kind === "player" ? "hero" : "grid"}
+        steeringAngleRad={snapshot.steeringAngleRad}
+      />
     </group>
   );
 }
@@ -50,12 +56,37 @@ export function RaceWeekendScene({ session, input, paused, onSnapshot }: RaceWee
   const target = useMemo(() => new THREE.Vector3(), []);
   const desiredCamera = useMemo(() => new THREE.Vector3(), []);
   const forward = useMemo(() => new THREE.Vector3(), []);
+  const collisionWorldRef = useRef<RapierMultiCarCollision | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    void RapierMultiCarCollision.create(session.track).then((collisionWorld) => {
+      if (disposed) {
+        collisionWorld.dispose();
+        return;
+      }
+      collisionWorldRef.current = collisionWorld;
+      session.getRaceSession().setCollisionWorld(collisionWorld);
+    });
+    return () => {
+      disposed = true;
+      session.getRaceSession().setCollisionWorld(undefined);
+      collisionWorldRef.current?.dispose();
+      collisionWorldRef.current = null;
+    };
+  }, [session]);
 
   useFrame((_, deltaSeconds) => {
     const liveSnapshot = session.getSnapshot();
     if (!paused && liveSnapshot.stage === "race" && liveSnapshot.status === "running") {
       // 브라우저 입력은 공통 VehicleControlInput으로 변환되어 RaceSession의 120Hz 경계를 통과한다.
-      session.advanceRace(input.sample(deltaSeconds), 2);
+      // RaceWeekendSession은 레이스 시작 때 RaceSession 인스턴스를 교체하므로 매 프레임 현재 세션에 연결한다.
+      session.getRaceSession().setCollisionWorld(collisionWorldRef.current ?? undefined);
+      // Rapier 다차량 충돌로 렌더 프레임이 낮아져도 레이스 시간이 화면 프레임에 종속되지 않게
+      // 경과 시간에 필요한 fixed-step을 보충한다. 최대 12스텝은 탭 복귀 시 긴 catch-up으로
+      // 한 프레임을 독점하는 것을 막는 안전 상한이며, RaceSession 내부는 여전히 120Hz를 사용한다.
+      const fixedStepCount = Math.max(1, Math.min(12, Math.ceil(Math.max(0, deltaSeconds) * 120)));
+      session.advanceRace(input.sample(deltaSeconds), fixedStepCount);
     }
 
     const renderSnapshots = session.getRaceSession().getRenderSnapshots(1);

@@ -107,6 +107,8 @@ export function buildAITrainingCandidates(
   // 먼저 기준 설정을 평가해 학습 전후의 개선량을 UI에 표시할 수 있게 한다.
   const mutations: readonly Partial<SingleOpponentAIConfig>[] = [
     {},
+    // 고속 복합 시나리오에서는 36 m가 과제 구간에 맞고, 전체 랩 기준선은 더 긴 60 m를 사용한다.
+    { brakeLookaheadM: 36 },
     { lookaheadM: 2.5 },
     { lookaheadM: 3.5 },
     { lookaheadM: 5.5 },

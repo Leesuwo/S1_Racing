@@ -25,10 +25,15 @@ export interface TireForceState {
 }
 
 export const DEFAULT_TIRE_MODEL_CONFIG: TireModelConfig = {
-  referenceLoadN: 1_950,
-  loadSensitivityExponent: 0.9,
-  longitudinalStiffnessNPerSlip: 46_000,
-  corneringStiffnessNPerRad: 38_000,
+  // 640 kg F1 기준 정적 바퀴 하중에 가까운 참조 하중이다. 실차 타이어
+  // 데이터가 아니므로 공력 하중과 함께 simulation_required로 관리한다.
+  referenceLoadN: 1_700,
+  // 하중이 증가할수록 마찰력이 선형보다 느리게 증가하는 slick tire 가정이다.
+  loadSensitivityExponent: 0.87,
+  // 낮은 슬립에서 구동·제동력이 빠르게 올라오도록 하는 initial_assumption이다.
+  longitudinalStiffnessNPerSlip: 58_000,
+  // F1 slick의 최대 횡력 구간을 작은 슬립각에 두기 위한 initial_assumption이다.
+  corneringStiffnessNPerRad: 52_000,
   minimumSlipSpeedMps: 0.5,
 };
 

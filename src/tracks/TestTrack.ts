@@ -31,6 +31,7 @@ export interface TestTrackSurfaceLayout {
 /** HUD와 AI가 사용할 트랙 구간 식별자다. */
 export type TestTrackSectionId =
   | "start-straight"
+  | "pit-lane"
   | "right-corner"
   | "back-straight"
   | "left-corner"
@@ -128,6 +129,18 @@ export interface TestTrackSector {
   endCheckpointOrder: number;
 }
 
+/** 실제 피트 레인 차선·게이트·박스·속도 제한을 공유하는 트랙 원본이다. */
+export interface TestTrackPitLane {
+  id: string;
+  centerline: readonly TrackPoint[];
+  widthM: number;
+  speedLimitMps: number;
+  entryGate: TrackPoint;
+  exitGate: TrackPoint;
+  pitBox: TrackPoint;
+  pitBoxRadiusM: number;
+}
+
 /**
  * 물리 표면, 경계, 체크포인트와 AI 경로가 공유하는 테스트 트랙 단일 원본이다.
  * 렌더링·물리·AI가 각각 같은 지오메트리를 재구성하지 않도록 유지한다.
@@ -154,6 +167,8 @@ export interface TestTrackDefinition {
   trackWidthM?: number;
   /** 교육 평가가 사용할 섹터 순서다. */
   sectors?: readonly TestTrackSector[];
+  /** M4B 실제 피트 레인 원본이다. 없으면 해당 트랙은 피트 서비스를 제공하지 않는다. */
+  pitLane?: TestTrackPitLane;
 }
 
 export interface TestTrackLocation {
@@ -162,6 +177,17 @@ export interface TestTrackLocation {
   surface: TestTrackSurfaceType;
   onTrack: boolean;
   distanceToBoundaryM: number;
+}
+
+/** 차량 위치를 피트 레인 중심선에 투영한 결과다. 거리 단위는 m다. */
+export interface TestTrackPitLaneLocation {
+  withinLane: boolean;
+  distanceToCenterlineM: number;
+  laneProgressM: number;
+  laneLengthM: number;
+  nearestPoint: TrackPoint;
+  headingRad: number;
+  insidePitBox: boolean;
 }
 
 // 섹션별 축 정렬 범위는 샘플 트랙의 단일 지오메트리 원본이다.
@@ -250,7 +276,9 @@ export const TEST_TRACK_DATA: TestTrackDefinition = {
     { id: "checkpoint-left", order: 3, label: "좌측 코너", position: { x: -18, z: 0 }, radiusM: 4 },
   ],
   collisionWalls: [
-    { id: "outer-wall-north", start: { x: -22, z: 14 }, end: { x: 22, z: 14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
+    // M4B 피트 진입·탈출을 위해 북쪽 외곽벽 중앙에 게이트를 남긴다.
+    { id: "outer-wall-north-west", start: { x: -22, z: 14 }, end: { x: -14.5, z: 14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
+    { id: "outer-wall-north-east", start: { x: 14.5, z: 14 }, end: { x: 22, z: 14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
     { id: "outer-wall-east", start: { x: 22, z: 14 }, end: { x: 22, z: -14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
     { id: "outer-wall-south", start: { x: 22, z: -14 }, end: { x: -22, z: -14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
     { id: "outer-wall-west", start: { x: -22, z: -14 }, end: { x: -22, z: 14 }, thicknessM: 0.35, heightM: 0.65, restitution: 0.18 },
@@ -269,6 +297,24 @@ export const TEST_TRACK_DATA: TestTrackDefinition = {
     { id: "curb-infield-south", start: { x: 12.5, z: -6.4 }, end: { x: -12.5, z: -6.4 }, widthM: 0.7, heightM: 0.08 },
     { id: "curb-infield-west", start: { x: -13.4, z: -5.5 }, end: { x: -13.4, z: 5.5 }, widthM: 0.7, heightM: 0.08 },
   ],
+  pitLane: {
+    id: "test-loop-pit-lane-v1",
+    centerline: [
+      { x: -10, z: 10 },
+      { x: -12.5, z: 14.8 },
+      { x: -9, z: 16.2 },
+      { x: 9, z: 16.2 },
+      { x: 12.5, z: 14.8 },
+      { x: 10, z: 10 },
+    ],
+    widthM: 3,
+    // 실제 경기 규정값이 아닌 플레이 가능한 테스트 트랙용 initial_assumption이다.
+    speedLimitMps: 12,
+    entryGate: { x: -10, z: 10 },
+    exitGate: { x: 10, z: 10 },
+    pitBox: { x: -4, z: 14.8 },
+    pitBoxRadiusM: 2.2,
+  },
   startPose: {
     position: { x: -10, z: 10 },
     yawRad: Math.PI / 2,
@@ -318,6 +364,75 @@ function contains(bounds: TrackBounds, point: TrackPoint): boolean {
     && point.x <= bounds.maxX
     && point.z >= bounds.minZ
     && point.z <= bounds.maxZ;
+}
+
+/** 피트 레인 선분 하나에 위치를 투영해 거리·진행률·방향을 계산한다. */
+function projectPointToPitSegment(
+  point: TrackPoint,
+  start: TrackPoint,
+  end: TrackPoint,
+): { ratio: number; distanceM: number; point: TrackPoint; lengthM: number; headingRad: number } {
+  const deltaX = end.x - start.x;
+  const deltaZ = end.z - start.z;
+  const lengthSquared = deltaX * deltaX + deltaZ * deltaZ;
+  const lengthM = Math.sqrt(lengthSquared);
+  const ratio = lengthSquared > 0
+    ? Math.max(0, Math.min(1, ((point.x - start.x) * deltaX + (point.z - start.z) * deltaZ) / lengthSquared))
+    : 0;
+  const projectedPoint = { x: start.x + deltaX * ratio, z: start.z + deltaZ * ratio };
+  return {
+    ratio,
+    distanceM: Math.hypot(point.x - projectedPoint.x, point.z - projectedPoint.z),
+    point: projectedPoint,
+    lengthM,
+    headingRad: Math.atan2(deltaX, -deltaZ),
+  };
+}
+
+/** 피트 레인 중심선에 대한 위치를 조회한다. 렌더러·물리·규정 모듈이 같은 값을 사용한다. */
+export function samplePitLaneLocation(
+  point: TrackPoint,
+  track: TestTrackDefinition = TEST_TRACK_DATA,
+): TestTrackPitLaneLocation | null {
+  const pitLane = track.pitLane;
+  if (!pitLane || pitLane.centerline.length < 2) return null;
+
+  let laneLengthM = 0;
+  let nearest = {
+    distanceM: Number.POSITIVE_INFINITY,
+    laneProgressM: 0,
+    point: { ...pitLane.centerline[0]! },
+    headingRad: 0,
+  };
+  for (let index = 0; index < pitLane.centerline.length - 1; index += 1) {
+    const start = pitLane.centerline[index]!;
+    const end = pitLane.centerline[index + 1]!;
+    const projection = projectPointToPitSegment(point, start, end);
+    if (projection.distanceM < nearest.distanceM) {
+      nearest = {
+        distanceM: projection.distanceM,
+        laneProgressM: laneLengthM + projection.lengthM * projection.ratio,
+        point: projection.point,
+        headingRad: projection.headingRad,
+      };
+    }
+    laneLengthM += projection.lengthM;
+  }
+  const insidePitBox = Math.hypot(point.x - pitLane.pitBox.x, point.z - pitLane.pitBox.z) <= pitLane.pitBoxRadiusM;
+  // 진입·탈출 게이트의 공통 좌표는 본선 스타트 직선이 우선하도록 차선 판정에서 제외한다.
+  const nearGate = Math.min(
+    Math.hypot(point.x - pitLane.entryGate.x, point.z - pitLane.entryGate.z),
+    Math.hypot(point.x - pitLane.exitGate.x, point.z - pitLane.exitGate.z),
+  ) <= 1.8;
+  return {
+    withinLane: nearest.distanceM <= pitLane.widthM * 0.5 && !nearGate,
+    distanceToCenterlineM: nearest.distanceM,
+    laneProgressM: nearest.laneProgressM,
+    laneLengthM,
+    nearestPoint: nearest.point,
+    headingRad: nearest.headingRad,
+    insidePitBox,
+  };
 }
 
 function distanceToOuterBoundary(bounds: TrackBounds, point: TrackPoint): number {
@@ -416,6 +531,8 @@ export function isInsideTestTrackBoundary(
   point: TrackPoint,
   track: TestTrackDefinition = TEST_TRACK_DATA,
 ): boolean {
+  const pitLaneLocation = samplePitLaneLocation(point, track);
+  if (pitLaneLocation?.withinLane) return true;
   // 상세 중심선 트랙은 도로 폭을 실제 경계로 사용하고, 기존 루프는 외곽 경계를 사용한다.
   const centerlineLocation = sampleCenterlineTrackLocation(point, track);
   if (centerlineLocation) return centerlineLocation.onTrack;
@@ -436,6 +553,16 @@ export function sampleTestTrackLocation(
   point: TrackPoint,
   track: TestTrackDefinition = TEST_TRACK_DATA,
 ): TestTrackLocation {
+  const pitLaneLocation = samplePitLaneLocation(point, track);
+  if (pitLaneLocation?.withinLane) {
+    return {
+      sectionId: "pit-lane",
+      sectionLabel: "피트 레인",
+      surface: "asphalt",
+      onTrack: true,
+      distanceToBoundaryM: (track.pitLane?.widthM ?? 0) * 0.5 - pitLaneLocation.distanceToCenterlineM,
+    };
+  }
   // M2A-0 교육 트랙은 중심선과 폭을 단일 원본으로 사용해 곡선 도로를 샘플링한다.
   const centerlineLocation = sampleCenterlineTrackLocation(point, track);
   if (centerlineLocation) return centerlineLocation;

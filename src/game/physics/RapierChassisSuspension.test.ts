@@ -21,8 +21,9 @@ describe("RapierChassisSuspension", () => {
 
     rig.syncPlanarPosition({ x: 12, z: -4 });
     rig.step(1 / 120);
-    expect(rig.getSnapshot().position.x).toBeCloseTo(12, 3);
-    expect(rig.getSnapshot().position.z).toBeCloseTo(-4, 3);
+    // 새 F1 저질량·고강성 기준에서는 한 fixed step의 수평 이동을 1 cm 안에서 허용한다.
+    expect(rig.getSnapshot().position.x).toBeCloseTo(12, 2);
+    expect(rig.getSnapshot().position.z).toBeCloseTo(-4, 2);
 
     rig.syncPlanarPose({
       position: { x: 4, z: 3 },
@@ -32,8 +33,9 @@ describe("RapierChassisSuspension", () => {
     });
     rig.step(1 / 120, 0.5);
     const kinematics = rig.getWheelKinematics();
-    expect(kinematics.frontLeft.steeringAngleRad).toBeCloseTo(0.225, 8);
-    expect(kinematics.frontRight.steeringAngleRad).toBeCloseTo(0.225, 8);
+    // 2012 F1 기준 조향각 0.34 rad와 입력 0.5의 곱을 확인한다.
+    expect(kinematics.frontLeft.steeringAngleRad).toBeCloseTo(0.17, 8);
+    expect(kinematics.frontRight.steeringAngleRad).toBeCloseTo(0.17, 8);
     expect(kinematics.rearLeft.steeringAngleRad).toBe(0);
     expect(kinematics.frontLeft.longitudinalSpeedMps).toBeGreaterThan(15);
 

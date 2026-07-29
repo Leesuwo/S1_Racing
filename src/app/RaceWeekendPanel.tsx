@@ -103,6 +103,21 @@ export function RaceWeekendPanel({
           <strong>{snapshot.race.flag.toUpperCase()} · {((operations?.damage.totalRatio ?? 0) * 100).toFixed(1)}% 손상</strong>
           <em>{operations?.pitStop.status === "servicing" ? `피트 서비스 ${(operations.pitStop.remainingSeconds).toFixed(1)} s` : `피트 ${operations?.pitStop.stopCount ?? 0}회 완료`}</em>
         </article>
+        <article className="weekend-summary-card weekend-summary-card--m4a">
+          <span>M4A · Rapier 차체 접촉</span>
+          <strong>{snapshot.race.contactCount}회 · {snapshot.race.flag.toUpperCase()}</strong>
+          <em>{snapshot.race.regulations.safetyCarCount}회 세이프티카 · {snapshot.race.regulations.redFlagCount}회 레드 플래그</em>
+        </article>
+        <article className="weekend-summary-card weekend-summary-card--m4b">
+          <span>M4B · 실제 피트 레인</span>
+          <strong>{player?.pitLane.status.toUpperCase() ?? "INACTIVE"}</strong>
+          <em>{player?.pitLane.speedMps.toFixed(1) ?? "0.0"} / {player?.pitLane.speedLimitMps.toFixed(1) ?? "0.0"} m/s · 위반 {player?.pitLane.speedViolationCount ?? 0}회</em>
+        </article>
+        <article className="weekend-summary-card weekend-summary-card--m4c">
+          <span>M4C · 레이스 규정</span>
+          <strong>{snapshot.race.regulations.raceControl.toUpperCase()}</strong>
+          <em>시간 패널티 {snapshot.race.regulations.totalTimePenaltySeconds.toFixed(1)} s · 청색기 포함</em>
+        </article>
       </div>
 
       <div className="weekend-controls" aria-label="레이스 주말 조작">

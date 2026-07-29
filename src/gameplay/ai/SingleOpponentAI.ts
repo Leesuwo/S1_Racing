@@ -61,7 +61,9 @@ export interface SingleOpponentAITarget {
 export const DEFAULT_SINGLE_OPPONENT_AI_CONFIG: SingleOpponentAIConfig = {
   lookaheadM: 4.5,
   lookaheadSpeedScale: 0.18,
-  brakeLookaheadM: 13,
+  // 2012 F1의 강한 제동은 코너 진입 전에 하중을 정리해야 하므로 60 m 앞을 미리 본다.
+  // 테스트 트랙에서 짧은 미리보기는 목표 속도 급락과 조향이 겹쳐 과도한 차체 슬립을 만들었다.
+  brakeLookaheadM: 60,
   headingGain: 1.4,
   lateralGain: 1.8,
   throttleGain: 0.12,
@@ -73,8 +75,9 @@ export const DEFAULT_SINGLE_OPPONENT_AI_CONFIG: SingleOpponentAIConfig = {
   slipRecoverySteeringGain: 1.2,
   // 0.05 rad(약 2.9°)부터 lift를 시작해 0.06 rad 평가 상한보다 먼저 횡그립을 회복한다.
   slipThrottleCutAngleRad: 0.05,
-  upshiftRpm: 7_200,
-  downshiftRpm: 2_000,
+  // FIA 2012 V8의 18,000 rpm 상한을 활용하는 초기 변속 기준이다.
+  upshiftRpm: 16_500,
+  downshiftRpm: 5_000,
   shiftCooldownSeconds: 0.25,
 };
 
@@ -184,24 +187,28 @@ export class SingleOpponentAI {
     const lookaheadIndex = this.findClosestPointIndex(targetPoint.position);
     const brakeLookaheadIndex = this.findClosestPointIndex(previewPoint.position);
 
-    // 선분 방향 변화에서 계산한 물리적으로 가능한 코너 속도 상한을 목표 속도에 함께 적용한다.
-    const cornerSpeedLimitMps = Math.min(
-      this.cornerSpeedLimitMps(targetPoint),
+    // 현재 목표점과 제동 미리보기 점의 곡률 기반 안전 속도를 각각 계산한다.
+    // 미리보기 속도를 곧바로 현재 목표 속도로 쓰면 직선에서도 속도가 급락하므로,
+    // 현재 속도 제어와 제동 판단을 분리해 F1의 늦지만 예측 가능한 제동을 만든다.
+    const targetCornerSpeedMps = this.cornerSpeedLimitMps(targetPoint);
+    const previewSpeedMps = Math.max(0, Math.min(
+      previewPoint.targetSpeedMps,
       this.cornerSpeedLimitMps(previewPoint),
-    );
+    ));
+    const lineTargetSpeedMps = Math.max(0, Math.min(
+      projection.point.targetSpeedMps,
+      targetPoint.targetSpeedMps,
+      targetCornerSpeedMps,
+    ));
+    const brakingPhase = Boolean(projection.point.brakePoint || targetPoint.brakePoint);
 
     return {
       closestIndex,
       lookaheadIndex,
       brakeLookaheadIndex,
       targetPoint,
-      targetSpeedMps: Math.max(0, Math.min(
-        projection.point.targetSpeedMps,
-        targetPoint.targetSpeedMps,
-        previewPoint.targetSpeedMps,
-        cornerSpeedLimitMps,
-      )),
-      previewSpeedMps: Math.max(0, previewPoint.targetSpeedMps),
+      targetSpeedMps: brakingPhase ? Math.min(lineTargetSpeedMps, previewSpeedMps) : lineTargetSpeedMps,
+      previewSpeedMps,
       brakePoint: Boolean(projection.point.brakePoint || targetPoint.brakePoint || previewPoint.brakePoint),
     };
   }
@@ -231,7 +238,7 @@ export class SingleOpponentAI {
     // 현재 yaw에서 목표 yaw까지의 최단 헤딩 오차(rad)다.
     const headingErrorRad = normalizeAngle(target.targetPoint.yawRad - state.yawRad);
     // 차체 전방과 실제 속도 벡터의 각도(rad)다. 라인 오차만 보정하면 이미 발생한 후미 슬립을
-    // 같은 방향의 추가 조향으로 키울 수 있으므로, 속도 벡터를 차체 축으로 되돌리는 항을 분리한다.
+    // 놓칠 수 있으므로, 속도 벡터가 미끄러지는 방향으로 조향하는 counter-steer 항을 분리한다.
     const bodySlipAngleRad = Math.atan2(
       state.velocity.x * right.x + state.velocity.z * right.z,
       Math.max(0.5, Math.abs(finiteOr(state.forwardSpeedMps, state.speedMps))),
@@ -240,7 +247,7 @@ export class SingleOpponentAI {
     const steering = clamp(
       headingErrorRad * this.config.headingGain
         + Math.atan2(lateralErrorM, lookaheadDistanceM) * this.config.lateralGain
-        - bodySlipAngleRad * this.config.slipRecoverySteeringGain,
+        + bodySlipAngleRad * this.config.slipRecoverySteeringGain,
       -1,
       1,
     ) + (racecraft?.steeringBias ?? 0);
@@ -252,10 +259,14 @@ export class SingleOpponentAI {
 
     // 후진 입력을 전진 제어기로 처리하지 않도록 음수 전진 속도를 0으로 제한한다.
     const forwardSpeedMps = Math.max(0, finiteOr(state.forwardSpeedMps, finiteOr(state.speedMps, 0)));
-    // 목표 속도와 현재 속도의 차이(m/s)이며 양수일 때 가속 여유를 뜻한다.
+    // 현재 라인 목표 속도와 현재 속도의 차이(m/s)이며 양수일 때 가속 여유를 뜻한다.
     const speedErrorMps = target.targetSpeedMps - forwardSpeedMps;
-    // 데드밴드를 제외하고 초과한 속도(m/s)이며 양수일 때 제동을 시작한다.
-    const overspeedMps = forwardSpeedMps - target.targetSpeedMps - this.config.brakeDeadbandMps;
+    // 현재 목표와 미리보기 안전 속도 중 낮은 값보다 초과한 속도(m/s)다.
+    // 미래 코너 속도를 현재 목표에 덮어쓰지 않고, 제동 입력에만 사용해 직선 가속을 보존한다.
+    const brakingTargetSpeedMps = target.brakePoint
+      ? Math.min(target.targetSpeedMps, target.previewSpeedMps)
+      : target.targetSpeedMps;
+    const overspeedMps = forwardSpeedMps - brakingTargetSpeedMps - this.config.brakeDeadbandMps;
     // 목표 속도보다 빠른 경우에는 스로틀과 브레이크를 동시에 요청하지 않는다.
     // brakeDeadbandMps는 타깃 속도 주변의 입력 채터링을 막는 초기 가정이다.
     // 목표 속도 오차와 브레이크 진입점을 반영한 정규화 제동 입력이다.
@@ -272,11 +283,14 @@ export class SingleOpponentAI {
       : clamp(speedErrorMps * this.config.throttleGain, 0, 1);
     // 고속 코너에서 풀스로틀은 차체가 레이싱 라인에 정렬되고 타이어 횡력이 남아 있을 때만 허용한다.
     // 한계를 넘으면 브레이크를 강제로 밟지 않고 lift로 하중·횡력을 회복해 드리프트 확대를 막는다.
-    const slipThrottleScale = clamp(
-      1 - Math.abs(bodySlipAngleRad) / Math.max(0.001, this.config.slipThrottleCutAngleRad),
-      0,
-      1,
-    );
+    // 정지에 가까운 상태에서는 작은 횡속도도 큰 각도로 보이므로, 복귀 가속까지 차단하지 않는다.
+    const slipThrottleScale = forwardSpeedMps < 5
+      ? 1
+      : clamp(
+        1 - Math.abs(bodySlipAngleRad) / Math.max(0.001, this.config.slipThrottleCutAngleRad),
+        0,
+        1,
+      );
     const throttle = requestedThrottle * slipThrottleScale * (racecraft?.throttleScale ?? 1);
     // RPM과 현재 기어에 따른 one-shot 변속 상승·하강 요청이다.
     const shiftUp = this.shiftCooldownSeconds <= 0

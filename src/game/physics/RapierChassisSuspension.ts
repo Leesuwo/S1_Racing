@@ -106,25 +106,28 @@ export interface RapierChassisSuspensionConfig {
 }
 
 export const DEFAULT_RAPIER_CHASSIS_SUSPENSION_CONFIG: RapierChassisSuspensionConfig = {
-  massKg: 780,
+  // 2012 FIA 규정의 최소 차량 중량 640 kg을 플레이 가능한 기준선으로 사용한다.
+  massKg: 640,
   wheelBaseM: 3.3,
-  frontAxleDistanceM: 1.815,
-  rearAxleDistanceM: 1.485,
+  frontAxleDistanceM: 1.78,
+  rearAxleDistanceM: 1.52,
   trackWidthM: 1.6,
-  wheelRadiusM: 0.36,
-  maxSteeringAngleRad: 0.45,
-  mountHeightBelowCenterM: 0.12,
+  wheelRadiusM: 0.33,
+  maxSteeringAngleRad: 0.34,
+  mountHeightBelowCenterM: 0.1,
   initialChassisHeightM: 0.7,
   restLengthM: 0.35,
-  travelM: 0.08,
-  springRateNPerM: 155_000,
-  bumpDampingNsPerM: 9_000,
-  reboundDampingNsPerM: 14_000,
-  maxSuspensionForceN: 28_000,
-  wheelRotationalInertiaKgM2: 1.15,
-  aeroDownforceCoefficient: 1.25,
+  travelM: 0.055,
+  springRateNPerM: 220_000,
+  bumpDampingNsPerM: 14_000,
+  // 과도한 rebound damping은 정적 하중보다 큰 감쇠력을 만들어 바퀴가
+  // 지면에 닿아도 수직 하중을 0으로 만들 수 있으므로 6 kN·s/m로 제한한다.
+  reboundDampingNsPerM: 6_000,
+  maxSuspensionForceN: 42_000,
+  wheelRotationalInertiaKgM2: 0.9,
+  aeroDownforceCoefficient: 4.4,
   aeroBalanceFront: 0.43,
-  dragCoefficient: 0.42,
+  dragCoefficient: 0.68,
   tire: DEFAULT_TIRE_MODEL_CONFIG,
 };
 
@@ -611,7 +614,9 @@ export class RapierChassisSuspension {
       const tire = calculateTireForce(
         {
           normalForceN: contact.suspensionForceN,
-          frictionCoefficient: 1.55 * control.surfaceGripMultiplier,
+        // 2012 slick tire의 높은 기계 그립을 공력 하중과 분리해 적용한다.
+        // 절대 마찰계수는 실차 데이터가 아닌 simulation_required 가정이다.
+        frictionCoefficient: 1.75 * control.surfaceGripMultiplier,
           longitudinalSpeedMps: kinematics.longitudinalSpeedMps,
           lateralSpeedMps: kinematics.lateralSpeedMps,
           wheelAngularSpeedRadS: previousAngularSpeedRadS,

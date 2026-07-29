@@ -204,11 +204,45 @@ function TrackCollisionVisuals({ track }: { track: TestTrackDefinition }) {
   );
 }
 
+/** M4B 피트 레인 중심선·속도 제한 구역·서비스 박스를 데이터 원본에서 표시한다. */
+function PitLaneVisual({ track }: { track: TestTrackDefinition }) {
+  const pitLane = track.pitLane;
+  if (!pitLane || pitLane.centerline.length < 2) return null;
+  return (
+    <group>
+      {pitLane.centerline.slice(0, -1).map((start, index) => {
+        const end = pitLane.centerline[index + 1]!;
+        const transform = segmentTransform(start, end);
+        return (
+          <mesh
+            key={pitLane.id + "-segment-" + String(index)}
+            position={[transform.centerX, TRACK_EDGE_Y + 0.012, transform.centerZ]}
+            rotation={[-Math.PI / 2, 0, transform.rotationRad]}
+          >
+            <planeGeometry args={[transform.lengthM, pitLane.widthM]} />
+            <meshBasicMaterial color="#263f54" transparent opacity={0.72} />
+          </mesh>
+        );
+      })}
+      <mesh position={[pitLane.pitBox.x, TRACK_EDGE_Y + 0.025, pitLane.pitBox.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[pitLane.pitBoxRadiusM - 0.08, pitLane.pitBoxRadiusM, 24]} />
+        <meshBasicMaterial color="#e6b85b" transparent opacity={0.85} />
+      </mesh>
+      <mesh position={[pitLane.entryGate.x, TRACK_EDGE_Y + 0.03, pitLane.entryGate.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.18, pitLane.widthM]} />
+        <meshBasicMaterial color="#f4e1a1" />
+      </mesh>
+      <mesh position={[pitLane.exitGate.x, TRACK_EDGE_Y + 0.03, pitLane.exitGate.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.18, pitLane.widthM]} />
+        <meshBasicMaterial color="#78d8bd" />
+      </mesh>
+    </group>
+  );
+}
+
 /** 기존 사각 테스트 루프의 도로·인필드 표시를 유지한다. */
 function RectangularTestLoop({ track }: { track: TestTrackDefinition }) {
-  const { outerBounds, innerGrassBounds } = track;
-  const trackWidth = boundsSize(outerBounds.minX, outerBounds.maxX);
-  const trackLength = boundsSize(outerBounds.minZ, outerBounds.maxZ);
+  const { innerGrassBounds } = track;
   const infieldWidth = boundsSize(innerGrassBounds.minX, innerGrassBounds.maxX);
   const infieldLength = boundsSize(innerGrassBounds.minZ, innerGrassBounds.maxZ);
 
@@ -221,22 +255,6 @@ function RectangularTestLoop({ track }: { track: TestTrackDefinition }) {
       >
         <planeGeometry args={[infieldWidth, infieldLength]} />
         <meshStandardMaterial color={VISUAL_PALETTE.track.grass} roughness={1} flatShading />
-      </mesh>
-      <mesh position={[0, TRACK_EDGE_Y, outerBounds.maxZ - 0.15]}>
-        <boxGeometry args={[trackWidth, 0.08, 0.3]} />
-        <meshStandardMaterial color={VISUAL_PALETTE.track.wallTop} roughness={0.8} flatShading />
-      </mesh>
-      <mesh position={[0, TRACK_EDGE_Y, outerBounds.minZ + 0.15]}>
-        <boxGeometry args={[trackWidth, 0.08, 0.3]} />
-        <meshStandardMaterial color={VISUAL_PALETTE.track.wallTop} roughness={0.8} flatShading />
-      </mesh>
-      <mesh position={[outerBounds.maxX - 0.15, TRACK_EDGE_Y, 0]}>
-        <boxGeometry args={[0.3, 0.08, trackLength]} />
-        <meshStandardMaterial color={VISUAL_PALETTE.track.wallTop} roughness={0.8} flatShading />
-      </mesh>
-      <mesh position={[outerBounds.minX + 0.15, TRACK_EDGE_Y, 0]}>
-        <boxGeometry args={[0.3, 0.08, trackLength]} />
-        <meshStandardMaterial color={VISUAL_PALETTE.track.wallTop} roughness={0.8} flatShading />
       </mesh>
     </>
   );
@@ -267,6 +285,7 @@ export function TestTrackVisual({ track = TEST_TRACK_DATA }: TestTrackVisualProp
       <TrackGround track={track} />
       {hasCenterline ? <CenterlineRoad track={track} /> : <RectangularTestLoop track={track} />}
       <TrackCollisionVisuals track={track} />
+      <PitLaneVisual track={track} />
       <TrackMarkers track={track} />
     </group>
   );

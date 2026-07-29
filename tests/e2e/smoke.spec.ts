@@ -1,4 +1,14 @@
-import { expect, test } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
+
+/** 사용자에게 보이는 브라우저 흐름과 모드 전환의 완료 상태를 검증하는 E2E 모음이다. */
+
+/** GPU 초기화 지연이 있어도 React 모드 상태가 확정된 뒤 주말 패널을 조회한다. */
+async function openRaceWeekend(page: Page) {
+  const tab = page.getByRole("tab", { name: "레이스 주말" });
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Race Weekend" })).toBeVisible({ timeout: 20_000 });
+}
 
 test("opens the AI Training Lab as the default visible screen", async ({ page }) => {
   await page.goto("/");
@@ -85,7 +95,8 @@ test("automatically tunes and conditionally applies AI configuration after train
   await page.getByLabel("교육 시나리오").selectOption("acceleration");
   await page.getByRole("button", { name: "훈련 시작" }).click();
 
-  await expect(page.getByRole("heading", { name: /설정을 (자동 적용|유지)했습니다/ })).toBeVisible({ timeout: 10_000 });
+  // 자동 튜닝은 동일한 fixed-step 교육 후보를 여러 번 평가하므로 전체 브라우저 부하를 고려한다.
+  await expect(page.getByRole("heading", { name: /설정을 (자동 적용|유지)했습니다/ })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("기준 점수", { exact: true })).toBeVisible();
   await expect(page.getByText("최고 점수", { exact: true })).toBeVisible();
   await expect(page.getByText("탐색 후보", { exact: true })).toBeVisible();
@@ -138,6 +149,20 @@ test("applies the keyboard preset without an input delay", async ({ page }) => {
   await expect(page.locator(".speed-readout strong")).not.toHaveText("0");
 });
 
+test("shows the front axle steering response in driving telemetry", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "주행 모드" }).click();
+
+  await page.getByLabel("입력 프리셋").selectOption("keyboard");
+  await page.locator("canvas").click({ position: { x: 12, y: 12 } });
+  await page.keyboard.down("a");
+
+  // UI 수치가 0이 아니면 동일한 렌더 스냅샷 조향각이 앞축 그룹에도 전달될 수 있는 상태다.
+  const steeringCard = page.locator("article").filter({ hasText: "전륜 조향각" });
+  await expect(steeringCard.locator("strong")).not.toHaveText("0.0°", { timeout: 3_000 });
+  await page.keyboard.up("a");
+});
+
 test("exposes M3A track-limit and wall telemetry in driving mode", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("tab", { name: "주행 모드" }).click();
@@ -150,8 +175,7 @@ test("exposes M3A track-limit and wall telemetry in driving mode", async ({ page
 test("opens the M2B to M2D race weekend control surface", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("tab", { name: "레이스 주말" }).click();
-  await expect(page.getByRole("heading", { name: "Race Weekend" })).toBeVisible();
+  await openRaceWeekend(page);
   await expect(page.locator("header").getByText("연습 준비", { exact: true })).toBeVisible();
   await expect(page.getByLabel("타이어 선택")).toHaveValue("medium");
   await expect(page.getByLabel("피트 정지 랩")).toBeVisible();
@@ -160,7 +184,7 @@ test("opens the M2B to M2D race weekend control surface", async ({ page }) => {
 
 test("runs deterministic qualifying cuts and exposes valid lap rules", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "레이스 주말" }).click();
+  await openRaceWeekend(page);
 
   await page.getByRole("button", { name: "퀄리파잉 실행" }).click();
   await expect(page.getByText("Q1 20 → 15 완료", { exact: true })).toBeVisible();
@@ -172,7 +196,7 @@ test("runs deterministic qualifying cuts and exposes valid lap rules", async ({ 
 
 test("starts the multi-car race from the qualifying grid and resets the weekend", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "레이스 주말" }).click();
+  await openRaceWeekend(page);
   await page.getByRole("button", { name: "퀄리파잉 실행" }).click();
   await page.getByRole("button", { name: "레이스 시작" }).click();
 
@@ -187,7 +211,7 @@ test("starts the multi-car race from the qualifying grid and resets the weekend"
 
 test("shows M3A contact and track-limit state in the race weekend panel", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "레이스 주말" }).click();
+  await openRaceWeekend(page);
   await expect(page.getByText("M3A · 트랙 리밋·접촉", { exact: true })).toBeVisible();
   await expect(page.getByText(/차량 접촉/).first()).toBeVisible();
   await expect(page.getByText(/PLAYER \d+회 위반/)).toBeVisible();
@@ -195,7 +219,7 @@ test("shows M3A contact and track-limit state in the race weekend panel", async 
 
 test("shows M3B to M3D tyre, racecraft, and race-operations state", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "레이스 주말" }).click();
+  await openRaceWeekend(page);
 
   await expect(page.getByText("M3B · 타이어 상태", { exact: true })).toBeVisible();
   await expect(page.getByText("M3C · 레이스크래프트", { exact: true })).toBeVisible();
@@ -210,12 +234,15 @@ test("shows M3B to M3D tyre, racecraft, and race-operations state", async ({ pag
 });
 
 test("completes the visible race weekend through the results stage", async ({ page }) => {
+  // 전체 20대 그리드의 Rapier fixed-step 실행은 기본 30초 테스트 제한을 초과할 수 있다.
+  test.setTimeout(90_000);
   await page.goto("/");
-  await page.getByRole("tab", { name: "레이스 주말" }).click();
+  await openRaceWeekend(page);
   await page.getByRole("button", { name: "퀄리파잉 실행" }).click();
   await page.getByRole("button", { name: "레이스 시작" }).click();
 
-  await expect(page.locator(".weekend-stage")).toHaveText("레이스 결과", { timeout: 30_000 });
+  // 20대 Rapier 차체가 실제 3랩을 완주하는 시나리오이므로 GPU·WASM 초기화 지연을 포함한 예산이다.
+  await expect(page.locator(".weekend-stage")).toHaveText("레이스 결과", { timeout: 60_000 });
   await expect(page.locator("header").getByText("결과 확인", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "주말 리셋" })).toBeVisible();
   await expect(page.getByText("현재 레이스 순위", { exact: true })).toBeVisible();

@@ -28,4 +28,16 @@ describe("VehicleSimulation track contract", () => {
     expect(simulation.current.speedMps).toBe(0);
     expect(simulation.getTelemetry().trackSectionId).toBe("start-straight");
   });
+
+  it("exposes the front axle steering angle to the render snapshot", () => {
+    const simulation = new VehicleSimulation();
+
+    // 렌더러가 동일한 차량 설정의 조향 한계를 사용해야 입력과 앞축 방향이 어긋나지 않는다.
+    simulation.step({ ...neutralVehicleControlInput(), steering: 0.5 }, 1 / 120);
+
+    expect(simulation.getRenderSnapshot(1).steeringAngleRad).toBeCloseTo(
+      simulation.config.maxSteeringAngleRad * 0.5,
+      8,
+    );
+  });
 });

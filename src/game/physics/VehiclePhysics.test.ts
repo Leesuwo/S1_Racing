@@ -104,6 +104,20 @@ describe("VehiclePhysics", () => {
     expect(state.yawRateRadS).toBeCloseTo(0, 8);
   });
 
+  // 프로젝트 좌표계에서 양의 앞바퀴 조향은 양의 yaw를 만들어야 AI counter-steer와 렌더 방향이 일치한다.
+  it("keeps positive steering and yaw response in the same direction", () => {
+    const state = createInitialVehicleState({ x: 0, z: 0 }, 0);
+    const input = { ...neutralVehicleControlInput(), throttle: 1, steering: 1 };
+
+    for (let step = 0; step < 120; step += 1) {
+      stepVehicle(state, input, 1 / 120, DEFAULT_VEHICLE_CONFIG, ASPHALT_SURFACE);
+    }
+
+    expect(state.speedMps).toBeGreaterThan(5);
+    expect(state.yawRad).toBeGreaterThan(0.05);
+    expect(state.yawRateRadS).toBeGreaterThan(0);
+  });
+
   it("settles after a short steering correction", () => {
     const state = createInitialVehicleState();
     const throttle = { ...neutralVehicleControlInput(), throttle: 1 };

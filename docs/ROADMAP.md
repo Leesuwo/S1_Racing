@@ -77,3 +77,17 @@ TestTrackDefinition의 정적 벽·연석을 렌더링·Rapier가 공유하고, 
 ## Milestone 3E — First completion hardening (완료)
 
 결정성 digest, 결과 단계 수렴, 통합 HUD·E2E, 아키텍처 문서와 전체 `npm run verify`를 기준으로 오프라인 단일 트랙 1차 완성 게이트를 닫았다. 포함·제외 범위는 [1차 완성 기준](./FIRST_COMPLETE.md)에 기록한다.
+
+## Milestone 4A — Shared Rapier multi-car collision (완료)
+
+`RaceSession`에 선택 가능한 공유 `RaceCollisionWorld` 경계를 추가하고, `RapierMultiCarCollision`이 참가자별 cuboid 차체를 하나의 Rapier World에서 실제 형상·질량·yaw 회전으로 해결한다. 입력·AI·엔진 상태는 기존 `VehicleSimulation`이 소유하고, 충돌 후 포즈와 접촉 이벤트만 세션에 전달한다. WASM 초기화 전 순수 테스트는 기존 결정적 접촉 해결기로 대체한다.
+
+## Milestone 4B — Physical pit lane and speed limit (완료)
+
+`TestTrackDefinition.pitLane`에 피트 중심선·폭·진입·탈출 게이트·서비스 박스·속도 제한을 추가했다. `PitLaneMonitor`는 전략 요청을 실제 차선 입력으로 변환하고, 차선 속도 위반과 박스 진입을 fixed-step으로 기록한다. 화면·노면 샘플러·레이스 세션은 동일한 피트 레인 원본을 사용한다.
+
+## Milestone 4C — S1 race regulations (완료)
+
+`RaceRegulations`가 접촉 강도에 따른 황색기·세이프티카, 레드 플래그 중단·재시작, 피트 속도 시간 패널티와 체커드 전이를 관리한다. 이는 전체 FIA 규정의 복제가 아니라 현재 오프라인 프로토타입에서 검증 가능한 S1 규정 v1이며, 규정 스냅샷은 Race Weekend UI와 결정성 digest에 포함된다.
+
+상세 범위와 검증 결과는 [Milestone 4 상세 문서](./MILESTONE_4.md)에 기록한다.

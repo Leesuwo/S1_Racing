@@ -1,5 +1,61 @@
 # Decisions
 
+## 2026-07-29 — D-037
+
+**결정:** M4는 공유 `RaceCollisionWorld`, 데이터 기반 `pitLane`, 순수 `RaceRegulations` 세 경계로 구현한다. `RaceSession`은 공통 `VehicleControlInput`과 `VehicleSimulation`을 계속 소유하고, Rapier 공유 세계는 다차량 cuboid 차체의 shape solver 후 포즈·접촉 이벤트만 반환한다. 피트 레인은 본선과 같은 트랙 데이터에서 중심선·게이트·박스·속도 제한을 읽으며, 규정 엔진은 황색기·세이프티카·레드 플래그·시간 패널티를 상태 스냅샷으로 제공한다.
+
+**이유:** 기존 M3A 원형 접촉은 결정성 검증에는 충분하지만 실제 차체 형상과 yaw 회전을 표현하지 못했고, M3D의 피트 서비스는 위치·속도와 분리된 추상 정지였다. 세 기능을 RaceSession이나 렌더러에 직접 하드코딩하면 물리 소유권과 트랙 원본이 다시 분리되므로, 구현 가능한 단위 경계를 먼저 고정한다.
+
+**범위:** `RaceCollisionWorld`/`RapierMultiCarCollision`, `PitLaneMonitor`, `RaceRegulations`, `RaceSession` 연결, 피트 레인 트랙 원본·시각화·Race Weekend M4 상태 표시와 단위·통합 테스트를 포함한다. 전체 FIA 규정, 온라인 동기화, 연료·DRS·KERS·날씨는 포함하지 않는다.
+
+**검증:** M4 전용 Rapier shape contact, RaceSession 주입, 피트 게이트·박스·속도 위반, 규정 플래그 단위 테스트와 전체 `npm run verify`를 사용한다. 트랙·속도·패널티·차체 치수는 실제 경기 또는 차량 재현값이 아닌 `initial_assumption`이다.
+
+## 2026-07-29 — D-036
+
+**결정:** 차량 움직임을 2012 F1의 공통 동역학에 가깝게 조정하기 위해, FIA 규정으로 확인되는 640 kg·2.4 L V8·18,000 rpm·7단·휠 치수 기준과 공식 2012 온보드 자료의 조작 흐름을 기준선으로 사용한다. 공력 계수·타이어 곡선·관성·서스펜션 강성은 특정 팀의 실차 데이터가 아닌 `initial_assumption`/`simulation_required`로 표시한다.
+
+**이유:** 기존 차량은 780 kg·8,000 rpm·낮은 다운포스와 전후 횡강성 불균형으로, 고속에서 차체가 붙기보다 저속과 고속의 차이가 약하고 turn-in이 인공적으로 느껴졌다. 2012 F1다운 주행감은 고속 공력 하중, 작은 슬립각, 빠른 yaw 응답, 강한 제동과 trail-braking 전이를 함께 만들어야 한다.
+
+**범위:** `AeroModel`, `TireModel`, `VehiclePhysics`, `RapierChassisSuspension`의 기본 기준값과 `SingleOpponentAI`의 예측 제동·카운터스티어 기준값, 관련 회귀 테스트·문서를 변경한다. `VehicleControlInput`, AI가 위치를 직접 바꾸지 않는 경계, 120Hz fixed-step, 렌더링 스냅샷 소유권은 유지한다. KERS·DRS·연료 질량 변화는 후속 마일스톤으로 남긴다.
+
+**검증:** `PhysicsValidation`, `VehiclePhysics`, `RapierChassisSuspension`, `SingleOpponentAI`, AI 고속 복합·전체 랩 평가와 브라우저 Driving·AI Training 화면을 확인하고 전체 `npm run verify`를 완료 게이트로 사용한다. F1 2012 출처와 영상 확인 대상은 `docs/F1_2012_DYNAMICS_REFERENCE.md`에 기록한다.
+
+## 2026-07-29 — D-035
+
+**결정:** 앞축 타이어의 시각 조향은 `VehicleRenderSnapshot.steeringAngleRad`를 통해 렌더러에 전달하고, 차체 yaw와 분리된 앞바퀴 그룹만 회전시킨다. 영웅 차량의 오픈 콕핏에는 외부 자산 없이 저폴리 헬멧·바이저·상체·팔·장갑으로 구성한 드라이버를 표시하고, 다차량 grid LOD에서는 비용을 늘리지 않는다.
+
+**이유:** 기존 차량은 타이어가 항상 차량 로컬 방향을 유지해 조향 입력이 화면에서 보이지 않았고, 오픈 콕핏은 비어 보였다. 조향각을 렌더 스냅샷으로 확장하면 물리 계층은 그대로 두면서 Driving·Training·Race Weekend가 같은 시각 계약을 사용할 수 있다. 드라이버는 2012년형 시대감과 콕핏 판독성을 높이되 외부 팀·드라이버 자산을 복제하지 않는다.
+
+**범위:** `VehicleSimulation`의 읽기 전용 렌더 스냅샷, `LowPolyCar`의 앞축 그룹과 hero cockpit, Driving·Training·Race Weekend의 연결 코드와 회귀 테스트만 변경한다. 조향 입력, 타이어 힘, 차량 포즈, AI 제어 경계는 변경하지 않는다.
+
+**검증:** `VehicleSimulation.test.ts`에서 조향각 전달을 확인하고, `npm run verify`에서 타입·단위·아키텍처·빌드·브라우저 검사를 실행한다. 화면에서는 Driving·Training·Race Weekend에서 앞축이 차체 yaw와 독립적으로 회전하고 hero 콕핏에 드라이버가 보이는지 확인한다.
+
+## 2026-07-29 — D-034
+
+**결정:** `design-taste-frontend`는 S1 Racing의 게임 HUD와 모드 전환 셸에만 적용한다. 기존 React/CSS 구조 안에서 `--ui-*` 토큰, Pit Wall / Telemetry 색상 계층, 4px·6px 각진 패널, 민트 기본 액센트, 의미 기반 황색·적색 상태를 사용한다. Tailwind·Motion·아이콘 라이브러리는 추가하지 않는다.
+
+**이유:** 이 화면의 핵심은 마케팅용 시각 연출이 아니라 주행 중 텔레메트리와 운영 상태의 판독성이다. 새 UI 의존성을 도입하면 번들·상태 경계·검증 범위가 불필요하게 커진다. 기존 HUD의 기능과 ARIA 경계를 보존하면서 공통 토큰과 포커스·reduced motion 규칙을 적용하는 편이 현재 마일스톤에 적합하다.
+
+**범위:** `src/styles.css`의 공통 셸·HUD·Training·Race Weekend 스타일과 `docs/DESIGN_TASTE_FRONTEND_REDESIGN.md`를 갱신한다. 차량 물리, 120Hz fixed-step, `VehicleControlInput`, AI 입력, Race Weekend 상태 전이와 캔버스 렌더링 소유권은 변경하지 않는다.
+
+**검증:** `npm run typecheck`, `npm run test:unit`, `npm run architecture:check`, `npm run build`, `npm run test:e2e`를 포함한 `npm run verify`를 실행한다. 기존 E2E 타이밍 실패가 재현되면 CSS 변경과 분리해 기록한다.
+
+## 2026-07-29 — D-033
+
+**결정:** F1 2012 차량 외관의 98% 유사도 요청은 특정 팀 차량의 복제가 아닌 2012년형 공통 형상 기준으로 구현한다. 공통 `LowPolyCar`는 물리 기준 휠베이스 3.30 m와 트랙 폭 1.60 m에 시각 휠 축을 정렬하고, 스텝 노즈·다층 프런트 윙·오픈 콕핏·사이드포드 언더컷·에어박스·고후방 배기·리어 윙/빔 윙/디퓨저·push-rod/pull-rod를 표시한다.
+
+**이유:** 사용자가 특정 팀 또는 한 대의 차종을 지정하지 않았으므로 단일 차량의 픽셀 유사도를 객관적으로 보장할 수 없다. 대신 2012년 시즌을 대표하는 공통 기술 문법을 높은 충실도로 보존해야 시즌 시대감과 독창적인 S1 자산 경계를 동시에 유지할 수 있다. 실제 팀 로고·스폰서·드라이버·리버리는 사용하지 않는다.
+
+**검증:** `src/world/LowPolyCar.tsx`의 station 기반 차체와 공력·기계 요소를 정면·측면·후면 기준으로 검토하고, `npm run verify`에서 타입·단위·빌드·브라우저 검사를 실행한다. 형상 수치는 시각 렌더링 전용 `initial_assumption`이며 차량 물리 설정을 대체하지 않는다.
+
+## 2026-07-29 — D-032
+
+**결정:** F1 2012 차량 이미지·기술 자료는 프로젝트 문서와 연결된 Notion 참조 페이지에 함께 기록한다. Notion의 `11. 외부 자료 조사 결과 — 공식 기준값과 구현 결정` 하위에 `13. F1 2012 차량 디자인 참조 자료` 섹션을 두고, 차종별 이미지 갤러리·기술 프로필·규정 근거·S1 적용 경계를 유지한다.
+
+**이유:** 차량 디자인 조사는 이미지, 기술 설명, 규정, 라이선스 판단을 함께 반복해서 확인해야 하므로 저장소 문서만으로 관리하면 시각 자료 탐색 경로가 분산된다. Notion 허브에 조사 결과를 연결하면 다음 디자인 세션에서 같은 자료를 다시 찾을 수 있고, 저장소에는 재현 가능한 링크와 라이선스 경계를 남길 수 있다. 외부 사진은 현재 런타임 자산으로 복사하지 않는다.
+
+**검증:** Notion 페이지의 부모가 `S1 Racing — 공식 문서·수학 공식·참고자료 허브`인지 다시 조회하고, F1 2012 섹션에 공통 규정·12개 차종 링크·비복제 규칙이 저장되었는지 확인한다. 저장소에서는 `docs/F1_2012_DESIGN_REFERENCE.md`와 `docs/ASSET_LICENSE_REGISTER.md`의 링크·참조 전용 상태를 검토한다.
+
 ## 2026-07-29 — D-031
 
 **결정:** 저폴리 그래픽 1차 재구성은 `VisualPalette`와 `SceneLighting`을 공통 렌더 모듈로 두고, Training·Driving·Race Weekend는 동일한 트랙 색상·노을 환경광·안개 규칙을 사용한다. 카메라 거리와 HUD 폭만 장면 목적에 맞게 조정하며 물리 스냅샷·입력·AI 경계는 변경하지 않는다.
@@ -182,7 +238,7 @@
 
 **이유:** 기어비·토크 커브·RPM·클러치·엔진 브레이크를 고정 120Hz에서 결정적으로 계산하면서, 타이어 힘과 휠 회전 적분은 Rapier 접지 경계에서 한 번만 수행해야 한다.
 
-**검증:** 1단/8단 토크·RPM 차이, 연결 주행 중 엔진 브레이크, 정지 상태 엔진 브레이크 0, 후륜 휠 각속도와 차량 속도 통합 테스트를 사용한다.
+**검증:** 1단/7단 토크·RPM 차이, 연결 주행 중 엔진 브레이크, 정지 상태 엔진 브레이크 0, 후륜 휠 각속도와 차량 속도 통합 테스트를 사용한다.
 
 ## 2026-07-19 — D-009
 

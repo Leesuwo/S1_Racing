@@ -532,7 +532,7 @@
 
     <!-- Main Diagram -->
     <div class="diagram-container">
-      <svg viewBox="0 0 1590 852" role="img" aria-label="S1 Racing — Milestone 2B~3E — 다차량 세션·타이어·레이스크래프트·운영·1차 완성 검증 (architecture diagram)">
+      <svg viewBox="0 0 1810 852" role="img" aria-label="S1 Racing — Milestone 2B~3E — 다차량 세션·타이어·레이스크래프트·운영·1차 완성 검증 (architecture diagram)">
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -556,10 +556,10 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect x="10" y="90" width="1540" height="694" rx="12" class="c-region" stroke-width="1"/>
+        <rect x="10" y="90" width="1760" height="694" rx="12" class="c-region" stroke-width="1"/>
         <text x="18" y="108" class="t-cloud" font-size="9" font-weight="600">브라우저 런타임</text>
 
-        <rect x="10" y="90" width="1540" height="674" rx="8" class="c-security-group" stroke-width="1"/>
+        <rect x="10" y="90" width="1760" height="674" rx="8" class="c-security-group" stroke-width="1"/>
         <text x="18" y="108" class="t-security" font-size="9" font-weight="600">순수 도메인 경계</text>
 
         <!-- Connection paths (before components for correct z-order) -->
@@ -592,6 +592,14 @@
         <path d="M 1210 600 L 1304.5 600 Q 1312.5 600 1312.5 592 L 1312.5 352 Q 1312.5 344 1320.5 344 L 1415 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 870 392 L 1097 392 Q 1105 392 1105 400 L 1105 524 Q 1105 532 1113 532 L 1340 532" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path d="M 1340 532 L 1218 532 Q 1210 532 1210 524 L 1210 320 Q 1210 312 1202 312 L 1080 312" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path d="M 870 392 L 1202 392 Q 1210 392 1210 400 L 1210 524 Q 1210 532 1218 532 L 1550 532" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 1550 532 L 1323 532 Q 1315 532 1315 524 L 1315 320 Q 1315 312 1307 312 L 1080 312" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path d="M 660 452 L 1097 452 Q 1105 452 1105 460 L 1105 624 Q 1105 632 1113 632 L 1550 632" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 870 392 L 1202 392 Q 1210 392 1210 400 L 1210 624 Q 1210 632 1218 632 L 1550 632" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 1550 632 L 1520 632" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path d="M 870 392 L 1202 392 Q 1210 392 1210 400 L 1210 704 Q 1210 712 1218 712 L 1550 712" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 1550 712 L 1542.5 712 Q 1535 712 1535 704.5 L 1535 639.5 Q 1535 632 1527.5 632 L 1520 632" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path d="M 1645 680 L 1538 680 Q 1530 680 1530 672 L 1530 352 Q 1530 344 1522 344 L 1415 344" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 870 392 L 987 392 Q 995 392 995 400 L 995 524 Q 995 532 1003 532 L 1120 532" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path d="M 1120 532 L 788 532 Q 780 532 780 524 L 780 240 Q 780 232 772 232 L 440 232" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path d="M 1080 312 L 1202 312 Q 1210 312 1210 320 L 1210 384 Q 1210 392 1218 392 L 1340 392" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
@@ -807,6 +815,24 @@
         <text x="1430" y="546" class="t-muted" font-size="9" text-anchor="middle">2D 원형 침투 분리·반발</text>
         <text x="1430" y="556" class="t-backend" font-size="7" text-anchor="middle">M3A</text>
 
+        <rect x="1550" y="500" width="190" height="64" rx="6" class="c-mask"/>
+        <rect x="1550" y="500" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+        <text x="1645" y="530" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">공유 Rapier 차체 충돌</text>
+        <text x="1645" y="546" class="t-muted" font-size="9" text-anchor="middle">cuboid 형상·yaw 회전·질량 접촉</text>
+        <text x="1645" y="556" class="t-backend" font-size="7" text-anchor="middle">M4A</text>
+
+        <rect x="1550" y="600" width="190" height="64" rx="6" class="c-mask"/>
+        <rect x="1550" y="600" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+        <text x="1645" y="630" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">실제 피트 레인</text>
+        <text x="1645" y="646" class="t-muted" font-size="9" text-anchor="middle">중심선·박스·게이트·속도 제한</text>
+        <text x="1645" y="656" class="t-backend" font-size="7" text-anchor="middle">M4B</text>
+
+        <rect x="1550" y="680" width="190" height="64" rx="6" class="c-mask"/>
+        <rect x="1550" y="680" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+        <text x="1645" y="710" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">레이스 규정 엔진</text>
+        <text x="1645" y="726" class="t-muted" font-size="9" text-anchor="middle">세이프티카·레드 플래그·시간 패널티</text>
+        <text x="1645" y="736" class="t-backend" font-size="7" text-anchor="middle">M4C</text>
+
         <rect x="690" y="120" width="165" height="64" rx="6" class="c-mask"/>
         <rect x="690" y="120" width="165" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
         <text x="772.5" y="150" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">트랙 월드 표시</text>
@@ -907,6 +933,22 @@
         <text x="1200" y="390" class="t-security" font-size="8" text-anchor="middle">차량별 평면 상태</text>
         <rect x="1149.4" y="348" width="101.2" height="14" rx="3" class="c-mask"/>
         <text x="1200" y="358" class="t-backend" font-size="8" text-anchor="middle">침투 분리·반발 응답</text>
+        <rect x="1406.6" y="428" width="86.8" height="14" rx="3" class="c-mask"/>
+        <text x="1450" y="438" class="t-security" font-size="8" text-anchor="middle">차량별 pose·질량</text>
+        <rect x="1397" y="486" width="106" height="14" rx="3" class="c-mask"/>
+        <text x="1450" y="496" class="t-backend" font-size="8" text-anchor="middle">shape solver 후 포즈</text>
+        <rect x="1334.6" y="710" width="110.8" height="14" rx="3" class="c-mask"/>
+        <text x="1390" y="720" class="t-security" font-size="8" text-anchor="middle">피트 중심선·폭·게이트</text>
+        <rect x="1369.4" y="668" width="101.2" height="14" rx="3" class="c-mask"/>
+        <text x="1420" y="678" class="t-security" font-size="8" text-anchor="middle">전략 요청·차량 포즈</text>
+        <rect x="1479.4" y="668" width="101.2" height="14" rx="3" class="c-mask"/>
+        <text x="1530" y="678" class="t-backend" font-size="8" text-anchor="middle">박스 진입·속도 위반</text>
+        <rect x="1401.8" y="730" width="96.39999999999999" height="14" rx="3" class="c-mask"/>
+        <text x="1450" y="740" class="t-security" font-size="8" text-anchor="middle">접촉·플래그 이벤트</text>
+        <rect x="1461.8" y="775" width="96.39999999999999" height="14" rx="3" class="c-mask"/>
+        <text x="1510" y="785" class="t-messagebus" font-size="8" text-anchor="middle">차량별 규정 플래그</text>
+        <rect x="1599" y="390" width="82" height="14" rx="3" class="c-mask"/>
+        <text x="1640" y="400" class="t-messagebus" font-size="8" text-anchor="middle">규정·패널티 HUD</text>
         <rect x="879.4" y="568" width="101.2" height="14" rx="3" class="c-mask"/>
         <text x="930" y="578" class="t-security" font-size="8" text-anchor="middle">상대·랩·황색기 상태</text>
         <rect x="856.6" y="568" width="86.8" height="14" rx="3" class="c-mask"/>
@@ -1006,12 +1048,12 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Milestone 2B~3E</h3>
+          <h3>Milestone 2B~4C</h3>
         </div>
         <ul>
           <li>&bull; 다차량 그리드·퀄리파잉·주말 운영</li>
-          <li>&bull; 타이어·racecraft·손상·피트 상태</li>
-          <li>&bull; 결정성 digest·HUD·E2E 1차 완성 게이트</li>
+          <li>&bull; Rapier 차체 충돌·실제 피트 레인</li>
+          <li>&bull; 세이프티카·레드 플래그·시간 패널티</li>
         </ul>
       </div>
 
@@ -1033,9 +1075,9 @@
           <h3>다음 경계</h3>
         </div>
         <ul>
-          <li>&bull; Rapier 다차량 차체 형상·회전 충돌</li>
-          <li>&bull; 실제 피트 레인 차선·속도 제한</li>
-          <li>&bull; 온라인 동기화와 전체 규정 확장</li>
+          <li>&bull; 온라인 동기화와 리플레이</li>
+          <li>&bull; 연료·DRS·KERS·날씨</li>
+          <li>&bull; 전체 대회 규정과 콘텐츠 확장</li>
         </ul>
       </div>
     </div>

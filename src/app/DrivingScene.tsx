@@ -21,7 +21,7 @@ import { sampleTestTrackSurface } from "../game/physics/TrackSurface";
 import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "../gameplay/race/TrackLimits";
 import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
-import { LowPolyCar } from "../world/LowPolyCar";
+import { LowPolyCar, type LowPolyCarFrontWheelRefs } from "../world/LowPolyCar";
 import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 
@@ -39,13 +39,22 @@ interface DrivingSceneProps {
 
 /** 물리 스냅샷을 표시하는 단순 차량 모델이며 물리 상태를 소유하지 않는다. */
 function VehicleModel({
+  frontWheelRefs,
   groupRef,
   color,
 }: {
+  frontWheelRefs: LowPolyCarFrontWheelRefs;
   groupRef: RefObject<THREE.Group | null>;
   color: string;
 }) {
-  return <LowPolyCar groupRef={groupRef} bodyColor={color} accentColor="#d8b96a" />;
+  return (
+    <LowPolyCar
+      groupRef={groupRef}
+      frontWheelRefs={frontWheelRefs}
+      bodyColor={color}
+      accentColor="#d8b96a"
+    />
+  );
 }
 /** 시뮬레이션의 시작·리셋 포즈를 해당 Rapier 리그에 동기화한다. */
 function syncRigFromSimulation(
@@ -120,6 +129,7 @@ function stepSimulationWithRig(
 /** Rapier 차체 높이와 보간된 평면 포즈를 Three.js 차량 그룹에 반영한다. */
 function updateVehicleModel(
   vehicleRef: RefObject<THREE.Group | null>,
+  frontWheelRefs: LowPolyCarFrontWheelRefs,
   snapshot: ReturnType<VehicleSimulation["getRenderSnapshot"]>,
   rig: RapierChassisSuspension | null,
 ): void {
@@ -135,6 +145,10 @@ function updateVehicleModel(
     : 0;
   vehicleRef.current.position.set(snapshot.position.x, visualHeight, snapshot.position.z);
   vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
+  // 차체 yaw와 분리해 앞축만 시각 조향한다. 차량 포즈·타이어 힘·입력 상태는 이 함수가 소유하지 않는다.
+  const steeringAngleRad = Number.isFinite(snapshot.steeringAngleRad) ? snapshot.steeringAngleRad : 0;
+  frontWheelRefs.left.current && (frontWheelRefs.left.current.rotation.y = steeringAngleRad);
+  frontWheelRefs.right.current && (frontWheelRefs.right.current.rotation.y = steeringAngleRad);
 }
 
 /** Rapier quaternion을 프로젝트 물리 좌표계의 yaw(rad)로 변환한다. */
@@ -181,6 +195,20 @@ export function DrivingScene({
   const vehicleRef = useRef<THREE.Group>(null);
   // 두 번째 차량 모델의 Three.js 표시 그룹 참조다.
   const opponentVehicleRef = useRef<THREE.Group>(null);
+  // 플레이어 앞 타이어를 각 허브 중심에서 시각 조향하는 참조다.
+  const frontLeftWheelRef = useRef<THREE.Group>(null);
+  const frontRightWheelRef = useRef<THREE.Group>(null);
+  // AI 차량 앞 타이어도 차체 원점이 아닌 각 허브를 중심으로 회전시킨다.
+  const opponentFrontLeftWheelRef = useRef<THREE.Group>(null);
+  const opponentFrontRightWheelRef = useRef<THREE.Group>(null);
+  const frontWheelRefs: LowPolyCarFrontWheelRefs = {
+    left: frontLeftWheelRef,
+    right: frontRightWheelRef,
+  };
+  const opponentFrontWheelRefs: LowPolyCarFrontWheelRefs = {
+    left: opponentFrontLeftWheelRef,
+    right: opponentFrontRightWheelRef,
+  };
   // 매 프레임 할당을 피하는 카메라 목표·바라보기·전방 벡터 버퍼다.
   const target = useMemo(() => new THREE.Vector3(), []);
   // 차량 뒤쪽에서 따라갈 카메라 위치 버퍼다.
@@ -285,8 +313,8 @@ export function DrivingScene({
     const snapshot = simulation.getRenderSnapshot(alpha);
     // AI 차량도 동일한 보간 계수로 렌더링해 두 차량의 시간축을 일치시킨다.
     const opponentSnapshot = opponentSimulation.getRenderSnapshot(alpha);
-    updateVehicleModel(vehicleRef, snapshot, suspensionRig.current);
-    updateVehicleModel(opponentVehicleRef, opponentSnapshot, opponentSuspensionRig.current);
+    updateVehicleModel(vehicleRef, frontWheelRefs, snapshot, suspensionRig.current);
+    updateVehicleModel(opponentVehicleRef, opponentFrontWheelRefs, opponentSnapshot, opponentSuspensionRig.current);
 
     // 차량 전방을 기준으로 후방 카메라 위치와 바라볼 점을 계산한다.
     forward.set(Math.sin(snapshot.yawRad), 0, -Math.cos(snapshot.yawRad));
@@ -319,8 +347,8 @@ export function DrivingScene({
     <>
       <SceneLighting variant="driving" />
       <TestTrackVisual track={simulation.track} />
-      <VehicleModel groupRef={vehicleRef} color="#d92f4f" />
-      <VehicleModel groupRef={opponentVehicleRef} color="#27b8d6" />
+      <VehicleModel groupRef={vehicleRef} frontWheelRefs={frontWheelRefs} color="#d92f4f" />
+      <VehicleModel groupRef={opponentVehicleRef} frontWheelRefs={opponentFrontWheelRefs} color="#27b8d6" />
     </>
   );
 }

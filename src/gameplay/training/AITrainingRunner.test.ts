@@ -124,6 +124,9 @@ describe("AITrainingRunner", () => {
       checkpointIndex: snapshot.totalCheckpointCount,
     });
     expect(snapshot.message).toContain("전체 랩 완료");
+    // 2012 F1 기준선은 결승선 통과뿐 아니라 제동·turn-in에서 큰 드리프트를 억제해야 한다.
+    expect(snapshot.maximumBodySlipAngleRad).toBeLessThan(0.2);
+    expect(snapshot.offTrackCount).toBeLessThan(50);
   });
 
   // 고속 복합 코너는 레이싱 라인을 향한 작은 타이어 슬립은 허용하지만, 차체가 진행 방향보다 크게 옆으로 미끄러지는 드리프트 상태는 허용하지 않는다.

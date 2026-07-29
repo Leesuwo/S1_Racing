@@ -82,32 +82,50 @@ export interface VehicleState {
 }
 
 export const DEFAULT_VEHICLE_CONFIG: VehiclePhysicsConfig = {
-  massKg: 780,
+  // FIA 2012 Technical Regulations의 최소 중량 640 kg을 기준선으로 둔다.
+  // 연료·세팅·노면에 따른 실제 주행 중량은 별도 레이스 마일스톤에서 다룬다.
+  massKg: 640,
   wheelBaseM: 3.3,
-  frontAxleDistanceM: 1.815,
-  rearAxleDistanceM: 1.485,
-  wheelRadiusM: 0.36,
-  maxSteeringAngleRad: 0.45,
-  maxBrakeForceN: 14_500,
-  maxEngineTorqueNm: 320,
+  // 2012 규정의 전후 하중 하한에 가까운 46/54% 정적 배분을 initial_assumption으로 둔다.
+  frontAxleDistanceM: 1.78,
+  rearAxleDistanceM: 1.52,
+  // FIA가 규정한 건조 완성 휠 직경 660 mm의 절반을 사용한다.
+  wheelRadiusM: 0.33,
+  // 2012 F1의 빠른 조향 응답을 표현하되 일반 차량처럼 과도하게 꺾이지 않게 제한한다.
+  maxSteeringAngleRad: 0.34,
+  // 고속에서는 다운포스가 타이어 하중을 늘리므로 브레이크 토크가 그 한계를 사용할 수 있게 한다.
+  maxBrakeForceN: 30_000,
+  // 2.4 L V8의 출력·회전수 범위를 간결하게 근사한 initial_assumption이다.
+  maxEngineTorqueNm: 305,
   finalDriveRatio: 3.6,
   drivetrainEfficiency: 0.9,
-  engineBrakeTorqueNm: 110,
-  engineRpmResponseRpmPerSecond: 24_000,
-  gearRatios: [3.2, 2.2, 1.65, 1.32, 1.1, 0.94, 0.82, 0.72],
-  idleRpm: 900,
-  redlineRpm: 8_000,
-  tireGripCoefficient: 1.55,
-  frontCorneringStiffness: 28_000,
-  // 후륜의 초기 횡강성(N/rad)을 앞축보다 높게 두어 고속 복합 코너에서 과도한 후미 회전을 억제한다.
-  rearCorneringStiffness: 70_000,
-  aeroDownforceCoefficient: 1.25,
+  engineBrakeTorqueNm: 145,
+  engineRpmResponseRpmPerSecond: 52_000,
+  // FIA 2012 규정의 최대 7단 전진 기어에 맞춘 주행용 비율이다.
+  gearRatios: [4.3, 3.2, 2.45, 1.95, 1.6, 1.38, 1.2],
+  idleRpm: 3_500,
+  redlineRpm: 18_000,
+  tireGripCoefficient: 1.75,
+  // 앞·뒤 타이어의 횡력 응답을 가깝게 두어 실제 F1의 균형 잡힌 회전을 만든다.
+  frontCorneringStiffness: 55_000,
+  rearCorneringStiffness: 58_000,
+  aeroDownforceCoefficient: 4.4,
   aeroBalanceFront: 0.43,
-  dragCoefficient: 0.42,
-  rollingResistance: 32,
-  yawInertiaKgM2: 4_800,
-  yawDamping: 1_800,
-  suspension: DEFAULT_SUSPENSION_CONFIG,
+  dragCoefficient: 0.68,
+  rollingResistance: 18,
+  // 저질량·낮은 관성의 반응을 만들기 위한 initial_assumption이다.
+  yawInertiaKgM2: 1_650,
+  // 고속 제동·turn-in에서 남은 yaw rate를 빠르게 정리하는 initial_assumption이다.
+  // F1의 공력 안정성 효과를 2D 평면 모델에서 차체 회전 감쇠로 근사한다.
+  yawDamping: 5_000,
+  suspension: {
+    ...DEFAULT_SUSPENSION_CONFIG,
+    centerOfMassHeightM: 0.27,
+    travelM: 0.055,
+    springRateNPerM: 220_000,
+    bumpDampingNsPerM: 14_000,
+    reboundDampingNsPerM: 20_000,
+  },
 };
 
 export const ASPHALT_SURFACE: VehicleSurface = {
@@ -285,7 +303,10 @@ export function stepVehicle(
   const forwardSpeedMps = dot(state.velocity, forward);
   const lateralSpeedMps = dot(state.velocity, right);
   const speedMps = Math.hypot(state.velocity.x, state.velocity.z);
-  const steeringAngleRad = safeSteering * config.maxSteeringAngleRad * clamp(1 - speedMps / 95, 0.25, 1);
+  // F1의 고속 조향은 저속 헤어핀의 최대 조향각을 그대로 쓰지 않는다.
+  // 속도가 오를수록 작은 앞바퀴 각도로 큰 횡가속을 만들도록 조향각을 줄여
+  // 브레이크-턴인 전환에서 차체가 갑자기 회전하는 것을 막는다.
+  const steeringAngleRad = safeSteering * config.maxSteeringAngleRad * clamp(1 - speedMps / 60, 0.18, 1);
 
   const frontVelocity = add(state.velocity, scale(right, state.yawRateRadS * config.frontAxleDistanceM));
   const rearVelocity = add(state.velocity, scale(right, -state.yawRateRadS * config.rearAxleDistanceM));
