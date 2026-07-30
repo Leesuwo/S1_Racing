@@ -41,6 +41,7 @@ import {
   type TyreCompound,
 } from "../gameplay/race/RaceWeekendSession";
 import { parseRaceReplay, serializeRaceReplay } from "../gameplay/race/RaceReplay";
+import type { DrivingCameraView } from "./DrivingScene";
 
 /**
  * 각 WebGL 모드는 선택 시점에만 내려받는다. 초기 Training 화면이 Race Weekend의 Rapier와
@@ -449,10 +450,13 @@ export function App() {
   // 현재 사용자가 보고 있는 장면 모드이며 교육실을 기본 화면으로 연다.
   const [mode, setMode] = useState<"training" | "drive" | "weekend" | "design">("training");
   // 디자인 검토 장면은 물리와 무관한 UI 상태만 보유한다.
-  const [designPaintId, setDesignPaintId] = useState<DesignStudioPaintId>("crimson");
+  // RB8 형상 대조에는 실제 팀 리버리 대신 표면 굴곡이 읽히는 무표식 슬레이트 도장을 기본으로 둔다.
+  const [designPaintId, setDesignPaintId] = useState<DesignStudioPaintId>("graphite");
   const [designView, setDesignView] = useState<DesignStudioView>("hero");
   const [designSteeringAngleDeg, setDesignSteeringAngleDeg] = useState(0);
   const [designAutoRotate, setDesignAutoRotate] = useState(true);
+  // 콕핏뷰 선택은 App 셸이 소유하는 렌더 전용 UI 상태이며 물리·입력·AI에 전달하지 않는다.
+  const [drivingCameraView, setDrivingCameraView] = useState<DrivingCameraView>("chase");
   // 플레이어 주행 모드의 마지막 텔레메트리 샘플이다.
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
   // AI 상대의 마지막 텔레메트리 샘플이다.
@@ -683,7 +687,7 @@ export function App() {
               : weekendMode
                 ? "S1 RACING / M2B → M3D · RACE WEEKEND"
                 : designMode
-                  ? "S1 RACING / DESIGN REVIEW · 2012 OPEN-WHEEL"
+                  ? "S1 RACING / DESIGN REVIEW · RB8 FORM STUDY"
                 : "S1 RACING / MILESTONE 2A · 단일 AI 상대"}
           </p>
           <h1>{trainingMode ? "Training Lab" : weekendMode ? "Race Weekend" : designMode ? "Car Design" : "S1 Racing"}</h1>
@@ -693,7 +697,7 @@ export function App() {
               : weekendMode
                 ? "다차량 그리드 · 유효 랩 퀄리파잉 · 최소 피트 전략을 하나의 결정적 흐름으로 검증"
                 : designMode
-                  ? "S1 2012 Open-Wheel · 노즈·콕핏·사이드포드·리어 에어로를 독립적으로 검토"
+                  ? "RB8 형상 연구 · 스텝 노즈·상부 배기·언더컷 채널·리어 에어로를 독립적으로 검토"
                 : "공유 VehicleControlInput과 120Hz 물리로 주행하는 AI 상대"}
           </p>
         </div>
@@ -775,6 +779,7 @@ export function App() {
                 <DrivingScene
                   input={input}
                   paused={paused}
+                  cameraView={drivingCameraView}
                   opponentAIConfig={opponentAIConfig}
                   onTelemetry={setTelemetry}
                   onOpponentTelemetry={setOpponentTelemetry}
@@ -841,12 +846,31 @@ export function App() {
               <button type="button" onClick={() => input.requestReset()}>
                 트랙 시작점으로 리셋
               </button>
+              <div className="camera-view-toggle" role="group" aria-label="카메라 시점">
+                <span>카메라</span>
+                <button
+                  type="button"
+                  aria-pressed={drivingCameraView === "chase"}
+                  className={drivingCameraView === "chase" ? "camera-view-toggle__button camera-view-toggle__button--active" : "camera-view-toggle__button"}
+                  onClick={() => setDrivingCameraView("chase")}
+                >
+                  추적 시점
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={drivingCameraView === "cockpit"}
+                  className={drivingCameraView === "cockpit" ? "camera-view-toggle__button camera-view-toggle__button--active" : "camera-view-toggle__button"}
+                  onClick={() => setDrivingCameraView("cockpit")}
+                >
+                  콕핏뷰
+                </button>
+              </div>
               <span>R 리셋 · 클릭/범퍼 변속 · W/S 또는 페달</span>
             </div>
           </>
         )}
         <div className="canvas-label">
-          {trainingMode ? "AI TRAINING LAB / NORTHFIELD GP PROTOTYPE" : weekendMode ? "RACE WEEKEND / MULTI-CAR PROTOTYPE" : designMode ? "DESIGN REVIEW / S1 2012 OPEN-WHEEL" : "PHYSICS PROTOTYPE / TEST TRACK"}
+          {trainingMode ? "AI TRAINING LAB / NORTHFIELD GP PROTOTYPE" : weekendMode ? "RACE WEEKEND / MULTI-CAR PROTOTYPE" : designMode ? "DESIGN REVIEW / RB8 FORM STUDY" : drivingCameraView === "cockpit" ? "COCKPIT VIEW / S1 2012 OPEN-WHEEL" : "PHYSICS PROTOTYPE / TEST TRACK"}
         </div>
       </section>
 

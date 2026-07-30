@@ -24,6 +24,8 @@ export interface LowPolyCarProps {
   steeringAngleRad?: number;
   /** 렌더 스냅샷이 전달하는 네 바퀴의 누적 구름 회전량(rad)이다. */
   wheelSpinRad?: LowPolyCarWheelSpin;
+  /** 1인칭 카메라에서 플레이어 자신의 외부 드라이버 메시를 숨긴다. */
+  hideDriver?: boolean;
 }
 
 /** 앞바퀴 조향과 모든 바퀴 구름을 서로 다른 회전축으로 표시하는 참조 묶음이다. */
@@ -84,11 +86,13 @@ type Point3 = readonly [x: number, y: number, z: number];
 /** 높은 모노코크와 낮은 노즈의 단차를 만드는 전방 차체 단면이다. */
 const NOSE_STATIONS: readonly HullStation[] = [
   { z: -2.72, halfWidth: 0.05, bottomY: 0.27, shoulderY: 0.31, crownY: 0.34 },
+  { z: -2.58, halfWidth: 0.085, bottomY: 0.275, shoulderY: 0.33, crownY: 0.365 },
   { z: -2.46, halfWidth: 0.12, bottomY: 0.28, shoulderY: 0.35, crownY: 0.39 },
   { z: -2.12, halfWidth: 0.2, bottomY: 0.3, shoulderY: 0.4, crownY: 0.45 },
   { z: -1.82, halfWidth: 0.28, bottomY: 0.31, shoulderY: 0.46, crownY: 0.5 },
   // 낮은 코 부분을 길게 유지한 뒤 모노코크가 한 번에 올라가야 2012년형 platypus nose가 읽힌다.
   { z: -1.67, halfWidth: 0.31, bottomY: 0.32, shoulderY: 0.48, crownY: 0.53 },
+  { z: -1.6, halfWidth: 0.325, bottomY: 0.33, shoulderY: 0.56, crownY: 0.64 },
   { z: -1.54, halfWidth: 0.34, bottomY: 0.34, shoulderY: 0.67, crownY: 0.78 },
 ];
 
@@ -98,6 +102,7 @@ const MONOCOQUE_STATIONS: readonly HullStation[] = [
   { z: -1.3, halfWidth: 0.4, bottomY: 0.35, shoulderY: 0.7, crownY: 0.84 },
   { z: -0.8, halfWidth: 0.47, bottomY: 0.36, shoulderY: 0.74, crownY: 0.92 },
   { z: -0.22, halfWidth: 0.5, bottomY: 0.37, shoulderY: 0.76, crownY: 0.94 },
+  { z: 0.08, halfWidth: 0.5, bottomY: 0.375, shoulderY: 0.755, crownY: 0.935 },
   { z: 0.36, halfWidth: 0.48, bottomY: 0.38, shoulderY: 0.74, crownY: 0.91 },
   { z: 0.78, halfWidth: 0.42, bottomY: 0.39, shoulderY: 0.69, crownY: 0.82 },
   { z: 1.04, halfWidth: 0.37, bottomY: 0.4, shoulderY: 0.64, crownY: 0.75 },
@@ -108,20 +113,26 @@ const ENGINE_COVER_STATIONS: readonly HullStation[] = [
   { z: 0.2, halfWidth: 0.35, bottomY: 0.5, shoulderY: 0.78, crownY: 1.03 },
   { z: 0.68, halfWidth: 0.33, bottomY: 0.5, shoulderY: 0.76, crownY: 1.1 },
   { z: 1.1, halfWidth: 0.29, bottomY: 0.49, shoulderY: 0.7, crownY: 1.02 },
+  { z: 1.32, halfWidth: 0.255, bottomY: 0.485, shoulderY: 0.655, crownY: 0.93 },
   { z: 1.52, halfWidth: 0.22, bottomY: 0.48, shoulderY: 0.61, crownY: 0.84 },
   { z: 1.85, halfWidth: 0.16, bottomY: 0.46, shoulderY: 0.54, crownY: 0.7 },
 ];
 
 /** 좌우 사이드포드의 깊은 언더컷과 후방 수축을 만드는 단면이다. */
 const SIDEPOD_STATIONS: readonly SidepodStation[] = [
-  { z: -1.2, innerX: 0.36, outerX: 0.7, bottomY: 0.37, shoulderY: 0.6, crownY: 0.68 },
-  { z: -0.9, innerX: 0.41, outerX: 0.88, bottomY: 0.36, shoulderY: 0.68, crownY: 0.79 },
+  { z: -1.35, innerX: 0.32, outerX: 0.55, bottomY: 0.38, shoulderY: 0.55, crownY: 0.61 },
+  { z: -1.2, innerX: 0.36, outerX: 0.64, bottomY: 0.37, shoulderY: 0.58, crownY: 0.65 },
+  { z: -0.9, innerX: 0.41, outerX: 0.78, bottomY: 0.36, shoulderY: 0.64, crownY: 0.74 },
+  { z: -0.72, innerX: 0.43, outerX: 0.81, bottomY: 0.355, shoulderY: 0.66, crownY: 0.77 },
   // 흡입구 아래쪽을 안으로 밀어 넣고 어깨를 높여 2012년형 언더컷을 옆면에서 읽게 한다.
-  { z: -0.48, innerX: 0.45, outerX: 0.91, bottomY: 0.35, shoulderY: 0.72, crownY: 0.84 },
-  { z: 0.05, innerX: 0.45, outerX: 0.88, bottomY: 0.36, shoulderY: 0.7, crownY: 0.81 },
-  { z: 0.6, innerX: 0.38, outerX: 0.7, bottomY: 0.38, shoulderY: 0.62, crownY: 0.71 },
-  { z: 1.05, innerX: 0.3, outerX: 0.53, bottomY: 0.4, shoulderY: 0.54, crownY: 0.62 },
-  { z: 1.35, innerX: 0.22, outerX: 0.4, bottomY: 0.41, shoulderY: 0.49, crownY: 0.56 },
+  { z: -0.48, innerX: 0.45, outerX: 0.82, bottomY: 0.35, shoulderY: 0.68, crownY: 0.79 },
+  { z: -0.2, innerX: 0.46, outerX: 0.81, bottomY: 0.355, shoulderY: 0.675, crownY: 0.785 },
+  { z: 0.05, innerX: 0.45, outerX: 0.78, bottomY: 0.36, shoulderY: 0.66, crownY: 0.76 },
+  { z: 0.32, innerX: 0.42, outerX: 0.72, bottomY: 0.37, shoulderY: 0.63, crownY: 0.72 },
+  { z: 0.6, innerX: 0.38, outerX: 0.61, bottomY: 0.38, shoulderY: 0.58, crownY: 0.67 },
+  { z: 0.82, innerX: 0.34, outerX: 0.55, bottomY: 0.39, shoulderY: 0.55, crownY: 0.63 },
+  { z: 1.05, innerX: 0.3, outerX: 0.47, bottomY: 0.4, shoulderY: 0.52, crownY: 0.59 },
+  { z: 1.35, innerX: 0.22, outerX: 0.36, bottomY: 0.41, shoulderY: 0.47, crownY: 0.53 },
 ];
 
 /** 프런트 윙의 메인 플레인은 노즈보다 넓고 끝으로 갈수록 뒤로 스윕된다. */
@@ -166,12 +177,28 @@ const NOSE_STEP_PLANFORM: readonly PlanformPoint[] = [
   [-0.34, -1.52],
 ];
 
+/** 프런트 윙 뒤까지 이어지는 가늘고 쐐기형인 노즈 상면이다. 구형 볼륨을 쓰지 않아 낮은 선단을 유지한다. */
+const NOSE_BRIDGE_TOP_PLANFORM: readonly PlanformPoint[] = [
+  [-0.1, -2.62],
+  [0.1, -2.62],
+  [0.32, -1.58],
+  [-0.32, -1.58],
+];
+
 /** 차량 하부의 바닥과 디퓨저가 만드는 얇은 어두운 실루엣이다. */
 const FLOOR_PLANFORM: readonly PlanformPoint[] = [
   [-0.86, -1.76],
   [0.86, -1.76],
   [0.78, 1.72],
   [-0.78, 1.72],
+];
+
+/** 리어 바닥에서 기어박스 뒤로 열리는 디퓨저 출구의 넓은 평면이다. */
+const REAR_DIFFUSER_PLANFORM: readonly PlanformPoint[] = [
+  [-0.68, 1.22],
+  [0.68, 1.22],
+  [0.52, 1.88],
+  [-0.52, 1.88],
 ];
 
 /** 2012년형 두 요소 리어 윙의 곡선 대신 저폴리 직선 윤곽을 사용한다. */
@@ -194,8 +221,12 @@ function createPlanformGeometry(points: readonly PlanformPoint[], thickness: num
   shape.closePath();
 
   const geometry = new THREE.ExtrudeGeometry(shape, {
-    bevelEnabled: false,
-    curveSegments: 1,
+    // 얇은 날개·바닥의 모서리를 아주 작게 둥글려 평판을 겹친 목업보다 실제 aero profile에 가깝게 읽게 한다.
+    bevelEnabled: true,
+    bevelSegments: 1,
+    bevelSize: Math.min(thickness * 0.32, 0.012),
+    bevelThickness: Math.min(thickness * 0.32, 0.012),
+    curveSegments: 2,
     depth: thickness,
     steps: 1,
   });
@@ -236,28 +267,30 @@ function PlanformPanel({
   );
 }
 
-/** 차체 station들을 육각 단면으로 연결해 면이 읽히는 저폴리 hull을 생성한다. */
+/** 차체 station들을 팔각 단면으로 연결해 매끈한 외피와 낮은 단차를 함께 보존한다. */
 function createHullGeometry(stations: readonly HullStation[]): THREE.BufferGeometry {
   const positions: number[] = [];
   const indices: number[] = [];
-  const sectionSize = 6;
+  const sectionSize = 8;
 
   for (const station of stations) {
     const { halfWidth, bottomY, shoulderY, crownY, z } = station;
     const section: Point3[] = [
       [-halfWidth, bottomY, z],
       [halfWidth, bottomY, z],
+      [halfWidth, bottomY + (shoulderY - bottomY) * 0.46, z],
       [halfWidth * 0.92, shoulderY, z],
       [halfWidth * 0.42, crownY, z],
       [-halfWidth * 0.42, crownY, z],
       [-halfWidth * 0.92, shoulderY, z],
+      [-halfWidth, bottomY + (shoulderY - bottomY) * 0.46, z],
     ];
     for (const [x, y, sectionZ] of section) {
       positions.push(x, y, sectionZ);
     }
   }
 
-  // 인접 station 사이를 쿼드 두 개로 나눠, 평평한 면과 경사 면을 함께 보존한다.
+  // 인접 station 사이를 쿼드 두 개로 나눠, 스텝 노즈의 단차와 매끈한 외피를 함께 보존한다.
   for (let stationIndex = 0; stationIndex < stations.length - 1; stationIndex += 1) {
     const currentStart = stationIndex * sectionSize;
     const nextStart = (stationIndex + 1) * sectionSize;
@@ -286,21 +319,23 @@ function createHullGeometry(stations: readonly HullStation[]): THREE.BufferGeome
   return geometry;
 }
 
-/** 좌우 경계가 다른 사이드포드 station들을 연결한다. */
+/** 좌우 경계가 다른 사이드포드 station들을 팔각 단면으로 연결한다. */
 function createSidepodGeometry(stations: readonly SidepodStation[], side: -1 | 1): THREE.BufferGeometry {
   const positions: number[] = [];
   const indices: number[] = [];
-  const sectionSize = 6;
+  const sectionSize = 8;
 
   for (const station of stations) {
     const { innerX, outerX, bottomY, shoulderY, crownY, z } = station;
     const section: Point3[] = [
       [side * innerX, bottomY, z],
       [side * outerX, bottomY, z],
+      [side * outerX, bottomY + (shoulderY - bottomY) * 0.48, z],
       [side * outerX, shoulderY, z],
       [side * outerX * 0.94, crownY, z],
       [side * innerX, crownY, z],
       [side * innerX, shoulderY, z],
+      [side * innerX, bottomY + (shoulderY - bottomY) * 0.46, z],
     ];
     for (const [x, y, sectionZ] of section) {
       positions.push(x, y, sectionZ);
@@ -348,14 +383,14 @@ function HullPanel({
   useEffect(() => () => geometry.dispose(), [geometry]);
 
   return (
-    <mesh geometry={geometry} castShadow receiveShadow>
+      <mesh geometry={geometry} castShadow receiveShadow>
       <meshStandardMaterial
         color={color}
         emissive={emissiveColor}
         emissiveIntensity={0.08}
-        metalness={0.12}
-        roughness={0.48}
-        flatShading
+        metalness={0.16}
+        roughness={0.42}
+        flatShading={false}
       />
     </mesh>
   );
@@ -368,7 +403,7 @@ function SidepodPanel({ color, stations, side }: { color: string; stations: read
 
   return (
     <mesh geometry={geometry} castShadow receiveShadow>
-      <meshStandardMaterial color={color} metalness={0.12} roughness={0.5} flatShading side={THREE.DoubleSide} />
+      <meshStandardMaterial color={color} metalness={0.16} roughness={0.44} flatShading={false} side={THREE.DoubleSide} />
     </mesh>
   );
 }
@@ -393,7 +428,8 @@ function Link({ color, end, start, width }: { color: string; end: Point3; start:
 
   return (
     <mesh position={transform.position} quaternion={transform.quaternion} castShadow>
-      <boxGeometry args={[width, width, transform.length]} />
+      {/* 레퍼런스의 wishbone·push-rod는 차체보다 얇은 연결봉이므로 시각 폭을 줄여 공중의 판처럼 보이지 않게 한다. */}
+      <boxGeometry args={[width * 0.58, width * 0.58, transform.length]} />
       <meshStandardMaterial color={color} roughness={0.72} flatShading />
     </mesh>
   );
@@ -402,23 +438,38 @@ function Link({ color, end, start, width }: { color: string; end: Point3; start:
 /** 오픈 콕핏 안에서 헬멧·상체·팔이 읽히도록 만든 저폴리 드라이버다. */
 function DriverCockpit({ accentColor }: { accentColor: string }) {
   const suitColor = "#151d26";
-  const gloveColor = "#b9b5aa";
+  // 운전자 장갑·칼라는 차체와 구분되되 흰색 부유 파츠처럼 튀지 않는 중성 청회색을 사용한다.
+  const gloveColor = "#6b8496";
   const visorColor = "#06090d";
 
   return (
-    <group position={[0, 0.55, -0.02]}>
+    <group position={[0, 0.49, -0.02]}>
       {/* 시트 앞쪽으로 몸통을 낮춰 2012년형 오픈 콕핏의 낮은 착좌 자세를 표현한다. */}
       <mesh position={[0, 0.24, 0.02]} castShadow>
-        <boxGeometry args={[0.27, 0.38, 0.3]} />
+        <boxGeometry args={[0.29, 0.4, 0.34]} />
         <meshStandardMaterial color={suitColor} roughness={0.84} flatShading />
       </mesh>
-      <mesh position={[0, 0.47, -0.01]} castShadow>
-        <sphereGeometry args={[0.16, 8, 5]} />
+      {/* 어깨의 타원형 볼륨은 헬멧만 떠 보이는 문제를 막고 낮은 착좌 자세를 만든다. */}
+      <mesh position={[0, 0.31, -0.005]} scale={[1, 0.72, 0.76]} castShadow>
+        <sphereGeometry args={[0.18, 10, 7]} />
+        <meshStandardMaterial color={suitColor} roughness={0.82} />
+      </mesh>
+      {/* 목과 칼라는 torso·헬멧 사이의 빈 틈을 메워 실제 착좌 관계를 만든다. */}
+      <mesh position={[0, 0.36, 0.01]} castShadow>
+        <cylinderGeometry args={[0.064, 0.074, 0.11, 8]} />
+        <meshStandardMaterial color={suitColor} roughness={0.84} />
+      </mesh>
+      <mesh position={[0, 0.3, -0.035]} scale={[1.25, 0.28, 0.9]}>
+        <sphereGeometry args={[0.12, 10, 6]} />
+        <meshStandardMaterial color={gloveColor} roughness={0.76} />
+      </mesh>
+      <mesh position={[0, 0.4, -0.01]} castShadow>
+        <sphereGeometry args={[0.12, 10, 7]} />
         <meshStandardMaterial color={accentColor} metalness={0.08} roughness={0.64} flatShading />
       </mesh>
       {/* 검은 전면 바이저를 별도 면으로 두어 카메라가 헬멧 방향을 판독하게 한다. */}
-      <mesh position={[0, 0.48, -0.13]}>
-        <boxGeometry args={[0.17, 0.065, 0.025]} />
+      <mesh position={[0, 0.405, -0.105]}>
+        <boxGeometry args={[0.15, 0.042, 0.025]} />
         <meshStandardMaterial color={visorColor} metalness={0.5} roughness={0.2} flatShading />
       </mesh>
       <mesh position={[0, 0.31, -0.08]}>
@@ -458,28 +509,55 @@ function Wheel({
   steeringGroupRef?: RefObject<THREE.Group | null>;
   width: number;
 }) {
+  // 2012년 13인치 휠의 작은 림과 두꺼운 타이어 비율을 유지하기 위한 외측 면 오프셋(m)이다.
+  const outerFaceOffsetM = side * (width * 0.5 + 0.018);
+  // 실제 팀 로고를 쓰지 않고도 휠의 기계적 밀도를 읽게 하는 방사형 스포크 인덱스다.
+  const spokeAnglesRad = Array.from({ length: 8 }, (_, index) => (Math.PI * 2 * index) / 8);
+
   return (
     <group ref={steeringGroupRef} position={steeringGroupRef ? position : undefined}>
       <group ref={rollingGroupRef} position={steeringGroupRef ? undefined : position}>
         <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-          <cylinderGeometry args={[radius, radius, width, 12]} />
+          <cylinderGeometry args={[radius, radius, width, 16]} />
           <meshStandardMaterial color="#111216" roughness={0.96} flatShading />
         </mesh>
-        <mesh position={[side * (width * 0.5 + 0.015), 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[radius * 0.56, radius * 0.56, 0.035, 10]} />
-          <meshStandardMaterial color="#b9b5aa" metalness={0.55} roughness={0.38} flatShading />
+        {/* 얇은 측면 밴드는 특정 Pirelli 표기를 복제하지 않고 2012년 타이어의 굵은 sidewall 비율만 강조한다. */}
+        <mesh position={[outerFaceOffsetM, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <torusGeometry args={[radius * 0.82, radius * 0.018, 5, 16]} />
+          <meshStandardMaterial color="#3b4146" roughness={0.72} metalness={0.18} flatShading />
         </mesh>
-        <mesh position={[side * (width * 0.5 + 0.038), 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[radius * 0.27, radius * 0.27, 0.042, 8]} />
+        <mesh position={[outerFaceOffsetM, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[radius * 0.62, radius * 0.62, 0.032, 12]} />
+          <meshStandardMaterial color="#252a2f" metalness={0.5} roughness={0.32} flatShading />
+        </mesh>
+        {/* 스포크는 동일한 휠 축 평면에 배치해 바퀴 구름 회전과 함께 돌도록 rolling group 안에 둔다. */}
+        {spokeAnglesRad.map((angleRad) => (
+          <mesh key={`wheel-spoke-${angleRad}`} position={[outerFaceOffsetM + side * 0.02, 0, 0]} rotation={[angleRad, 0, 0]}>
+            <boxGeometry args={[0.026, radius * 0.46, 0.035]} />
+            <meshStandardMaterial color="#9da4a8" metalness={0.64} roughness={0.3} flatShading />
+          </mesh>
+        ))}
+        <mesh position={[outerFaceOffsetM + side * 0.04, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[radius * 0.2, radius * 0.2, 0.052, 10]} />
           <meshStandardMaterial color={accentColor} metalness={0.46} roughness={0.34} flatShading />
         </mesh>
-        <mesh position={[side * (width * 0.5 + 0.052), 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[radius * 0.09, radius * 0.09, 0.05, 8]} />
+        <mesh position={[outerFaceOffsetM + side * 0.07, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[radius * 0.075, radius * 0.075, 0.04, 8]} />
           <meshStandardMaterial color="#0a0b0e" roughness={0.84} flatShading />
         </mesh>
         <mesh position={[side * (width * 0.5 - 0.02), 0, 0]} rotation={[0, Math.PI / 2, 0]}>
           <cylinderGeometry args={[radius * 0.38, radius * 0.43, 0.06, 8]} />
           <meshStandardMaterial color="#252832" roughness={0.78} flatShading />
+        </mesh>
+        {/* upright는 타이어 안쪽 허브와 서스펜션 링크가 만나는 실제 접점으로, 휠이 차체에 매달린 것처럼 보이지 않게 한다. */}
+        <mesh position={[side * (width * 0.5 - 0.055), 0, 0]} castShadow>
+          <boxGeometry args={[0.075, radius * 0.72, radius * 0.42]} />
+          <meshStandardMaterial color="#1d2935" metalness={0.36} roughness={0.54} />
+        </mesh>
+        {/* 브레이크 caliper는 허브 뒤쪽에 붙여 휠·upright·서스펜션의 층을 실제 부품 순서로 보여 준다. */}
+        <mesh position={[outerFaceOffsetM - side * 0.03, radius * 0.1, -radius * 0.27]}>
+          <boxGeometry args={[0.052, radius * 0.24, radius * 0.2]} />
+          <meshStandardMaterial color="#6b7e8e" metalness={0.28} roughness={0.46} />
         </mesh>
       </group>
     </group>
@@ -638,7 +716,8 @@ function GridCar({
   steeringAngleRad,
 }: Pick<LowPolyCarProps, "accentColor" | "bodyColor" | "groupRef" | "steeringAngleRad" | "wheelRefs" | "wheelSpinRad">) {
   const carbonColor = "#12151a";
-  const aeroColor = "#20252b";
+  // 검은 aero를 배경에 묻히지 않는 청회색 탄소 톤으로 두어 wing·floor 접점을 읽게 한다.
+  const aeroColor = "#32495b";
   const resolvedAccentColor = accentColor ?? "#d6b46a";
 
   return (
@@ -691,6 +770,7 @@ export function LowPolyCar({
   steeringAngleRad = 0,
   wheelRefs,
   wheelSpinRad,
+  hideDriver = false,
 }: LowPolyCarProps) {
   if (detail === "grid") {
     return (
@@ -706,8 +786,10 @@ export function LowPolyCar({
   }
 
   const carbonColor = "#12151a";
-  const aeroColor = "#20252b";
-  const highlightColor = "#d5d1c5";
+  // 검은 aero를 배경에 묻히지 않는 청회색 탄소 톤으로 두어 wing·floor 접점을 읽게 한다.
+  const aeroColor = "#32495b";
+  // 흰색 포인트는 측면에서 차체와 분리된 파츠처럼 보여, 실제 표면에 붙는 보조 패널 색으로 제한한다.
+  const highlightColor = "#6e9fbc";
   const frontWingZ = S1_2012_OPEN_WHEEL_DIMENSIONS.frontWingZ;
   const rearWingZ = S1_2012_OPEN_WHEEL_DIMENSIONS.rearWingZ;
 
@@ -720,11 +802,25 @@ export function LowPolyCar({
       <SidepodPanel color={bodyColor} side={-1} stations={SIDEPOD_STATIONS} />
       <SidepodPanel color={bodyColor} side={1} stations={SIDEPOD_STATIONS} />
 
+      {/* 사이드포드 어깨는 기존 외피와 겹치는 곡면으로 만들어 직선 벽과 언더컷의 경계를 연결한다. */}
+      {([-1, 1] as const).map((side) => (
+        <mesh key={`sidepod-shoulder-shell-${side}`} position={[side * 0.57, 0.67, -0.28]} scale={[1.05, 0.62, 1.7]} castShadow>
+          <sphereGeometry args={[0.29, 14, 8]} />
+          <meshStandardMaterial color={bodyColor} metalness={0.14} roughness={0.44} />
+        </mesh>
+      ))}
       {/* 스텝 노즈의 상면을 분리해 둥근 단일 노즈가 아닌 2012년형 단차를 보존한다. */}
       <PlanformPanel color={bodyColor} points={NOSE_STEP_PLANFORM} position={[0, 0.6, 0]} thickness={0.04} />
       <mesh position={[0, 0.56, -1.68]} castShadow>
         <boxGeometry args={[0.54, 0.06, 0.26]} />
         <meshStandardMaterial color={carbonColor} roughness={0.68} flatShading />
+      </mesh>
+      {/* 노즈 상면은 구형 셸이 아니라 station 외피와 맞물리는 쐐기형 패널로 빈 공간을 연결한다. */}
+      <PlanformPanel color={bodyColor} points={NOSE_BRIDGE_TOP_PLANFORM} position={[0, 0.51, 0]} thickness={0.1} />
+      {/* RB8 형상 연구의 냉각 slot: 스텝 단차에 작은 개구부를 두되 팀 배지·그래픽은 포함하지 않는다. */}
+      <mesh position={[0, 0.69, -1.545]}>
+        <boxGeometry args={[0.16, 0.045, 0.018]} />
+        <meshStandardMaterial color="#050608" roughness={0.96} flatShading />
       </mesh>
 
       {/* 바닥은 차체보다 낮고 길게 두어 오픈휠 차의 얇은 허리를 만든다. */}
@@ -750,11 +846,73 @@ export function LowPolyCar({
         <boxGeometry args={[0.3, 0.08, 0.52]} />
         <meshStandardMaterial color="#0b0d11" roughness={0.9} flatShading />
       </mesh>
-      <mesh position={[0, 0.9, -0.34]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.12, 0.025, 4, 8, Math.PI * 1.7]} />
-        <meshStandardMaterial color={carbonColor} roughness={0.72} flatShading />
+      {/* 시트 basin은 driver torso 아래와 모노코크 바닥을 겹치게 해 운전자가 빈 공간에 떠 보이지 않게 한다. */}
+      <mesh position={[0, 0.57, 0.08]} scale={[0.9, 0.48, 1.05]} castShadow>
+        <sphereGeometry args={[0.24, 12, 8]} />
+        <meshStandardMaterial color="#0c1219" roughness={0.88} />
       </mesh>
-      <DriverCockpit accentColor={accentColor} />
+      {/* 좌우 safety shoulder와 낮은 시트 입구를 분리해 헬멧·상체가 모노코크 안에 앉아 보이게 한다. */}
+      {([-1, 1] as const).map((side) => (
+        <group key={`cockpit-safety-cell-${side}`}>
+          <mesh position={[side * 0.33, 0.8, -0.03]} rotation={[0, side * 0.12, side * 0.08]} castShadow>
+            <boxGeometry args={[0.12, 0.18, 0.62]} />
+            <meshStandardMaterial color={bodyColor} roughness={0.54} metalness={0.08} flatShading />
+          </mesh>
+          <mesh position={[side * 0.29, 0.9, -0.28]} rotation={[0, side * 0.1, 0]}>
+            <boxGeometry args={[0.075, 0.11, 0.25]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.84} flatShading />
+          </mesh>
+          {/* 둥근 shoulder fairing은 사각 기둥처럼 보이던 안전 셀을 차체 외피와 연속되게 연결한다. */}
+          <mesh position={[side * 0.325, 0.84, 0.12]} scale={[0.42, 0.78, 1.18]} castShadow>
+            <sphereGeometry args={[0.19, 12, 8]} />
+            <meshStandardMaterial color={bodyColor} roughness={0.46} metalness={0.14} />
+          </mesh>
+        </group>
+      ))}
+      {/* 낮은 앞 coaming은 운전자의 상체가 차체 속에 들어가 보이게 하되 콕핏 카메라의 전방 시야는 비운다. */}
+      <mesh position={[0, 0.9, -0.46]} scale={[1, 0.48, 0.66]} castShadow>
+        <sphereGeometry args={[0.25, 14, 8]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.45} metalness={0.14} />
+      </mesh>
+      <mesh position={[0, 0.97, -0.53]} scale={[1, 0.36, 0.44]}>
+        <sphereGeometry args={[0.17, 12, 8]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.82} />
+      </mesh>
+      {/* 등받이와 headrest는 카메라의 후방(z+)에 두어 1인칭 시야를 막지 않으면서 콕핏 깊이를 제공한다. */}
+      <mesh position={[0, 0.78, 0.44]} rotation={[0.18, 0, 0]} castShadow>
+        <boxGeometry args={[0.38, 0.3, 0.16]} />
+        <meshStandardMaterial color="#10141a" roughness={0.88} flatShading />
+      </mesh>
+      <mesh position={[0, 0.96, 0.41]} scale={[1, 1.22, 0.62]}>
+        <sphereGeometry args={[0.2, 8, 6]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
+      </mesh>
+      {/* 콕핏 카메라에서 휠이 화면 하단에 보이도록 수직에 가깝게 세운 2012년형 무표식 조작부다. */}
+      <group position={[0, 0.86, -0.38]} rotation={[-0.18, 0, 0]}>
+        <mesh>
+          <torusGeometry args={[0.12, 0.025, 4, 8, Math.PI * 1.7]} />
+          <meshStandardMaterial color={carbonColor} roughness={0.72} flatShading />
+        </mesh>
+        {/* 중앙 패드와 상단 표시부는 실제 팀 버튼 배열을 복제하지 않고 휠의 기능 밀도만 전달한다. */}
+        <mesh position={[0, -0.01, 0.018]}>
+          <boxGeometry args={[0.11, 0.07, 0.032]} />
+          <meshStandardMaterial color="#1b222b" roughness={0.56} flatShading />
+        </mesh>
+        <mesh position={[0, 0.075, 0.024]}>
+          <boxGeometry args={[0.095, 0.026, 0.018]} />
+          <meshStandardMaterial color={accentColor} emissive={accentColor} emissiveIntensity={0.14} roughness={0.4} flatShading />
+        </mesh>
+        {/* 후면 paddle 두 장은 팀별 버튼 레이아웃을 피하면서도 조작부의 깊이를 만든다. */}
+        {([-1, 1] as const).map((side) => (
+          <mesh key={`wheel-paddle-${side}`} position={[side * 0.1, -0.02, -0.018]} rotation={[0, 0, side * 0.18]}>
+            <boxGeometry args={[0.026, 0.1, 0.018]} />
+            <meshStandardMaterial color="#0a0d11" roughness={0.76} />
+          </mesh>
+        ))}
+      </group>
+      {/* steering column은 대시보드와 휠 중심을 직접 겹쳐 콕핏 조작부가 차체 안에 떠 있지 않게 한다. */}
+      <Link color={carbonColor} start={[0, 0.79, -0.13]} end={[0, 0.84, -0.34]} width={0.04} />
+      {!hideDriver && <DriverCockpit accentColor={accentColor} />}
 
       {/* 콕핏 가장자리를 얇은 탄소 섬유 림으로 분리해 낮은 시점에서도 운전석 깊이를 읽게 한다. */}
       {([-1, 1] as const).map((side) => (
@@ -765,21 +923,39 @@ export function LowPolyCar({
           </mesh>
           {/* 거울은 차체 색을 복제하지 않고 작은 반사면으로만 표시한다. */}
           <Link color={carbonColor} start={[side * 0.3, 0.87, -0.48]} end={[side * 0.47, 0.96, -0.58]} width={0.035} />
-          <mesh position={[side * 0.51, 0.98, -0.6]}>
-            <boxGeometry args={[0.095, 0.045, 0.13]} />
-            <meshStandardMaterial color={highlightColor} metalness={0.48} roughness={0.3} flatShading />
+          <mesh position={[side * 0.48, 0.91, -0.58]} rotation={[0, side * 0.12, 0]}>
+            <boxGeometry args={[0.075, 0.035, 0.105]} />
+            <meshStandardMaterial color={bodyColor} metalness={0.2} roughness={0.42} />
+          </mesh>
+          <mesh position={[side * 0.375, 0.91, -0.53]} rotation={[0, side * 0.32, 0]}>
+            <boxGeometry args={[0.035, 0.035, 0.22]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.82} />
           </mesh>
         </group>
       ))}
 
-      {/* 에어박스와 검은 흡입구는 엔진 커버의 중앙 능선을 명확히 한다. */}
-      <mesh position={[0, 1.2, 0.6]} castShadow>
-        <coneGeometry args={[0.27, 0.46, 6]} />
+      {/* 에어박스는 낮은 타원 단면으로 만들어 헬멧과 별개의 흡입구·엔진 커버 연속면으로 읽게 한다. */}
+      <mesh position={[0, 1.04, 0.62]} scale={[1, 1.22, 0.92]} castShadow>
+        <sphereGeometry args={[0.19, 8, 6]} />
         <meshStandardMaterial color={carbonColor} roughness={0.72} flatShading />
       </mesh>
-      <mesh position={[0, 1.43, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.15, 0.18, 0.035, 8]} />
+      <mesh position={[0, 1.08, 0.452]}>
+        <boxGeometry args={[0.18, 0.09, 0.022]} />
         <meshStandardMaterial color="#050608" roughness={0.95} flatShading />
+      </mesh>
+      {/* 단순한 검은 기둥 대신 낮은 롤 후프를 더해 2012년 오픈 콕핏의 보호 구조를 분리해 읽게 한다. */}
+      {([-1, 1] as const).map((side) => (
+        <Link
+          key={`roll-hoop-leg-${side}`}
+          color={carbonColor}
+          start={[side * 0.13, 0.88, 0.19]}
+          end={[side * 0.13, 1.0, 0.42]}
+          width={0.045}
+        />
+      ))}
+      <mesh position={[0, 1.0, 0.42]}>
+        <boxGeometry args={[0.31, 0.045, 0.045]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
       </mesh>
       <mesh position={[0, 1.0, 1.12]}>
         <boxGeometry args={[0.045, 0.24, 0.82]} />
@@ -795,62 +971,144 @@ export function LowPolyCar({
       {/* 사이드포드 입구와 바닥 언더컷을 어두운 면으로 분리한다. */}
       {([-1, 1] as const).map((side) => (
         <group key={`sidepod-detail-${side}`}>
-          <mesh position={[side * 0.69, 0.72, -0.7]} rotation={[0, side * 0.12, 0]}>
+          <mesh position={[side * 0.63, 0.69, -0.7]} rotation={[0, side * 0.12, 0]}>
             <boxGeometry args={[0.045, 0.18, 0.5]} />
             <meshStandardMaterial color={carbonColor} roughness={0.9} flatShading />
           </mesh>
-          <mesh position={[side * 0.65, 0.41, -0.24]} rotation={[0, side * 0.08, 0]}>
+          <mesh position={[side * 0.58, 0.41, -0.24]} rotation={[0, side * 0.08, 0]}>
             <boxGeometry args={[0.035, 0.055, 0.74]} />
             <meshStandardMaterial color={aeroColor} roughness={0.82} flatShading />
           </mesh>
           {/* 높은 어깨와 검은 흡입구를 나눠야 차체가 넓은 포드가 아니라 언더컷 포드로 읽힌다. */}
-          <mesh position={[side * 0.79, 0.75, -0.52]} rotation={[0, side * 0.11, side * 0.04]}>
-            <boxGeometry args={[0.12, 0.15, 0.56]} />
+          <mesh position={[side * 0.69, 0.68, -0.57]} rotation={[0, side * 0.11, side * 0.04]}>
+            <boxGeometry args={[0.1, 0.17, 0.5]} />
             <meshStandardMaterial color={carbonColor} roughness={0.88} flatShading />
           </mesh>
-          <mesh position={[side * 0.84, 0.79, -0.5]} rotation={[0, side * 0.11, side * 0.04]}>
-            <boxGeometry args={[0.035, 0.075, 0.38]} />
+          {/* 넓고 낮은 intake slot은 2012년형 포드의 가로로 긴 개구부 비율을 보존한다. */}
+          <mesh position={[side * 0.806, 0.69, -0.59]} rotation={[0, side * 0.11, side * 0.035]}>
+            <boxGeometry args={[0.018, 0.105, 0.28]} />
             <meshStandardMaterial color="#050608" roughness={0.96} flatShading />
           </mesh>
-          {/* 2012년형 고후방 배기의 위치감만 표현하며 물리 공력 이득은 부여하지 않는다. */}
-          <mesh position={[side * 0.28, 0.92, 1.44]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.065, 0.085, 0.16, 8]} />
-            <meshStandardMaterial color="#08090b" metalness={0.42} roughness={0.4} flatShading />
+          {/* intake lip을 별도 외피로 두어 검은 개구부가 단순한 스티커가 아니라 포드 안으로 꺾여 보이게 한다. */}
+          <mesh position={[side * 0.812, 0.7, -0.59]} rotation={[Math.PI / 2, 0, side * 0.035]} scale={[0.78, 1, 1]}>
+            <torusGeometry args={[0.118, 0.015, 6, 12]} />
+            <meshStandardMaterial color={carbonColor} metalness={0.12} roughness={0.82} />
           </mesh>
-          <mesh position={[side * 0.28, 0.92, 1.53]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.035, 0.04, 0.018, 8]} />
+          {/* intake 아래의 긴 채널은 바닥과 포드가 겹쳐 보이지 않도록 명확한 언더컷 그림자를 만든다. */}
+          <mesh position={[side * 0.56, 0.425, 0.18]} rotation={[0, side * 0.12, 0]}>
+            <boxGeometry args={[0.045, 0.11, 1.26]} />
+            <meshStandardMaterial color="#080a0d" roughness={0.92} flatShading />
+          </mesh>
+          <Link color={carbonColor} start={[side * 0.48, 0.49, -0.92]} end={[side * 0.67, 0.5, -0.18]} width={0.028} />
+          {/* RB8의 특징인 상부 배기와 하향 ramp를 시각화한다. 경사 아래 채널은 exhaust plume과 분리된 공기 통로다. */}
+          <mesh position={[side * 0.34, 0.86, 1.13]} rotation={[0.42, side * 0.08, 0]}>
+            <boxGeometry args={[0.24, 0.04, 0.76]} />
+            <meshStandardMaterial color={bodyColor} roughness={0.54} metalness={0.08} flatShading />
+          </mesh>
+          <mesh position={[side * 0.34, 0.98, 0.82]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.055, 0.07, 0.17, 8]} />
+            <meshStandardMaterial color="#090b0e" metalness={0.5} roughness={0.38} flatShading />
+          </mesh>
+          <mesh position={[side * 0.34, 0.94, 0.88]} rotation={[0.32, side * 0.1, 0]} scale={[0.82, 0.52, 1.1]}>
+            <sphereGeometry args={[0.12, 10, 7]} />
+            <meshStandardMaterial color={bodyColor} roughness={0.46} metalness={0.14} />
+          </mesh>
+          <mesh position={[side * 0.36, 0.54, 1.08]} rotation={[0, side * 0.1, 0]}>
+            <boxGeometry args={[0.22, 0.09, 0.58]} />
+            <meshStandardMaterial color="#06080b" roughness={0.93} flatShading />
+          </mesh>
+          <mesh position={[side * 0.33, 0.66, 1.41]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.033, 0.037, 0.02, 8]} />
             <meshStandardMaterial color="#e88b50" emissive="#9d3f1e" emissiveIntensity={0.16} flatShading />
           </mesh>
         </group>
       ))}
 
       {/* 중앙 스트라이프와 사이드 스트레이크는 팀 리버리가 아닌 무표식 식별 그래픽이다. */}
-      <mesh position={[0, 0.965, -1.16]}>
-        <boxGeometry args={[0.08, 0.025, 0.74]} />
-        <meshStandardMaterial color={accentColor} emissive={emissiveColor} emissiveIntensity={0.12} flatShading />
+      {/* 중앙 seam은 모노코크 crown에 묻혀야 하므로 위로 뜬 장식 막대가 되지 않게 낮춘다. */}
+      <mesh position={[0, 0.85, -1.16]}>
+        <boxGeometry args={[0.05, 0.018, 0.62]} />
+        <meshStandardMaterial color={highlightColor} roughness={0.58} flatShading />
       </mesh>
       {([-1, 1] as const).map((side) => (
-        <mesh key={`livery-stripe-${side}`} position={[side * 0.58, 0.8, -0.38]} rotation={[0, side * 0.16, side * 0.08]}>
+        <mesh key={`livery-stripe-${side}`} position={[side * 0.58, 0.74, -0.38]} rotation={[0, side * 0.16, side * 0.08]}>
           <boxGeometry args={[0.035, 0.026, 0.92]} />
-          <meshStandardMaterial color={accentColor} roughness={0.58} flatShading />
+          <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
         </mesh>
+      ))}
+
+      {/* 2012년형의 복잡한 전방 언더컷을 읽게 하는 바지보드다. 실제 팀별 판 형상은 복제하지 않는다. */}
+      {([-1, 1] as const).map((side) => (
+        <group key={`bargeboard-${side}`}>
+          <mesh position={[side * 0.56, 0.57, -1.05]} rotation={[0, side * 0.34, side * 0.12]}>
+            <boxGeometry args={[0.028, 0.42, 0.42]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
+          </mesh>
+          <Link color={carbonColor} start={[side * 0.49, 0.39, -1.35]} end={[side * 0.61, 0.67, -0.88]} width={0.025} />
+        </group>
       ))}
 
       {/* 노즈 지지대, 다층 메인 플레인, 플랩, 엔드플레이트로 프런트 윙을 구성한다. */}
       <PlanformPanel color={aeroColor} points={FRONT_WING_MAIN_PLANFORM} position={[0, 0.25, 0]} thickness={0.07} />
       <PlanformPanel color={carbonColor} points={FRONT_WING_FLAP_PLANFORM} position={[0, 0.33, 0]} thickness={0.05} />
       <PlanformPanel color={carbonColor} points={FRONT_WING_UPPER_FLAP_PLANFORM} position={[0, 0.4, 0]} thickness={0.035} />
+      {/* 넓은 중앙 flap 두 장은 전방에서 보이는 흡입·노즈 사이의 빈 공간을 줄이고 2012년형 다층 단면을 만든다. */}
+      <mesh position={[0, 0.31, -2.71]} rotation={[0.07, 0, 0]} castShadow>
+        <boxGeometry args={[1.08, 0.035, 0.26]} />
+        <meshStandardMaterial color={aeroColor} roughness={0.72} metalness={0.1} />
+      </mesh>
+      <mesh position={[0, 0.39, -2.61]} rotation={[0.1, 0, 0]}>
+        <boxGeometry args={[0.92, 0.025, 0.19]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.8} />
+      </mesh>
+      {/* RB8형 전방의 넓은 twin pylon은 노즈와 메인 플레인을 실제 구조물처럼 연결한다. */}
+      {([-1, 1] as const).map((side) => (
+        <group key={`front-wing-pylon-${side}`}>
+          <mesh position={[side * 0.15, 0.43, -2.16]} rotation={[0.25, 0, 0]} castShadow>
+            <boxGeometry args={[0.055, 0.2, 0.5]} />
+            <meshStandardMaterial color={aeroColor} roughness={0.7} metalness={0.12} flatShading />
+          </mesh>
+          <mesh position={[side * 0.69, 0.45, -2.58]} rotation={[0.12, side * 0.06, 0]}>
+            <boxGeometry args={[0.34, 0.028, 0.3]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.76} flatShading />
+          </mesh>
+          <mesh position={[side * 0.87, 0.51, -2.63]} rotation={[0.08, side * 0.08, 0]}>
+            <boxGeometry args={[0.22, 0.022, 0.24]} />
+            <meshStandardMaterial color={aeroColor} roughness={0.72} flatShading />
+          </mesh>
+          {/* pylon의 앞뒤 fairing은 노즈와 윙이 공중에서 끊어지지 않도록 얇은 타원형 연결면을 만든다. */}
+          <mesh position={[side * 0.15, 0.46, -2.12]} rotation={[0.22, 0, 0]} scale={[0.3, 0.7, 1.15]}>
+            <sphereGeometry args={[0.11, 10, 6]} />
+            <meshStandardMaterial color={aeroColor} roughness={0.68} metalness={0.14} />
+          </mesh>
+          {/* 노즈 하부에서 프런트 윙 메인 플레인까지 직접 닿는 지지대라야 윙이 떠 보이지 않는다. */}
+          <Link color={aeroColor} start={[side * 0.14, 0.49, -1.82]} end={[side * 0.14, 0.34, -2.52]} width={0.1} />
+        </group>
+      ))}
       <mesh position={[0, 0.4, frontWingZ + 0.12]}>
         <boxGeometry args={[0.78, 0.045, 0.08]} />
-        <meshStandardMaterial color={accentColor} roughness={0.62} flatShading />
+        <meshStandardMaterial color={carbonColor} roughness={0.72} flatShading />
       </mesh>
       {([-1, 1] as const).map((side) => (
         <group key={`front-wing-endplate-${side}`}>
-          <mesh position={[side * 1.12, 0.42, frontWingZ + 0.01]}>
-            <boxGeometry args={[0.07, 0.28, 0.18]} />
+          <mesh position={[side * 1.12, 0.4, frontWingZ + 0.01]} rotation={[0, side * 0.12, 0]}>
+            <boxGeometry args={[0.055, 0.24, 0.25]} />
             <meshStandardMaterial color={aeroColor} roughness={0.76} flatShading />
           </mesh>
+          <mesh position={[side * 1.1, 0.53, frontWingZ + 0.07]} rotation={[0, side * 0.09, 0]}>
+            <boxGeometry args={[0.045, 0.14, 0.34]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.8} flatShading />
+          </mesh>
+          <mesh position={[side * 1.08, 0.29, frontWingZ - 0.12]} rotation={[0.08, side * 0.14, 0]}>
+            <boxGeometry args={[0.05, 0.08, 0.3]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.82} />
+          </mesh>
           <Link color={carbonColor} end={[side * 0.18, 0.66, -1.67]} start={[side * 0.18, 0.34, -2.51]} width={0.07} />
+          {/* 가는 rod를 따라 폭 있는 fairing을 덧대 노즈-윙 연결이 골조만 남는 것을 피한다. */}
+          <mesh position={[side * 0.18, 0.49, -2.08]} rotation={[-0.34, 0, 0]} castShadow>
+            <boxGeometry args={[0.105, 0.07, 0.72]} />
+            <meshStandardMaterial color={aeroColor} roughness={0.7} metalness={0.12} />
+          </mesh>
         </group>
       ))}
       {/* 메인 플레인 사이의 수직 스트레이크로 2012년형 다층 프런트 윙의 방향성을 강조한다. */}
@@ -860,6 +1118,11 @@ export function LowPolyCar({
           <meshStandardMaterial color={carbonColor} roughness={0.8} flatShading />
         </mesh>
       ))}
+      {/* 중앙의 짧은 상단 flap은 노즈 아래가 비어 보이지 않게 하고 다층 전면 면적을 완성한다. */}
+      <mesh position={[0, 0.47, -2.57]} rotation={[0.1, 0, 0]}>
+        <boxGeometry args={[0.62, 0.025, 0.16]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.78} />
+      </mesh>
 
       {/* 리어 윙, DRS 플랩, 빔 윙, 중앙 지지대를 높이 계층으로 배치한다. */}
       <PlanformPanel color={aeroColor} points={REAR_WING_MAIN_PLANFORM} position={[0, 1.06, 0]} thickness={0.08} />
@@ -880,32 +1143,43 @@ export function LowPolyCar({
       </mesh>
       {([-1, 1] as const).map((side) => (
         <group key={`rear-wing-support-${side}`}>
-          <mesh position={[side * 0.76, 1.02, rearWingZ]}>
-            <boxGeometry args={[0.075, 0.56, 0.12]} />
+          <mesh position={[side * 0.76, 1.02, rearWingZ]} rotation={[0, side * 0.1, 0]}>
+            <boxGeometry args={[0.055, 0.48, 0.18]} />
             <meshStandardMaterial color={aeroColor} roughness={0.78} flatShading />
           </mesh>
           <Link color={carbonColor} end={[side * 0.36, 0.76, 1.62]} start={[side * 0.76, 0.76, 2.15]} width={0.055} />
+          {/* 중앙 지지대 두 개를 기어박스에서 메인 윙까지 직접 연결해 후면 날개가 공중에 떠 보이지 않게 한다. */}
+          <Link color={aeroColor} start={[side * 0.22, 0.68, 1.62]} end={[side * 0.22, 1.02, 2.23]} width={0.085} />
+          <mesh position={[side * 0.22, 0.69, 1.64]}>
+            <sphereGeometry args={[0.07, 8, 6]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.8} />
+          </mesh>
         </group>
       ))}
       {/* 리어 윙 끝판은 날개 폭과 차체 중심선을 분리해 후면 실루엣을 강화한다. */}
       {([-1, 1] as const).map((side) => (
-        <mesh key={`rear-wing-endplate-${side}`} position={[side * 0.91, 1.13, rearWingZ]}>
-          <boxGeometry args={[0.055, 0.48, 0.18]} />
+        <mesh key={`rear-wing-endplate-${side}`} position={[side * 0.9, 1.1, rearWingZ]} rotation={[0, side * 0.08, 0]}>
+          <boxGeometry args={[0.045, 0.42, 0.24]} />
           <meshStandardMaterial color={aeroColor} roughness={0.76} flatShading />
         </mesh>
       ))}
       <mesh position={[0, 1.32, 2.39]}>
         <boxGeometry args={[0.62, 0.035, 0.04]} />
-        <meshStandardMaterial color={accentColor} roughness={0.6} flatShading />
+        <meshStandardMaterial color={carbonColor} roughness={0.72} flatShading />
       </mesh>
 
       {/* 후방 바닥에는 디퓨저 스트레이크를 남겨 리어 윙과 다른 층을 만든다. */}
-      {([-1, 0, 1] as const).map((side) => (
-        <mesh key={`diffuser-${side}`} position={[side * 0.28, 0.34, 1.62]}>
+      <PlanformPanel color={aeroColor} points={REAR_DIFFUSER_PLANFORM} position={[0, 0.31, 0]} thickness={0.06} />
+      {([-2, -1, 0, 1, 2] as const).map((side) => (
+        <mesh key={`diffuser-${side}`} position={[side * 0.17, 0.34, 1.62]}>
           <boxGeometry args={[0.045, 0.16, 0.58]} />
           <meshStandardMaterial color={carbonColor} roughness={0.9} flatShading />
         </mesh>
       ))}
+      <mesh position={[0, 0.31, 1.86]} rotation={[0.18, 0, 0]}>
+        <boxGeometry args={[0.74, 0.035, 0.32]} />
+        <meshStandardMaterial color="#07090c" roughness={0.9} />
+      </mesh>
 
       <SuspensionArms color={carbonColor} />
       <Wheels
@@ -918,9 +1192,15 @@ export function LowPolyCar({
         <boxGeometry args={[0.46, 0.26, 0.4]} />
         <meshStandardMaterial color={carbonColor} roughness={0.8} flatShading />
       </mesh>
-      <mesh position={[0, 0.99, 1.74]}>
-        <boxGeometry args={[0.24, 0.09, 0.08]} />
-        <meshStandardMaterial color={highlightColor} metalness={0.32} roughness={0.42} flatShading />
+      {/* 기어박스 앞쪽 tail fairing은 코크 보틀의 수축 끝과 디퓨저를 겹쳐 후면 중앙을 하나의 패키지로 묶는다. */}
+      <mesh position={[0, 0.58, 1.62]} scale={[0.72, 0.58, 0.9]} castShadow>
+        <sphereGeometry args={[0.28, 12, 8]} />
+        <meshStandardMaterial color={bodyColor} metalness={0.14} roughness={0.46} />
+      </mesh>
+      {/* 기어박스 상면의 작은 패널은 엔진 커버 crown 높이에 묻혀야 하므로 떠 있는 밝은 블록으로 만들지 않는다. */}
+      <mesh position={[0, 0.76, 1.74]}>
+        <boxGeometry args={[0.18, 0.045, 0.12]} />
+        <meshStandardMaterial color={carbonColor} metalness={0.18} roughness={0.72} />
       </mesh>
     </group>
   );

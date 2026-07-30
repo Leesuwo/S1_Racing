@@ -54,7 +54,8 @@ test("opens the car design review and switches its visual inspection controls", 
   await sideView.click();
   await expect(sideView).toHaveAttribute("aria-pressed", "true");
 
-  const graphitePaint = page.getByRole("button", { name: "Carbon Graphite", exact: true });
+  // RB8 형상 대조용 무표식 기본 도장은 기존 Carbon Graphite 대신 Midnight Form Study로 표기한다.
+  const graphitePaint = page.getByRole("button", { name: "Midnight Form Study", exact: true });
   await graphitePaint.click();
   await expect(graphitePaint).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("STEP NOSE", { exact: true })).toBeVisible();
@@ -169,6 +170,24 @@ test("moves the vehicle when throttle is held in driving mode", async ({ page })
   await page.keyboard.up("w");
 
   await expect(page.locator(".speed-readout strong")).not.toHaveText("0");
+});
+
+test("switches between chase and cockpit camera views without changing the driving flow", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "주행 모드" }).click();
+
+  const chaseButton = page.getByRole("button", { name: "추적 시점" });
+  const cockpitButton = page.getByRole("button", { name: "콕핏뷰" });
+  await expect(chaseButton).toHaveAttribute("aria-pressed", "true");
+  await expect(cockpitButton).toHaveAttribute("aria-pressed", "false");
+
+  await cockpitButton.click();
+  await expect(cockpitButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".canvas-label")).toHaveText("COCKPIT VIEW / S1 2012 OPEN-WHEEL");
+
+  await chaseButton.click();
+  await expect(chaseButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".canvas-label")).toHaveText("PHYSICS PROTOTYPE / TEST TRACK");
 });
 
 test("applies the keyboard preset without an input delay", async ({ page }) => {

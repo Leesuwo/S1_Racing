@@ -827,6 +827,42 @@ h1 {
   background: var(--ui-surface-strong);
 }
 
+/* 주행 시점 선택은 HUD보다 낮은 밀도로 두어 카메라를 바꾸면서도 조작 영역을 가리지 않는다. */
+.camera-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--ui-line-soft);
+  border-radius: var(--ui-radius-small);
+  background: rgb(0 0 0 / 0.18);
+}
+
+.camera-view-toggle > span {
+  padding: 0 4px;
+  color: var(--ui-text-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+}
+
+.simulation-toolbar .camera-view-toggle__button {
+  padding: 6px 7px;
+  border-color: transparent;
+  border-radius: 4px;
+  color: var(--ui-text-muted);
+  background: transparent;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+}
+
+.simulation-toolbar .camera-view-toggle__button--active {
+  border-color: var(--ui-accent);
+  color: var(--ui-bg);
+  background: var(--ui-accent);
+}
+
 .training-button--primary {
   border-color: var(--ui-accent);
   color: var(--ui-bg);

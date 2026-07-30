@@ -4,7 +4,7 @@
 
 S1 Racing의 평면 차량 모델을 특정 팀의 차량이나 실제 텔레메트리 복제품으로 표현하지 않고, 2012년 F1에서 관찰되는 공통 거동에 가깝게 조정하기 위한 조사 기록이다.
 
-조사 기준일: 2026-07-29
+조사 기준일: 2026-07-30
 
 ## 2. 자료를 통해 확인한 사실
 
@@ -32,7 +32,24 @@ S1 Racing의 평면 차량 모델을 특정 팀의 차량이나 실제 텔레메
 
 브라우저에서는 Formula1.com 쿠키 선택 창 때문에 영상 재생 자체까지는 진행하지 못했다. 따라서 영상 페이지의 공식 제목·길이·설명과 함께 FIA 규정, 공력·제동 기술 설명을 교차 확인했고, 영상에서 관찰할 동작 항목은 런타임 플레이테스트의 기준으로 사용했다.
 
-### 2.3 공력·제동의 해석
+### 2.3 콕핏뷰·운전자 시야
+
+콕핏 내부의 정지 형상은 라이선스가 확인된 로컬 이미지로 고정하고, 움직이는 시야와 손 동작은 공식 온보드 링크로 확인한다.
+
+- [`f2012-italian-gp-cockpit-2012.jpg`](reference-images/f1-2012/f2012-italian-gp-cockpit-2012.jpg)은 F2012의 낮은 시트, 헬멧 중심, 어깨·팔·스티어링 휠의 상대 위치를 확인하는 기준이다.
+- [`e20-italian-gp-steering-wheel-2012.jpg`](reference-images/f1-2012/e20-italian-gp-steering-wheel-2012.jpg)와 [`caterham-steering-wheel-goodwood-2012.jpg`](reference-images/f1-2012/caterham-steering-wheel-goodwood-2012.jpg)은 2012년형 휠의 넓은 손잡이, 상단 LED·디스플레이, 중앙 다이얼, 좌우 버튼군의 밀도를 확인하는 기준이다.
+- [Mercedes W03 onboard camera](https://www.topgear.com/car-news/motorsport/new-mercedes-f1-car)는 2012 W03의 실제 운전자 시야와 휠 조작을 보여 주는 보조 자료다. [Formula1.com Brazil 2012 Best Onboards](https://www.formula1.com/en/video/brazil-2012-best-onboards.1687508295906982814)는 주행 중 전방 시야, 제동, turn-in, 탈출 시 시야 흔들림을 확인하는 공식 영상 자료다.
+
+S1 콕핏뷰에 반영할 `initial_assumption`은 다음과 같다.
+
+| 관찰 항목 | S1 적용 기준 | 물리 경계 |
+|---|---|---|
+| 카메라 높이 | 헬멧·휠·노즈가 함께 보이되 전방 트랙을 가리지 않는 낮은 시점 | 카메라는 렌더 전용이며 차체 포즈를 변경하지 않는다. |
+| 시야 하단 | 스티어링 휠이 화면 하단 중앙을 차지하고 전륜·프런트 윙 일부만 노출 | HUD·카메라 보정은 `VehicleControlInput`과 분리한다. |
+| 운전자 움직임 | 조향 시 손·휠·노즈가 차체 yaw와 함께 움직이고, 휠 회전은 조향과 별도 축을 사용 | 렌더 스냅샷만 읽고 물리 상태를 직접 수정하지 않는다. |
+| 콕핏 판독 | 헬멧·바이저·팔·시트·림을 서로 다른 재질·명암으로 유지 | 실제 드라이버·팀 리버리·스폰서를 복제하지 않는다. |
+
+### 2.4 공력·제동의 해석
 
 - [Mercedes-AMG PETRONAS의 다운포스 설명](https://www.mercedesamgf1.com/news/feature-downforce-in-formula-one-explained)은 고속에서 다운포스가 차량을 지면에 붙이고, 다운포스가 줄면 직선 속도는 늘지만 차체가 더 미끄럽고 후미가 불안정해진다고 설명한다. 또한 약 150 km/h에서 차량 무게에 가까운 다운포스, 최고속 부근에서 3–4배 중량 수준이라는 규모를 제시한다.
 - [Honda F1 차량 성능 설명](https://global.honda/en/F1/features/f1-explained/10/)은 다운포스가 코너링·제동 안정성을 높이고, 서스펜션이 가속·제동·코너링 때 차체 자세를 제어한다고 설명한다.

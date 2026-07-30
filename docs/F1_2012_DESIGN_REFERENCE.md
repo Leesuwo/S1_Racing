@@ -7,9 +7,10 @@
 - 실제 팀·차량·드라이버·스폰서 리버리를 게임 자산으로 복제하지 않는다.
 - 아래 사진은 형상 관찰용 참조이며, 런타임에 외부 사진을 텍스처로 넣지 않는다.
 - 실제 차량의 성능값을 추정하거나 현재 물리값으로 확정하지 않는다. 물리 수치는 기존 `initial_assumption`/`simulation_required` 정책을 따른다.
-- 이미지 파일을 저장소에 추가할 때는 해당 파일의 설명 페이지에서 라이선스와 저작자를 확인한 뒤 `docs/ASSET_LICENSE_REGISTER.md`에 파일 단위로 기록한다.
+- 개발용 이미지 파일은 `docs/reference-images/f1-2012/`에만 저장하고, 해당 파일의 설명 페이지에서 라이선스와 저작자를 확인한 뒤 `docs/ASSET_LICENSE_REGISTER.md`에 파일 단위로 기록한다. 런타임 텍스처나 production 번들에는 포함하지 않는다.
 
 조사 기준일: 2026-07-29
+로컬 레퍼런스 패키지 기록일: 2026-07-30
 
 ## 2. 먼저 고정할 2012년형 공통 문법
 
@@ -106,18 +107,15 @@ S1용 안전한 해석은 다음과 같다.
 
 ## 5. S1 차량을 설계하기 위한 권장 기준선
 
-### 5.1 권장 기준 차량
+### 5.1 형상 대조 기준 차량
 
-특정 팀을 복제하는 대신, 다음의 혼합 기준으로 `S1 2012 Open-Wheel`을 설계한다.
+2026-07-30부터 사용자가 지정한 **Red Bull RB8**을 `S1 2012 Open-Wheel`의 형상 대조 기준으로 사용한다. 이는 RB8의 로고·스폰서·리버리·드라이버 자산을 복제한다는 뜻이 아니다. S1은 아래의 형태 관계만 무표식 geometry와 고유 팔레트로 재해석한다.
 
-- 노즈: RB8·F2012 계열의 높은 모노코크 + 분명한 스텝을 참고한다.
-- 프런트 윙: Ferrari·Force India의 넓은 지지대와 다층 플랩을 단순화한다.
-- 콕핏: 2012년형 오픈 콕핏과 높은 롤 구조를 유지한다. Halo는 넣지 않는다.
-- 사이드포드: Force India·Toro Rosso처럼 앞쪽이 깊게 파인 언더컷을 사용하되, 면 수를 제한한다.
-- 엔진 커버: Red Bull·Mercedes처럼 콕핏 뒤에서 에어박스로 올라갔다가 후방으로 좁아지는 단일 능선을 만든다.
-- 배기: 2012년형 고후방 배기의 위치감만 참고하고 실제 공력 이득을 시뮬레이션했다고 표현하지 않는다.
-- 후방: Lotus·McLaren 계열의 좁은 코크 보틀과 높은 리어 윙, 빔 윙, 단순화한 디퓨저를 층으로 배치한다.
-- 서스펜션: 전방 push-rod, 후방 pull-rod의 대비를 시각적으로 보인다.
+- 노즈: 높은 모노코크로 이어지는 명확한 스텝과, 단차 중앙의 작은 냉각 aperture를 둔다.
+- 콕핏·엔진 커버: 낮은 오픈 콕핏 뒤에서 에어박스로 올라간 뒤, 뒤쪽으로 빠르게 좁아지는 중앙 능선을 만든다.
+- 사이드포드: 상면 배기가 후방·하방으로 흐르는 ramp와 그 아래의 독립 channel을 분리한다.
+- 후방: 높은 리어 윙·빔 윙·디퓨저 strake, 후방 pull-rod를 층으로 배치한다.
+- 서스펜션: 전방 push-rod와 후방 pull-rod의 대비를 시각적으로 보인다.
 
 이 조합은 2012년의 공통 문법을 읽을 수 있으면서도 어느 한 팀의 차체·리버리·브랜딩을 그대로 재현하지 않는다.
 
@@ -153,8 +151,9 @@ S1용 안전한 해석은 다음과 같다.
 
 - [Wikimedia Commons 2012 Formula One season cars 전체 카테고리](https://commons.wikimedia.org/wiki/Category:2012_Formula_One_season_cars)는 12개 차종 하위 카테고리를 제공한다.
 - Commons는 카테고리 단위로 단일 라이선스를 보장하지 않는다. 실제 사용 가능한지는 각 `File:` 설명 페이지의 저작자·라이선스·출처·변경 조건을 확인해야 한다.
-- 현재 문서는 외부 이미지를 저장소나 게임 번들에 복사하지 않고 링크로만 참조한다. 따라서 이 문서의 이미지 링크는 **참조 자료**이며 런타임 자산이 아니다.
-- 이후 로컬 이미지가 필요하면 라이선스가 명시된 Commons 파일만 선별해 축소본을 만들고, 원본 링크·저작자·라이선스·변경 여부를 자산 등록부에 기록한다.
+- [F1 2012 Google 이미지 검색](https://www.google.com/search?udm=2&q=f1+2012)은 시각적 탐색 인덱스로 유지한다. 검색 결과 이미지는 원본·라이선스 증명으로 사용하지 않는다.
+- 라이선스가 확인된 6개 개발용 이미지와 파일별 메타데이터는 [`docs/reference-images/f1-2012/README.md`](reference-images/f1-2012/README.md)에 저장했다. 원본 설명 페이지·작성자·라이선스·SHA-256·부품별 관찰 목적을 함께 관리한다.
+- 로컬 이미지 패키지는 개발·디자인 검토 전용이다. `src/` 또는 production 번들에 import하지 않으며, S1 차량에는 사진의 공통 형상만 무표식 geometry로 재해석한다.
 
 ### 6.2 기술 자료
 
@@ -163,6 +162,13 @@ S1용 안전한 해석은 다음과 같다.
 - [F1technical 2012 차량 목록](https://www.f1technical.net/f1db/cars/years/2012): 차종·엔진·기술 프로필 색인
 - [RaceFans 2012 기술 프리뷰](https://www.racefans.net/2012/01/27/2012-technical-preview/): 규정 변화가 노즈·배기·타이어·공력 패키지에 미친 영향
 - [Formula1.com 2012 결과 페이지](https://www.formula1.com/en/results/2012/races): 시즌이 실제 20개 레이스로 운영되었음을 확인하는 공식 기록
+
+### 6.3 콕핏뷰·온보드
+
+- 실제 2012년 콕핏 배치와 운전자 착좌는 [`f2012-italian-gp-cockpit-2012.jpg`](reference-images/f1-2012/f2012-italian-gp-cockpit-2012.jpg)로 확인한다. 낮은 시트, 헬멧 중심, 팔·스티어링 휠·콕핏 림의 깊이를 관찰한다.
+- 스티어링 휠은 [`e20-italian-gp-steering-wheel-2012.jpg`](reference-images/f1-2012/e20-italian-gp-steering-wheel-2012.jpg)와 [`caterham-steering-wheel-goodwood-2012.jpg`](reference-images/f1-2012/caterham-steering-wheel-goodwood-2012.jpg)를 사용한다. 버튼·다이얼·상단 LED·디스플레이의 밀도만 추출하고 특정 팀의 휠 디자인은 복제하지 않는다.
+- 운전자 시야와 움직임은 [Brazil 2012: Best Onboards](https://www.formula1.com/en/video/brazil-2012-best-onboards.1687508295906982814), [2012 미국 GP Vettel pole lap](https://www.formula1.com/en/video/mega-quali-laps-sebastian-vettels-pole-lap-at-the-2012-united-states-grand-prix.1714053993819089057), [Mercedes W03 onboard](https://www.topgear.com/car-news/motorsport/new-mercedes-f1-car) 영상·페이지로 확인한다.
+- 영상은 전방 시야의 가림 정도, 스티어링 휠의 화면 하단 위치, 헬멧의 중앙 정렬, 조향 시 손·휠·노즈가 함께 움직이는 관계를 판단하는 자료다. 영상 파일 자체는 저장소에 복사하지 않는다.
 
 ## 7. Notion 기록 위치
 
@@ -199,7 +205,7 @@ Notion 기록에는 다음을 포함한다.
 
 ## 11. 2026-07-29 구글 이미지 재대조 및 2차 외관 조정
 
-사용자가 제공한 [Google 이미지 검색 — F1 2012](https://www.google.com/search?udm=2&q=f1+2012)를 다시 확인하고, 검색 결과에서 반복적으로 보이는 2012년 시즌의 정면·상면·후면 관계를 현재 모델과 대조했다. 검색 페이지의 실제 사진은 저장소에 복사하지 않고, 형상 판단을 위한 링크 참조로만 남긴다.
+사용자가 제공한 [Google 이미지 검색 — F1 2012](https://www.google.com/search?udm=2&q=f1+2012)를 다시 확인하고, 검색 결과에서 반복적으로 보이는 2012년 시즌의 정면·상면·후면 관계를 현재 모델과 대조했다. 검색 페이지는 시각 탐색 링크로 유지하고, 실제 개발 비교에는 라이선스가 확인된 [`docs/reference-images/f1-2012/`](reference-images/f1-2012/) 로컬 패키지를 사용한다.
 
 ### 11.1 이번 대조에서 고정한 시각적 특징
 

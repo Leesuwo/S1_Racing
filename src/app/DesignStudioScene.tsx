@@ -38,9 +38,11 @@ export function DesignStudioScene({
     <>
       {/* 주행 트랙 대신 중립 스튜디오 배경을 사용해 차체 실루엣과 부품 층을 우선 판독한다. */}
       <color attach="background" args={["#0a1113"]} />
-      <ambientLight intensity={1.4} color="#d9f5ed" />
-      <directionalLight position={[-5, 8, 6]} intensity={3.2} color="#ffe0b0" castShadow />
-      <directionalLight position={[5, 4, -4]} intensity={1.8} color="#8fd9e8" />
+      <ambientLight intensity={1.7} color="#d9f5ed" />
+      <directionalLight position={[-5, 8, 6]} intensity={3.6} color="#ffe0b0" castShadow />
+      <directionalLight position={[5, 4, -4]} intensity={2.4} color="#8fd9e8" />
+      {/* 어두운 탄소 부품이 배경에 묻히지 않도록 후방 rim light를 둬 형상 검토를 우선한다. */}
+      <directionalLight position={[0, 5, 7]} intensity={1.4} color="#a7c9ff" />
       <hemisphereLight args={["#b9e9ed", "#17231f", 1.05]} />
 
       {/* key로 카메라를 교체해 시점 버튼을 눌렀을 때 이전 OrbitControls 상태를 끌고 오지 않게 한다. */}
@@ -48,7 +50,7 @@ export function DesignStudioScene({
         key={view}
         makeDefault
         position={camera.position}
-        fov={38}
+        fov={32}
         near={0.1}
         far={100}
       />

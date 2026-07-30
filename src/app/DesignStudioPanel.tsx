@@ -39,7 +39,7 @@ export function DesignStudioPanel({
     <section className="design-studio-dashboard" aria-label="차량 디자인 검토 패널">
       <div className="design-studio-dashboard__header">
         <div>
-          <span className="section-kicker">CAR DESIGN / S1 2012 OPEN-WHEEL</span>
+          <span className="section-kicker">CAR DESIGN / RB8 FORM STUDY · 2012</span>
           <h2>차량 외관을 가까이서 확인하십시오</h2>
           <p>드래그로 회전하고, 휠로 확대·축소하며 노즈·콕핏·사이드포드·리어 윙을 비교합니다.</p>
         </div>

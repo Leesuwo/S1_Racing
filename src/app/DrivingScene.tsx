@@ -25,10 +25,35 @@ import { LowPolyCar, type LowPolyCarWheelRefs } from "../world/LowPolyCar";
 import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
 
+/** 주행 화면에서 차량을 외부에서 추적하거나 운전자 위치에서 관찰하는 렌더 전용 시점이다. */
+export type DrivingCameraView = "chase" | "cockpit";
+
+/**
+ * 2012년 온보드 자료에서 추출한 콕핏 카메라의 렌더링 전용 기준값이다.
+ * 실제 차량 CAD 치수가 아니므로 `initial_assumption`이며 물리 차체의 무게중심이나 충돌 형상에는 사용하지 않는다.
+ */
+const COCKPIT_CAMERA = {
+  /** 휠 뒤쪽의 운전자 눈 위치에 두기 위한 차량 로컬 후방 오프셋(m)이다. */
+  forwardOffsetM: -0.25,
+  /** 낮은 2012년형 착좌 자세를 읽게 하는 차체 기준 높이(m)다. */
+  heightM: 1,
+  /** 노즈·프런트 윙과 전방 트랙을 함께 보게 하는 바라보기 거리(m)다. */
+  lookAheadM: 18,
+  /** 수평선보다 약간 아래를 보게 해 스티어링 휠·노즈가 화면 하단에 남도록 하는 오프셋(m)이다. */
+  lookDownM: 0.35,
+  /** 좁은 추적 시점보다 넓은 온보드 주변 시야를 위한 수직 시야각(deg)이다. */
+  fovDeg: 68,
+} as const;
+
+/** 외부 추적 시점은 차량 자세와 트랙을 함께 읽기 위한 기존 수직 시야각(deg)이다. */
+const CHASE_CAMERA_FOV_DEG = 55;
+
 /** R3F 장면과 플레이어·AI 텔레메트리 콜백 사이의 통합 경계다. */
 interface DrivingSceneProps {
   input: BrowserVehicleInput;
   paused: boolean;
+  /** App 셸이 소유하는 UI 시점 선택이며 차량 물리와 분리된다. */
+  cameraView: DrivingCameraView;
   /** M2A-0에서 검증·적용된 AI 설정이며, 생략하지 않고 주행 세션에 전달한다. */
   opponentAIConfig: SingleOpponentAIConfig;
   onTelemetry: (telemetry: VehicleTelemetry) => void;
@@ -42,10 +67,13 @@ function VehicleModel({
   groupRef,
   wheelRefs,
   color,
+  hideDriver = false,
 }: {
   groupRef: RefObject<THREE.Group | null>;
   wheelRefs: LowPolyCarWheelRefs;
   color: string;
+  /** 1인칭 시점에서 플레이어 자신의 외부 드라이버 메시를 생략한다. */
+  hideDriver?: boolean;
 }) {
   return (
     <LowPolyCar
@@ -53,6 +81,7 @@ function VehicleModel({
       wheelRefs={wheelRefs}
       bodyColor={color}
       accentColor="#d8b96a"
+      hideDriver={hideDriver}
     />
   );
 }
@@ -181,6 +210,7 @@ function rapierRotationToPhysicsYaw(rotation: { x: number; y: number; z: number;
 export function DrivingScene({
   input,
   paused,
+  cameraView,
   opponentAIConfig,
   onTelemetry,
   onOpponentTelemetry,
@@ -235,6 +265,17 @@ export function DrivingScene({
   const suspensionRig = useRef<RapierChassisSuspension | null>(null);
   // AI 차량의 독립 Rapier world와 차체를 소유하는 리그 참조다.
   const opponentSuspensionRig = useRef<RapierChassisSuspension | null>(null);
+
+  useEffect(() => {
+    // 시점 전환은 projection만 바꾸며, 렌더러가 차량 포즈나 입력을 수정하지 않게 한다.
+    if (!(camera instanceof THREE.PerspectiveCamera)) return;
+
+    const nextFovDeg = cameraView === "cockpit" ? COCKPIT_CAMERA.fovDeg : CHASE_CAMERA_FOV_DEG;
+    if (camera.fov === nextFovDeg) return;
+
+    camera.fov = nextFovDeg;
+    camera.updateProjectionMatrix();
+  }, [camera, cameraView]);
 
   useEffect(() => {
     // Rapier WASM 생성은 비동기이므로 언마운트 이후 결과를 폐기할 수 있게 한다.
@@ -330,20 +371,39 @@ export function DrivingScene({
     updateVehicleModel(vehicleRef, wheelRefs, snapshot, suspensionRig.current);
     updateVehicleModel(opponentVehicleRef, opponentWheelRefs, opponentSnapshot, opponentSuspensionRig.current);
 
-    // 차량 전방을 기준으로 후방 카메라 위치와 바라볼 점을 계산한다.
+    // 차량 전방을 기준으로 후방·콕핏 카메라가 공유할 차량 로컬 전방 벡터를 계산한다.
     forward.set(Math.sin(snapshot.yawRad), 0, -Math.cos(snapshot.yawRad));
-    desiredCamera.set(
-      snapshot.position.x - forward.x * 7,
-      4.2,
-      snapshot.position.z - forward.z * 7,
-    );
-    // pause 중에는 카메라까지 느리게 보간해 화면이 갑자기 움직이지 않게 한다.
-    camera.position.lerp(desiredCamera, paused ? 0.025 : 0.08);
-    target.set(
-      snapshot.position.x + forward.x * 4,
-      0.35,
-      snapshot.position.z + forward.z * 4,
-    );
+    // Rapier 차체의 승차 높이는 콕핏에서만 필요하므로 외부 추적 시점의 프레임 비용에 넣지 않는다.
+    const cockpitRigTelemetry = cameraView === "cockpit" ? suspensionRig.current?.getTelemetry() : null;
+    // 차량 내부에서 카메라만 수직으로 떠 보이지 않게 현재 승차 높이 차이를 읽기 전용으로 사용한다.
+    const cockpitVisualHeight = cockpitRigTelemetry
+      ? cockpitRigTelemetry.chassisHeightM - cockpitRigTelemetry.referenceRideHeightM
+      : 0;
+    if (cameraView === "cockpit") {
+      // 헬멧보다 앞·휠보다 위에 고정해 운전자 눈높이에서 노즈와 스티어링 휠을 함께 읽게 한다.
+      desiredCamera.set(
+        snapshot.position.x + forward.x * COCKPIT_CAMERA.forwardOffsetM,
+        cockpitVisualHeight + COCKPIT_CAMERA.heightM,
+        snapshot.position.z + forward.z * COCKPIT_CAMERA.forwardOffsetM,
+      );
+      target.copy(desiredCamera).addScaledVector(forward, COCKPIT_CAMERA.lookAheadM);
+      target.y -= COCKPIT_CAMERA.lookDownM;
+      // 운전자 시점은 차체에 고정돼야 하므로 추적 카메라처럼 지연 보간하지 않는다.
+      camera.position.copy(desiredCamera);
+    } else {
+      desiredCamera.set(
+        snapshot.position.x - forward.x * 7,
+        4.2,
+        snapshot.position.z - forward.z * 7,
+      );
+      // pause 중에는 카메라까지 느리게 보간해 화면이 갑자기 움직이지 않게 한다.
+      camera.position.lerp(desiredCamera, paused ? 0.025 : 0.08);
+      target.set(
+        snapshot.position.x + forward.x * 4,
+        0.35,
+        snapshot.position.z + forward.z * 4,
+      );
+    }
     camera.lookAt(target);
 
     // 물리 루프는 120Hz지만 HUD는 10Hz 샘플로 충분해 렌더 상태 갱신을 줄인다.
@@ -361,7 +421,12 @@ export function DrivingScene({
     <>
       <SceneLighting variant="driving" />
       <TestTrackVisual track={simulation.track} />
-      <VehicleModel groupRef={vehicleRef} wheelRefs={wheelRefs} color="#d92f4f" />
+      <VehicleModel
+        groupRef={vehicleRef}
+        wheelRefs={wheelRefs}
+        color="#d92f4f"
+        hideDriver={cameraView === "cockpit"}
+      />
       <VehicleModel groupRef={opponentVehicleRef} wheelRefs={opponentWheelRefs} color="#27b8d6" />
     </>
   );
