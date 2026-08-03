@@ -1032,10 +1032,23 @@ export function LowPolyCar({
             <boxGeometry args={[0.1, 0.17, 0.5]} />
             <meshStandardMaterial color={carbonColor} roughness={0.88} flatShading />
           </mesh>
+          {/* intake backing은 검은 면의 깊이를 만들고, 위·아래 lip은 개구부가 차체 표면에 붙어 있음을 보여 준다. */}
+          <mesh position={[side * 0.814, 0.69, -0.59]} rotation={[0, side * 0.11, side * 0.035]}>
+            <boxGeometry args={[0.03, 0.19, 0.4]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.9} flatShading />
+          </mesh>
           {/* 넓고 낮은 intake slot은 2012년형 포드의 가로로 긴 개구부 비율을 보존한다. */}
           <mesh position={[side * 0.806, 0.69, -0.59]} rotation={[0, side * 0.11, side * 0.035]}>
             <boxGeometry args={[0.018, 0.105, 0.28]} />
             <meshStandardMaterial color="#050608" roughness={0.96} flatShading />
+          </mesh>
+          <mesh position={[side * 0.826, 0.79, -0.59]} rotation={[0, side * 0.11, side * 0.035]}>
+            <boxGeometry args={[0.032, 0.025, 0.34]} />
+            <meshStandardMaterial color={aeroColor} roughness={0.78} flatShading />
+          </mesh>
+          <mesh position={[side * 0.826, 0.59, -0.59]} rotation={[0, side * 0.11, side * 0.035]}>
+            <boxGeometry args={[0.032, 0.025, 0.34]} />
+            <meshStandardMaterial color={aeroColor} roughness={0.78} flatShading />
           </mesh>
           {/* intake lip을 별도 외피로 두어 검은 개구부가 단순한 스티커가 아니라 포드 안으로 꺾여 보이게 한다. */}
           <mesh position={[side * 0.812, 0.7, -0.59]} rotation={[Math.PI / 2, 0, side * 0.035]} scale={[0.78, 1, 1]}>
@@ -1047,11 +1060,21 @@ export function LowPolyCar({
             <boxGeometry args={[0.045, 0.11, 1.26]} />
             <meshStandardMaterial color="#080a0d" roughness={0.92} flatShading />
           </mesh>
+          {/* 터널의 바깥 벽은 intake 뒤에서 diffuser 외측까지 이어져 하부 공기 경로를 표면으로 고정한다. */}
+          <mesh position={[side * 0.61, 0.46, 0.52]} rotation={[0.06, side * 0.12, 0]}>
+            <boxGeometry args={[0.04, 0.08, 0.92]} />
+            <meshStandardMaterial color={aeroColor} roughness={0.82} flatShading />
+          </mesh>
           <Link color={carbonColor} start={[side * 0.48, 0.49, -0.92]} end={[side * 0.67, 0.5, -0.18]} width={0.028} />
           {/* RB8의 특징인 상부 배기와 하향 ramp를 시각화한다. 경사 아래 채널은 exhaust plume과 분리된 공기 통로다. */}
           <mesh position={[side * 0.34, 0.86, 1.13]} rotation={[0.42, side * 0.08, 0]}>
             <boxGeometry args={[0.24, 0.04, 0.76]} />
             <meshStandardMaterial color={bodyColor} roughness={0.54} metalness={0.08} flatShading />
+          </mesh>
+          {/* exhaust surround는 출구와 ramp 사이의 열 차폐 표면으로, 배기 원통이 차체 밖에 떠 보이지 않게 한다. */}
+          <mesh position={[side * 0.34, 0.93, 0.83]} rotation={[0, side * 0.08, 0]}>
+            <boxGeometry args={[0.2, 0.055, 0.25]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.88} flatShading />
           </mesh>
           <mesh position={[side * 0.34, 0.98, 0.82]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.055, 0.07, 0.17, 8]} />
@@ -1069,6 +1092,8 @@ export function LowPolyCar({
             <cylinderGeometry args={[0.033, 0.037, 0.02, 8]} />
             <meshStandardMaterial color="#e88b50" emissive="#9d3f1e" emissiveIntensity={0.16} flatShading />
           </mesh>
+          {/* exhaust ramp의 끝을 diffuser 외측으로 시각 연결한다. 공력 힘이나 배기 추력은 계산하지 않는다. */}
+          <Link color={aeroColor} start={[side * 0.36, 0.84, 1.18]} end={[side * 0.52, 0.38, 1.58]} width={0.04} />
         </group>
       ))}
 
@@ -1189,6 +1214,19 @@ export function LowPolyCar({
           <boxGeometry args={[0.03, 0.11, 0.48]} />
           <meshStandardMaterial color={carbonColor} roughness={0.9} flatShading />
         </mesh>
+      ))}
+      {/* diffuser outer fence는 sidepod tunnel exit와 rear tyre 안쪽 경계를 동시에 보여 준다. */}
+      {([-1, 1] as const).map((side) => (
+        <group key={`diffuser-outer-fence-${side}`}>
+          <mesh position={[side * 0.52, 0.38, 1.58]} rotation={[0.14, side * 0.06, 0]}>
+            <boxGeometry args={[0.04, 0.14, 0.72]} />
+            <meshStandardMaterial color={aeroColor} roughness={0.82} flatShading />
+          </mesh>
+          <mesh position={[side * 0.66, 0.4, 1.46]} rotation={[0.12, side * 0.08, 0]}>
+            <boxGeometry args={[0.035, 0.1, 0.42]} />
+            <meshStandardMaterial color={carbonColor} roughness={0.9} flatShading />
+          </mesh>
+        </group>
       ))}
       <mesh position={[0, 0.34, 1.82]} rotation={[0.18, 0, 0]}>
         <boxGeometry args={[0.62, 0.025, 0.2]} />

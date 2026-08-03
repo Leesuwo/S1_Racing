@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-08-03 — D-058
+
+**결정:** RB8 파츠별 두 번째 구현은 사이드포드 흡기 backing·상하 lip, 언더컷 tunnel 외벽, 상부 배기 surround, 배기 ramp와 diffuser 외측을 잇는 시각 링크, diffuser outer fence를 하나의 측·후방 공력 패키지로 묶는 렌더 전용 형상 패스로 진행한다.
+
+**이유:** 기존 사이드포드는 흡기 개구부와 하부 채널이 검은 면과 짧은 선으로만 읽혀, 실제 2012년형 RB8에서 중요한 높은 흡기구·코크 보틀·배기 출구·diffuser 측면의 연속성이 약했다. 먼저 입구의 깊이와 테두리, 하부 터널의 외곽 벽, 배기 열 차폐, diffuser 측면 경계를 연결해 차체 외피와 공력 부품이 같은 조립체로 보이게 한다.
+
+**경계:** 변경은 `LowPolyCar`의 읽기 전용 geometry와 material에만 적용한다. 배기 ramp와 diffuser 연결선은 공기 흐름을 설명하는 시각 표현이며 `AeroModel`, 타이어 힘, 차량 포즈, `VehicleControlInput`, 120Hz fixed-step, Rapier 상태, AI 위치 소유권을 변경하지 않는다. 모든 추가 수치는 실차 계측값이 아닌 렌더 전용 `initial_assumption`이다.
+
+**검증:** 디자인 스튜디오 `3/4 VIEW`, `SIDE`, `REAR`에서 흡기구가 포드 표면에 붙고 tunnel·exhaust·diffuser 외곽이 끊기지 않는지 수동 검토한다. 타입 검사와 전체 `npm run verify`를 완료 게이트로 사용한다.
+
 ## 2026-08-03 — D-057
 
 **결정:** RB8 파츠별 연구의 첫 구현은 노즈·프런트 윙·전륜 서스펜션·브레이크 덕트를 하나의 전방 패키지로 묶는 렌더 전용 형상 패스로 진행한다. step 상면의 냉각 aperture, 프런트 윙 하부 footplate·중앙 keel, suspension chassis anchor·steering arm·브레이크 덕트를 추가해 부품 간 접점을 우선 고정한다.
