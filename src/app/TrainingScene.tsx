@@ -11,7 +11,7 @@ import {
   type AITrainingSnapshot,
 } from "../gameplay/training/AITrainingRunner";
 import type { VehicleRenderSnapshot } from "../game/physics/VehicleSimulation";
-import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
+import { physicsSteeringToThreeWheelYaw, physicsYawToThreeYaw } from "../rendering/physicsTransform";
 import { LowPolyCar, type LowPolyCarWheelRefs } from "../world/LowPolyCar";
 import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
@@ -236,8 +236,10 @@ export function TrainingScene({ runner, paused, onSnapshot }: TrainingSceneProps
       vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
     }
     const steeringAngleRad = Number.isFinite(snapshot.steeringAngleRad) ? snapshot.steeringAngleRad : 0;
-    if (wheelRefs.frontLeft.steering.current) wheelRefs.frontLeft.steering.current.rotation.y = steeringAngleRad;
-    if (wheelRefs.frontRight.steering.current) wheelRefs.frontRight.steering.current.rotation.y = steeringAngleRad;
+    // 교육 루프도 주행·LowPolyCar와 같은 좌표계 변환을 사용해 AI 차량만 조향 방향이 뒤집히지 않게 한다.
+    const visualSteeringAngleRad = physicsSteeringToThreeWheelYaw(steeringAngleRad);
+    if (wheelRefs.frontLeft.steering.current) wheelRefs.frontLeft.steering.current.rotation.y = visualSteeringAngleRad;
+    if (wheelRefs.frontRight.steering.current) wheelRefs.frontRight.steering.current.rotation.y = visualSteeringAngleRad;
     for (const [ref, spinRad] of [
       [wheelRefs.frontLeft.rolling, snapshot.wheelSpinRad.frontLeft],
       [wheelRefs.frontRight.rolling, snapshot.wheelSpinRad.frontRight],

@@ -4,11 +4,11 @@
 
 **결정:** 물리의 앞바퀴 조향각은 `physicsSteeringToThreeWheelYaw`를 통해서만 Three.js steering group에 전달한다. 물리 좌표계의 양의 조향은 앞바퀴 전방 벡터 `+X`를 의미하고, 차량 로컬 전방 `-Z`를 사용하는 Three.js 그룹에서는 같은 방향을 음의 `rotation.y`로 표현한다.
 
-**이유:** 기존에는 `VehicleRenderSnapshot.steeringAngleRad`를 두 렌더 적용 지점에서 `rotation.y`에 그대로 대입해, 입력·물리 yaw는 오른쪽인데 화면의 전륜은 왼쪽으로 꺾였다. yaw 변환과 휠 조향 변환을 분리된 계약으로 명시해야 차체 방향을 고치는 과정에서 휠 조향 부호를 다시 뒤집지 않는다.
+**이유:** 기존에는 `VehicleRenderSnapshot.steeringAngleRad`를 주행·교육의 프레임 루프와 `LowPolyCar`의 렌더 적용 지점에서 `rotation.y`에 그대로 대입해, 입력·물리 yaw는 오른쪽인데 화면의 전륜은 왼쪽으로 꺾였다. yaw 변환과 휠 조향 변환을 분리된 계약으로 명시하고 모든 렌더 루프가 같은 함수를 사용해야 한 화면만 고쳐지고 다른 화면에서 부호가 다시 뒤집히지 않는다.
 
 **경계:** 변경은 렌더 좌표 변환과 회귀 테스트에만 적용한다. `VehicleControlInput`, `VehicleSimulation`, Rapier 타이어 힘, AI 입력·위치 소유권, 휠 spin 축은 변경하지 않는다.
 
-**검증:** `physicsTransform.test.ts`에 양·음 조향 부호 대칭 테스트를 추가하고 `WheelKinematics`, `VehicleSimulation`, 타입 검사, 전체 `npm run verify`, 브라우저 디자인 조향 미리보기를 통과시킨다.
+**검증:** `physicsTransform.test.ts`에 양·음 조향 부호 대칭 테스트를 추가하고 `WheelKinematics`, `VehicleSimulation`, 주행·AI 교육의 렌더 루프, 타입 검사, 전체 `npm run verify`, 브라우저 디자인 조향 미리보기를 통과시킨다.
 
 ## 2026-08-03 — D-060
 
