@@ -42,8 +42,8 @@ function RaceVehicleModel({ vehicle }: { vehicle: RaceVehicleRenderSnapshot }) {
   const vehicleRef = useRef<THREE.Group>(null);
 
   useLayoutEffect(() => {
-    // 그리드 AI는 플레이어 바로 뒤의 보조 시각 요소다. 19대가 모두 shadow map을 갱신하면
-    // 낮은 폴리곤 수와 무관하게 draw-call 비용이 급증하므로, 플레이어만 그림자를 남긴다.
+    // AI도 플레이어와 같은 RB8 hero geometry를 쓰지만, 19대가 모두 shadow map을 갱신하면
+    // 외관 통일과 무관하게 draw-call 비용이 급증하므로, 플레이어만 그림자를 남긴다.
     if (vehicle.kind === "player") return;
     vehicleRef.current?.traverse((object) => {
       if (object instanceof THREE.Mesh) {
@@ -62,7 +62,8 @@ function RaceVehicleModel({ vehicle }: { vehicle: RaceVehicleRenderSnapshot }) {
       <LowPolyCar
         bodyColor={vehicleColor(vehicle)}
         accentColor="#d8b96a"
-        detail={vehicle.kind === "player" ? "hero" : "grid"}
+        // 플레이어와 AI가 같은 RB8 Form Study 외관을 써야 레이스 결과 화면에서 차량 정체성이 달라지지 않는다.
+        detail="hero"
         steeringAngleRad={snapshot.steeringAngleRad}
         wheelSpinRad={snapshot.wheelSpinRad}
       />

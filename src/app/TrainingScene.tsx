@@ -62,7 +62,7 @@ function TrainingVehicleModel({
   wheelRefs: LowPolyCarWheelRefs;
   groupRef: RefObject<THREE.Group | null>;
 }) {
-  // 교육 루프는 매 프레임 상태를 관찰하므로 grid LOD를 유지하되, GridCar 내부의 경량 운전자 실루엣을 함께 표시한다.
+  // AI 교육도 디자인 스튜디오와 동일한 RB8 hero 외관을 사용해야 시각 검증과 실제 교육 화면의 차량이 달라지지 않는다.
   return (
     <LowPolyCar
       groupRef={groupRef}
@@ -70,7 +70,7 @@ function TrainingVehicleModel({
       bodyColor="#32c8e8"
       accentColor="#ffbe55"
       emissiveColor="#075e75"
-      detail="grid"
+      detail="hero"
     />
   );
 }

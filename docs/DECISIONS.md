@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-08-03 — D-060
+
+**결정:** 디자인 스튜디오의 RB8 `hero` 외관을 AI 교육·Driving 상대 차량·Race Weekend의 모든 인게임 차량에 공통 적용한다. 기존 `detail="grid"` API는 호출 호환용 alias로 남기되 내부에서는 동일한 hero geometry를 반환한다.
+
+**이유:** AI 교육과 Race Weekend AI가 `GridCar`의 별도 경량 메시지를 사용해, 사용자가 디자인 스튜디오에서 확인한 RB8과 실제 교육·레이스 화면의 차량이 서로 다른 실루엣으로 보였다. 차량 외관 검증의 기준이 화면마다 달라지는 문제를 없애려면 차량 종류가 달라도 같은 `LowPolyCar` 형상 패키지를 렌더해야 한다.
+
+**성능 경계:** 다차량 장면은 공통 geometry를 유지하되 AI 차량의 shadow cast/receive는 기존처럼 끈다. 물리·AI·입력·휠 steer/spin 계약은 변경하지 않으며, 새 의존성도 추가하지 않는다. 향후 차량 수가 늘어 성능 문제가 확인되면 형상을 바꾸는 별도 LOD 설계를 먼저 검증한다.
+
+**검증:** AI 교육·디자인 스튜디오·Race Weekend E2E를 회귀 실행하고, 브라우저에서 차량 색상만 달라지고 노즈·콕핏·사이드포드·리어윙 구조는 동일한지 확인한다. 전체 `npm run verify`를 완료 게이트로 사용한다.
+
 ## 2026-08-03 — D-059
 
 **결정:** RB8 파츠별 세 번째 구현은 콕핏 뒤의 에어박스·엔진 커버·기어박스·리어 윙 중앙 지지대를 `ENGINE_COVER_SPINE_STATIONS`와 `GEARBOX_TAIL_STATIONS`를 중심으로 하나의 중앙 구조 패키지로 연결한다. 에어박스 외피는 body 색으로 엔진 커버에 묻히고, inlet throat와 lip만 carbon으로 분리한다.

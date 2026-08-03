@@ -18,7 +18,7 @@ export interface LowPolyCarProps {
   accentColor?: string;
   /** 교육 모드에서 차체 포인트를 약하게 강조할 선택적 발광 색상이다. */
   emissiveColor?: string;
-  /** 단일 추적 차량은 hero, 다차량 그리드는 실루엣 중심으로 표시한다. */
+  /** 현재 인게임 차량은 모두 RB8 공통 hero 외관을 사용하며, grid 값은 기존 호출 호환을 위해 남긴다. */
   detail?: "hero" | "grid";
   /** 렌더 스냅샷이 전달하는 앞축 시각 조향각(rad)이다. */
   steeringAngleRad?: number;
@@ -747,27 +747,7 @@ function SuspensionArms({ color }: { color: string }) {
   );
 }
 
-/** 다차량·교육 화면에서 비용을 제한하면서도 콕핏 안의 운전자 방향을 읽게 하는 경량 실루엣이다. */
-function GridDriverCockpit({ accentColor }: { accentColor: string }) {
-  return (
-    <group position={[0, 0.54, -0.02]}>
-      <mesh position={[0, 0.22, 0.03]} castShadow>
-        <boxGeometry args={[0.24, 0.32, 0.28]} />
-        <meshStandardMaterial color="#111821" roughness={0.88} flatShading />
-      </mesh>
-      <mesh position={[0, 0.43, -0.01]} castShadow>
-        <sphereGeometry args={[0.14, 6, 4]} />
-        <meshStandardMaterial color={accentColor} roughness={0.66} flatShading />
-      </mesh>
-      <mesh position={[0, 0.44, -0.12]}>
-        <boxGeometry args={[0.15, 0.05, 0.025]} />
-        <meshStandardMaterial color="#05070a" metalness={0.42} roughness={0.24} flatShading />
-      </mesh>
-    </group>
-  );
-}
-
-/** 다차량 레이스에서 프레임 비용을 제한하면서 2012년형 실루엣을 유지하는 LOD다. */
+/** 기존 grid 호출을 유지하면서도 모든 인게임 차량을 동일한 RB8 hero 외관으로 연결하는 호환 래퍼다. */
 function GridCar({
   accentColor,
   bodyColor,
@@ -776,48 +756,16 @@ function GridCar({
   wheelSpinRad,
   steeringAngleRad,
 }: Pick<LowPolyCarProps, "accentColor" | "bodyColor" | "groupRef" | "steeringAngleRad" | "wheelRefs" | "wheelSpinRad">) {
-  const carbonColor = "#12151a";
-  // 검은 aero를 배경에 묻히지 않는 청회색 탄소 톤으로 두어 wing·floor 접점을 읽게 한다.
-  const aeroColor = "#32495b";
-  const resolvedAccentColor = accentColor ?? "#d6b46a";
-
   return (
-    <group ref={groupRef}>
-      {/* 원거리 차량도 노즈 단차·사이드포드·코크 보틀의 외곽선을 유지한다. */}
-      <HullPanel color={bodyColor} emissiveColor="#000000" stations={NOSE_STATIONS} />
-      <HullPanel color={bodyColor} emissiveColor="#000000" stations={MONOCOQUE_STATIONS} />
-      <HullPanel color={bodyColor} emissiveColor="#000000" stations={ENGINE_COVER_STATIONS} />
-      <SidepodPanel color={bodyColor} side={-1} stations={SIDEPOD_STATIONS} />
-      <SidepodPanel color={bodyColor} side={1} stations={SIDEPOD_STATIONS} />
-      <PlanformPanel color={bodyColor} points={NOSE_STEP_PLANFORM} position={[0, 0.6, 0]} thickness={0.035} />
-      <PlanformPanel color={carbonColor} points={FLOOR_PLANFORM} position={[0, 0.29, 0]} thickness={0.055} />
-      <mesh position={[0, 0.9, -0.12]}>
-        <boxGeometry args={[0.38, 0.045, 0.72]} />
-        <meshStandardMaterial color="#07090c" roughness={0.92} flatShading />
-      </mesh>
-      <GridDriverCockpit accentColor={resolvedAccentColor} />
-      <PlanformPanel color={aeroColor} points={FRONT_WING_MAIN_PLANFORM} position={[0, 0.25, 0]} thickness={0.07} />
-      <PlanformPanel color={carbonColor} points={FRONT_WING_UPPER_FLAP_PLANFORM} position={[0, 0.4, 0]} thickness={0.03} />
-      <PlanformPanel color={aeroColor} points={REAR_WING_MAIN_PLANFORM} position={[0, 1.06, 0]} thickness={0.08} />
-      <mesh position={[0, 1.22, 2.4]}>
-        <boxGeometry args={[1.54, 0.07, 0.1]} />
-        <meshStandardMaterial color={aeroColor} roughness={0.72} flatShading />
-      </mesh>
-      <mesh position={[0, 0.82, 2.12]}>
-        <boxGeometry args={[1.54, 0.065, 0.1]} />
-        <meshStandardMaterial color={aeroColor} roughness={0.72} flatShading />
-      </mesh>
-      <mesh position={[0, 0.98, -0.92]}>
-        <boxGeometry args={[0.07, 0.025, 0.78]} />
-        <meshStandardMaterial color={resolvedAccentColor} roughness={0.58} flatShading />
-      </mesh>
-      <Wheels
-        accentColor={resolvedAccentColor}
-        wheelRefs={wheelRefs}
-        wheelSpinRad={wheelSpinRad}
-        steeringAngleRad={steeringAngleRad}
-      />
-    </group>
+    <LowPolyCar
+      groupRef={groupRef}
+      wheelRefs={wheelRefs}
+      bodyColor={bodyColor}
+      accentColor={accentColor}
+      wheelSpinRad={wheelSpinRad}
+      steeringAngleRad={steeringAngleRad}
+      detail="hero"
+    />
   );
 }
 
