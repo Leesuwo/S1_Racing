@@ -20,7 +20,7 @@ import {
 import { sampleTestTrackSurface } from "../game/physics/TrackSurface";
 import { VehicleSimulation, type VehicleTelemetry } from "../game/physics/VehicleSimulation";
 import { TrackLimitsMonitor, type TrackLimitsSnapshot } from "../gameplay/race/TrackLimits";
-import { physicsYawToThreeYaw } from "../rendering/physicsTransform";
+import { physicsSteeringToThreeWheelYaw, physicsYawToThreeYaw } from "../rendering/physicsTransform";
 import { LowPolyCar, type LowPolyCarWheelRefs } from "../world/LowPolyCar";
 import { SceneLighting } from "../world/SceneLighting";
 import { TestTrackVisual } from "../world/TestTrackVisual";
@@ -182,8 +182,10 @@ function updateVehicleModel(
   vehicleRef.current.rotation.y = physicsYawToThreeYaw(snapshot.yawRad);
   // 차체 yaw와 분리해 앞축만 시각 조향한다. 차량 포즈·타이어 힘·입력 상태는 이 함수가 소유하지 않는다.
   const steeringAngleRad = Number.isFinite(snapshot.steeringAngleRad) ? snapshot.steeringAngleRad : 0;
-  wheelRefs.frontLeft.steering.current && (wheelRefs.frontLeft.steering.current.rotation.y = steeringAngleRad);
-  wheelRefs.frontRight.steering.current && (wheelRefs.frontRight.steering.current.rotation.y = steeringAngleRad);
+  // 물리의 양의 조향은 +X를 향하지만 Three.js의 +Y 회전은 -Z 전방을 -X로 보내므로 부호를 변환한다.
+  const visualSteeringAngleRad = physicsSteeringToThreeWheelYaw(steeringAngleRad);
+  wheelRefs.frontLeft.steering.current && (wheelRefs.frontLeft.steering.current.rotation.y = visualSteeringAngleRad);
+  wheelRefs.frontRight.steering.current && (wheelRefs.frontRight.steering.current.rotation.y = visualSteeringAngleRad);
   // Rapier 우선 또는 평면 fallback으로 계산된 누적 회전량을 네 바퀴의 X축에 적용한다.
   for (const [ref, spinRad] of [
     [wheelRefs.frontLeft.rolling, snapshot.wheelSpinRad.frontLeft],

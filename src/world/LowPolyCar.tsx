@@ -5,6 +5,7 @@
  */
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
+import { physicsSteeringToThreeWheelYaw } from "../rendering/physicsTransform";
 
 /** 렌더링용 차량의 외관만 전달하는 읽기 전용 입력이다. */
 export interface LowPolyCarProps {
@@ -645,6 +646,8 @@ function Wheels({
   useEffect(() => {
     // 조향과 구름을 다른 그룹에 적용해 차체 yaw가 휠 회전축을 오염시키지 않게 한다.
     const safeSteeringAngleRad = Number.isFinite(steeringAngleRad) ? steeringAngleRad : 0;
+    // 물리의 +X 조향과 Three.js의 -Z 전방 회전축 부호가 반대이므로 시각 그룹에서만 변환한다.
+    const visualSteeringAngleRad = physicsSteeringToThreeWheelYaw(safeSteeringAngleRad);
     const safeWheelSpinRad = wheelSpinRad ?? {
       frontLeft: 0,
       frontRight: 0,
@@ -652,10 +655,10 @@ function Wheels({
       rearRight: 0,
     };
     if (resolvedFrontLeft.steering.current) {
-      resolvedFrontLeft.steering.current.rotation.y = safeSteeringAngleRad;
+      resolvedFrontLeft.steering.current.rotation.y = visualSteeringAngleRad;
     }
     if (resolvedFrontRight.steering.current) {
-      resolvedFrontRight.steering.current.rotation.y = safeSteeringAngleRad;
+      resolvedFrontRight.steering.current.rotation.y = visualSteeringAngleRad;
     }
     const rollingRefs = [
       [resolvedFrontLeft.rolling, safeWheelSpinRad.frontLeft],
