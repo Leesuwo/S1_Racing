@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-08-03 — D-057
+
+**결정:** RB8 파츠별 연구의 첫 구현은 노즈·프런트 윙·전륜 서스펜션·브레이크 덕트를 하나의 전방 패키지로 묶는 렌더 전용 형상 패스로 진행한다. step 상면의 냉각 aperture, 프런트 윙 하부 footplate·중앙 keel, suspension chassis anchor·steering arm·브레이크 덕트를 추가해 부품 간 접점을 우선 고정한다.
+
+**이유:** 레퍼런스 대조에서 현재 차량의 문제는 부품 수보다 노즈-윙-허브-서스펜션이 분리된 판과 링크처럼 읽히는 관계였다. 2012년형 차량은 프런트 윙의 다층 aero와 얇은 suspension rod가 서로 다른 부품이어도 같은 하중·유동 패키지로 보이므로, 세부 장식보다 접점과 중심선을 먼저 보강한다.
+
+**경계:** 변경은 `LowPolyCar`의 읽기 전용 geometry와 material에만 적용한다. `VehicleControlInput`, 120Hz fixed-step, Rapier 포즈·타이어 힘·AI 위치 소유권·휠 steer/spin 계약은 변경하지 않는다. 모든 추가 수치는 실차 계측값이 아닌 렌더 전용 `initial_assumption`이다.
+
+**검증:** 디자인 스튜디오 정면·3/4에서 footplate·central keel·twin pylon의 접점을 확인하고, `npm run verify`의 타입·110개 단위 테스트·아키텍처·빌드·코드/최적화 리뷰·22개 E2E를 통과시킨다.
+
 ## 2026-07-30 — D-055
 
 **결정:** 사용자의 100점 목표에 따라 `RB8_FORM_SCORECARD.md`의 내부 완료선을 100/100으로 올리고, 네 시점 수동 검토에서 반복 4 최종 점수를 100/100으로 기록한다. 최종 반복은 wheel upright·brake caliper·steering column·기어박스-코크보틀 tail fairing 통합이다.

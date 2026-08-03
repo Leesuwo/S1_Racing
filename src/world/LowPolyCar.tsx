@@ -170,12 +170,34 @@ const FRONT_WING_UPPER_FLAP_PLANFORM: readonly PlanformPoint[] = [
   [-0.89, -2.4],
 ];
 
+/** 메인 플레인 아래의 footplate는 외측 endplate와 중앙 pylon 사이를 하나의 하부 패키지로 묶는다. */
+const FRONT_WING_FOOTPLATE_PLANFORM: readonly PlanformPoint[] = [
+  [-1.24, -2.68],
+  [-0.98, -2.72],
+  [-0.46, -2.62],
+  [0.46, -2.62],
+  [0.98, -2.72],
+  [1.24, -2.68],
+  [1.08, -2.76],
+  [0.42, -2.7],
+  [-0.42, -2.7],
+  [-1.08, -2.76],
+];
+
 /** 노즈 단차의 평평한 상면을 별도 패널로 분리해 옆면 실루엣을 선명하게 한다. */
 const NOSE_STEP_PLANFORM: readonly PlanformPoint[] = [
   [-0.31, -1.74],
   [0.31, -1.74],
   [0.34, -1.52],
   [-0.34, -1.52],
+];
+
+/** RB8의 step 상면 냉각 개구부를 얇은 carbon lip과 cavity로 분리한다. */
+const NOSE_COOLING_APERTURE_PLANFORM: readonly PlanformPoint[] = [
+  [-0.13, -1.62],
+  [0.13, -1.62],
+  [0.1, -1.48],
+  [-0.1, -1.48],
 ];
 
 /** 프런트 윙 뒤까지 이어지는 가늘고 쐐기형인 노즈 상면이다. 구형 볼륨을 쓰지 않아 낮은 선단을 유지한다. */
@@ -674,9 +696,29 @@ function SuspensionArms({ color }: { color: string }) {
     <>
       {([-1, 1] as const).map((side) => (
         <group key={`suspension-${side}`}>
+          {/* chassis anchor는 rod의 시작점에 작은 구조 볼륨을 겹쳐 얇은 링크가 공중에서 시작하지 않게 한다. */}
+          <mesh position={[side * 0.38, 0.76, -1.18]} castShadow>
+            <sphereGeometry args={[0.055, 8, 5]} />
+            <meshStandardMaterial color={color} roughness={0.72} flatShading />
+          </mesh>
+          <mesh position={[side * 0.48, 0.61, -1.42]} castShadow>
+            <sphereGeometry args={[0.045, 8, 5]} />
+            <meshStandardMaterial color={color} roughness={0.72} flatShading />
+          </mesh>
+          <mesh position={[side * 0.52, 0.42, -1.34]} castShadow>
+            <sphereGeometry args={[0.04, 8, 5]} />
+            <meshStandardMaterial color={color} roughness={0.72} flatShading />
+          </mesh>
           <Link color={color} end={[side * frontWheelX, 0.5, frontZ]} start={[side * 0.38, 0.76, -1.18]} width={0.045} />
           <Link color={color} end={[side * frontWheelX, 0.46, frontZ]} start={[side * 0.48, 0.61, -1.42]} width={0.04} />
           <Link color={color} end={[side * frontWheelX, 0.38, frontZ]} start={[side * 0.52, 0.42, -1.34]} width={0.045} />
+          {/* steering arm은 wheel steer 그룹과 같은 허브 높이를 바라보며 조향축의 기계적 방향을 드러낸다. */}
+          <Link color={color} end={[side * frontWheelX, 0.47, frontZ - 0.03]} start={[side * 0.3, 0.49, -1.52]} width={0.032} />
+          {/* 외측 wheel face 안쪽에 브레이크 덕트를 겹쳐 휠·upright·링크를 하나의 전륜 모듈로 묶는다. */}
+          <mesh position={[side * (frontWheelX - 0.04), 0.5, frontZ - 0.08]} rotation={[0, side * 0.1, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.18, 0.24]} />
+            <meshStandardMaterial color={color} metalness={0.22} roughness={0.58} flatShading />
+          </mesh>
           {/* 후방 pull-rod는 휠 허브에서 기어박스 상부로 올라가는 반대 방향 링크다. */}
           <Link color={color} end={[side * rearWheelX, 0.48, rearZ]} start={[side * 0.26, 0.95, 0.98]} width={0.045} />
           <Link color={color} end={[side * rearWheelX, 0.54, rearZ]} start={[side * 0.42, 0.64, 1.16]} width={0.04} />
@@ -818,10 +860,15 @@ export function LowPolyCar({
       </mesh>
       {/* 노즈 상면은 구형 셸이 아니라 station 외피와 맞물리는 쐐기형 패널로 빈 공간을 연결한다. */}
       <PlanformPanel color={bodyColor} points={NOSE_BRIDGE_TOP_PLANFORM} position={[0, 0.51, 0]} thickness={0.1} />
-      {/* RB8 형상 연구의 냉각 slot: 스텝 단차에 작은 개구부를 두되 팀 배지·그래픽은 포함하지 않는다. */}
-      <mesh position={[0, 0.69, -1.545]}>
-        <boxGeometry args={[0.16, 0.045, 0.018]} />
+      {/* RB8 형상 연구의 냉각 aperture는 장식 슬롯이 아니라 carbon lip 안쪽의 실제 cavity로 겹친다. */}
+      <PlanformPanel color={carbonColor} points={NOSE_COOLING_APERTURE_PLANFORM} position={[0, 0.7, 0]} thickness={0.022} />
+      <mesh position={[0, 0.715, -1.545]}>
+        <boxGeometry args={[0.16, 0.025, 0.018]} />
         <meshStandardMaterial color="#050608" roughness={0.96} flatShading />
+      </mesh>
+      <mesh position={[0, 0.728, -1.545]}>
+        <boxGeometry args={[0.2, 0.018, 0.02]} />
+        <meshStandardMaterial color={aeroColor} roughness={0.78} flatShading />
       </mesh>
 
       {/* 바닥은 차체보다 낮고 길게 두어 오픈휠 차의 얇은 허리를 만든다. */}
@@ -1050,6 +1097,7 @@ export function LowPolyCar({
       ))}
 
       {/* 프런트 윙은 전륜 축보다 앞에 붙은 하나의 패키지로 읽혀야 하므로, 세 층의 z 범위와 y 접점을 함께 맞춘다. */}
+      <PlanformPanel color={carbonColor} points={FRONT_WING_FOOTPLATE_PLANFORM} position={[0, 0.265, 0]} thickness={0.025} />
       <PlanformPanel color={aeroColor} points={FRONT_WING_MAIN_PLANFORM} position={[0, 0.29, 0]} thickness={0.05} />
       <PlanformPanel color={carbonColor} points={FRONT_WING_FLAP_PLANFORM} position={[0, 0.36, 0]} thickness={0.035} />
       <PlanformPanel color={carbonColor} points={FRONT_WING_UPPER_FLAP_PLANFORM} position={[0, 0.42, 0]} thickness={0.025} />
@@ -1057,6 +1105,11 @@ export function LowPolyCar({
       <mesh position={[0, 0.34, -2.43]} rotation={[0.06, 0, 0]} castShadow>
         <boxGeometry args={[0.88, 0.028, 0.2]} />
         <meshStandardMaterial color={aeroColor} roughness={0.72} metalness={0.1} />
+      </mesh>
+      {/* central keel은 노즈 하부와 footplate 사이의 실제 접촉면을 만들어 중앙 빈 공간을 줄인다. */}
+      <mesh position={[0, 0.36, -2.04]} rotation={[0.18, 0, 0]} castShadow>
+        <boxGeometry args={[0.09, 0.1, 0.68]} />
+        <meshStandardMaterial color={aeroColor} metalness={0.12} roughness={0.7} flatShading />
       </mesh>
       {/* twin pylon은 노즈 하부 안쪽에서 시작해 메인 플레인에 파묻히도록 배치한다. */}
       {([-1, 1] as const).map((side) => (
