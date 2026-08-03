@@ -119,6 +119,24 @@ const ENGINE_COVER_STATIONS: readonly HullStation[] = [
   { z: 1.85, halfWidth: 0.16, bottomY: 0.46, shoulderY: 0.54, crownY: 0.7 },
 ];
 
+/** 에어박스 뒤에서 기어박스 앞까지 올라오는 좁은 dorsal spine이다. 렌더 전용 초기 가정이다. */
+const ENGINE_COVER_SPINE_STATIONS: readonly HullStation[] = [
+  { z: 0.16, halfWidth: 0.22, bottomY: 0.82, shoulderY: 0.96, crownY: 1.05 },
+  { z: 0.56, halfWidth: 0.21, bottomY: 0.82, shoulderY: 1.0, crownY: 1.12 },
+  { z: 0.96, halfWidth: 0.18, bottomY: 0.76, shoulderY: 0.94, crownY: 1.08 },
+  { z: 1.3, halfWidth: 0.155, bottomY: 0.67, shoulderY: 0.85, crownY: 0.96 },
+  { z: 1.6, halfWidth: 0.125, bottomY: 0.58, shoulderY: 0.74, crownY: 0.86 },
+  { z: 1.84, halfWidth: 0.09, bottomY: 0.5, shoulderY: 0.63, crownY: 0.73 },
+];
+
+/** 코크 보틀 끝에서 diffuser·리어 윙 지지점까지 이어지는 낮은 기어박스 fairing이다. */
+const GEARBOX_TAIL_STATIONS: readonly HullStation[] = [
+  { z: 1.28, halfWidth: 0.24, bottomY: 0.42, shoulderY: 0.62, crownY: 0.78 },
+  { z: 1.54, halfWidth: 0.23, bottomY: 0.41, shoulderY: 0.58, crownY: 0.72 },
+  { z: 1.8, halfWidth: 0.2, bottomY: 0.4, shoulderY: 0.53, crownY: 0.66 },
+  { z: 2.04, halfWidth: 0.14, bottomY: 0.39, shoulderY: 0.47, crownY: 0.58 },
+];
+
 /** 좌우 사이드포드의 깊은 언더컷과 후방 수축을 만드는 단면이다. */
 const SIDEPOD_STATIONS: readonly SidepodStation[] = [
   { z: -1.35, innerX: 0.32, outerX: 0.55, bottomY: 0.38, shoulderY: 0.55, crownY: 0.61 },
@@ -842,6 +860,10 @@ export function LowPolyCar({
       <HullPanel color={bodyColor} emissiveColor={emissiveColor} stations={NOSE_STATIONS} />
       <HullPanel color={bodyColor} emissiveColor={emissiveColor} stations={MONOCOQUE_STATIONS} />
       <HullPanel color={bodyColor} emissiveColor={emissiveColor} stations={ENGINE_COVER_STATIONS} />
+      {/* engine-cover spine은 에어박스 뒤의 높은 crown과 기어박스 앞의 낮은 tail을 같은 외피로 묶는다. */}
+      <HullPanel color={bodyColor} emissiveColor={emissiveColor} stations={ENGINE_COVER_SPINE_STATIONS} />
+      {/* gearbox fairing은 후방 중앙에서 diffuser와 rear-wing support가 끊기지 않도록 낮게 수축한다. */}
+      <HullPanel color={bodyColor} emissiveColor={emissiveColor} stations={GEARBOX_TAIL_STATIONS} />
       <SidepodPanel color={bodyColor} side={-1} stations={SIDEPOD_STATIONS} />
       <SidepodPanel color={bodyColor} side={1} stations={SIDEPOD_STATIONS} />
 
@@ -982,10 +1004,27 @@ export function LowPolyCar({
         </group>
       ))}
 
-      {/* 에어박스는 낮은 타원 단면으로 만들어 헬멧과 별개의 흡입구·엔진 커버 연속면으로 읽게 한다. */}
+      {/* 에어박스 외피는 body 색으로 엔진 커버 spine에 묻히고, 전면 throat만 carbon으로 남긴다. */}
       <mesh position={[0, 1.04, 0.62]} scale={[1, 1.22, 0.92]} castShadow>
         <sphereGeometry args={[0.19, 8, 6]} />
-        <meshStandardMaterial color={carbonColor} roughness={0.72} flatShading />
+        <meshStandardMaterial color={bodyColor} metalness={0.12} roughness={0.46} flatShading />
+      </mesh>
+      {/* inlet lip은 black throat의 위·아래와 양옆에 겹쳐 에어박스가 엔진 커버에서 솟은 단일 파츠로 읽히게 한다. */}
+      <mesh position={[0, 1.105, 0.452]}>
+        <boxGeometry args={[0.22, 0.026, 0.035]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
+      </mesh>
+      <mesh position={[0, 1.055, 0.452]}>
+        <boxGeometry args={[0.22, 0.026, 0.035]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
+      </mesh>
+      <mesh position={[-0.1, 1.08, 0.452]}>
+        <boxGeometry args={[0.026, 0.08, 0.035]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
+      </mesh>
+      <mesh position={[0.1, 1.08, 0.452]}>
+        <boxGeometry args={[0.026, 0.08, 0.035]} />
+        <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
       </mesh>
       <mesh position={[0, 1.08, 0.452]}>
         <boxGeometry args={[0.18, 0.09, 0.022]} />
@@ -1193,6 +1232,12 @@ export function LowPolyCar({
         <boxGeometry args={[1.38, 0.045, 0.075]} />
         <meshStandardMaterial color={aeroColor} roughness={0.72} flatShading />
       </mesh>
+      {/* central rear-wing support는 gearbox tail의 중심선에서 main wing까지 직접 하중 경로를 만든다. */}
+      <Link color={aeroColor} start={[0, 0.56, 1.78]} end={[0, 1.0, 2.22]} width={0.09} />
+      <mesh position={[0, 0.61, 1.78]} rotation={[0.12, 0, 0]}>
+        <boxGeometry args={[0.2, 0.08, 0.24]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.52} metalness={0.08} flatShading />
+      </mesh>
       {([-1, 1] as const).map((side) => (
         <group key={`rear-wing-support-${side}`}>
           {/* central support의 시작점을 기어박스 내부에 겹쳐 실제 하중 전달 경로처럼 보이게 한다. */}
@@ -1244,12 +1289,7 @@ export function LowPolyCar({
         <boxGeometry args={[0.46, 0.26, 0.4]} />
         <meshStandardMaterial color={carbonColor} roughness={0.8} flatShading />
       </mesh>
-      {/* 기어박스 앞쪽 tail fairing은 코크 보틀의 수축 끝과 디퓨저를 겹쳐 후면 중앙을 하나의 패키지로 묶는다. */}
-      <mesh position={[0, 0.58, 1.62]} scale={[0.72, 0.58, 0.9]} castShadow>
-        <sphereGeometry args={[0.28, 12, 8]} />
-        <meshStandardMaterial color={bodyColor} metalness={0.14} roughness={0.46} />
-      </mesh>
-      {/* 기어박스 상면의 작은 패널은 엔진 커버 crown 높이에 묻혀야 하므로 떠 있는 밝은 블록으로 만들지 않는다. */}
+      {/* gearbox lower housing은 새 tail 외피 안쪽에 묻혀 diffuser와 rear axle의 기계적 층을 남긴다. */}
       <mesh position={[0, 0.76, 1.74]}>
         <boxGeometry args={[0.18, 0.045, 0.12]} />
         <meshStandardMaterial color={carbonColor} metalness={0.18} roughness={0.72} />

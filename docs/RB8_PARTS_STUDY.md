@@ -10,6 +10,18 @@
 
 기존 `RB8_FORM_SCORECARD.md`의 100/100은 프로젝트 내부 무표식 렌더 점수다. 실차의 1:1 재현이나 각 파츠의 구조적 정확성을 증명하는 점수로 사용하지 않으며, 이번 문서의 파츠별 검증이 끝나기 전까지는 다음 구현의 완료 근거로 사용하지 않는다.
 
+## 2026-08-03 구현 기록 — cockpit to rear spine
+
+이번 반복에서는 콕핏 뒤의 파츠를 개별 장식이 아니라 중앙 구조 패키지로 연결했다.
+
+- 에어박스: body 외피와 carbon inlet lip을 분리해 전면 throat만 어둡게 유지
+- 엔진 커버: 에어박스 뒤에서 코크 보틀 끝까지 좁아지는 `ENGINE_COVER_SPINE_STATIONS` 추가
+- 기어박스: 후방 diffuser와 리어 윙 지지점까지 낮아지는 `GEARBOX_TAIL_STATIONS` 추가
+- 리어 윙: gearbox 중심선에서 main wing으로 올라가는 central support와 하부 mounting collar 추가
+- 기존 driver·seat·headrest·steering column·휠·물리 스냅샷 계약은 유지
+
+추가 station과 높이·폭은 사진에서 직접 계측한 실차 치수가 아닌 렌더 전용 `initial_assumption`이다. 이 변경은 `LowPolyCar`의 geometry·material만 수정하며, 공력 힘이나 차량 포즈를 계산하지 않는다.
+
 ## 기준과 근거
 
 ### 저장된 로컬 레퍼런스

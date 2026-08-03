@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-08-03 — D-059
+
+**결정:** RB8 파츠별 세 번째 구현은 콕핏 뒤의 에어박스·엔진 커버·기어박스·리어 윙 중앙 지지대를 `ENGINE_COVER_SPINE_STATIONS`와 `GEARBOX_TAIL_STATIONS`를 중심으로 하나의 중앙 구조 패키지로 연결한다. 에어박스 외피는 body 색으로 엔진 커버에 묻히고, inlet throat와 lip만 carbon으로 분리한다.
+
+**이유:** 기존 후방은 에어박스, 엔진 커버, 기어박스, 리어 윙 지지대가 각각 존재해도 측면·후면에서 중심선이 끊겨 보였다. 2012년형 오픈휠 차량은 드라이버 뒤의 airbox와 수축하는 engine cover, gearbox tail, rear-wing support가 하나의 높이 변화와 하중 경로로 읽혀야 하므로, 새 장식을 늘리기보다 station 외피와 중앙 지지 접점을 추가한다.
+
+**경계:** 변경은 `LowPolyCar`의 읽기 전용 geometry·material에만 적용한다. `VehicleControlInput`, 120Hz fixed-step, Rapier 포즈·타이어 힘·AI 위치 소유권·휠 steer/spin 계약과 `AeroModel`은 변경하지 않는다. 모든 추가 치수는 실차 계측값이 아닌 렌더 전용 `initial_assumption`이다.
+
+**검증:** 디자인 스튜디오 `3/4 VIEW`, `FRONT`, `SIDE`, `REAR`에서 airbox·engine-cover spine·gearbox tail·central rear-wing support의 접점과 부유 여부를 수동 확인하고, 전체 `npm run verify`를 완료 게이트로 사용한다.
+
 ## 2026-08-03 — D-058
 
 **결정:** RB8 파츠별 두 번째 구현은 사이드포드 흡기 backing·상하 lip, 언더컷 tunnel 외벽, 상부 배기 surround, 배기 ramp와 diffuser 외측을 잇는 시각 링크, diffuser outer fence를 하나의 측·후방 공력 패키지로 묶는 렌더 전용 형상 패스로 진행한다.
