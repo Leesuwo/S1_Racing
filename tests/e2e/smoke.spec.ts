@@ -58,6 +58,9 @@ test("opens the car design review and switches its visual inspection controls", 
   const graphitePaint = page.getByRole("button", { name: "Midnight Form Study", exact: true });
   await graphitePaint.click();
   await expect(graphitePaint).toHaveAttribute("aria-pressed", "true");
+  const cockpitView = page.getByRole("button", { name: "COCKPIT", exact: true });
+  await cockpitView.click();
+  await expect(cockpitView).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("STEP NOSE", { exact: true })).toBeVisible();
   await expect(page.getByText("UNDERCUT POD", { exact: true })).toBeVisible();
   await expect(page.getByText("이 화면은 LowPolyCar의 읽기 전용 외관만 표시하며 물리 포즈·입력·AI 상태를 변경하지 않습니다.")).toBeVisible();

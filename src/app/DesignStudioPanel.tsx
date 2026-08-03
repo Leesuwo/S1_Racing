@@ -32,7 +32,7 @@ export function DesignStudioPanel({
   onSteeringChange,
   onAutoRotateChange,
 }: DesignStudioPanelProps) {
-  const viewOptions: readonly DesignStudioView[] = ["hero", "front", "side", "rear"];
+  const viewOptions: readonly DesignStudioView[] = ["hero", "front", "side", "rear", "cockpit"];
   const paintOptions: readonly DesignStudioPaintId[] = ["crimson", "telemetry", "graphite"];
 
   return (

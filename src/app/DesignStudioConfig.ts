@@ -4,7 +4,7 @@
  */
 
 /** 차량 디자인 검토 화면에서 선택할 카메라 방향이다. */
-export type DesignStudioView = "hero" | "front" | "side" | "rear";
+export type DesignStudioView = "hero" | "front" | "side" | "rear" | "cockpit";
 
 /** 차량 디자인 검토 화면에서 사용할 무표식 도장 프리셋의 식별자다. */
 export type DesignStudioPaintId = "crimson" | "telemetry" | "graphite";
@@ -22,16 +22,20 @@ export const DESIGN_STUDIO_PAINTS: Readonly<Record<DesignStudioPaintId, {
   graphite: { label: "Midnight Form Study", bodyColor: "#31577f", accentColor: "#b9cfdd", emissiveColor: "#102a48" },
 } as const;
 
-/** 뷰포트별 초기 카메라 위치(m)다. 값은 렌더링 전용 initial_assumption이다. */
+/** 뷰포트별 초기 카메라 구도다. 값은 렌더링 전용 initial_assumption이다. */
 export const DESIGN_STUDIO_CAMERA: Readonly<Record<DesignStudioView, {
   label: string;
   position: readonly [number, number, number];
+  target: readonly [number, number, number];
+  fovDeg: number;
 }>> = {
   // 전방(-Z) 3/4 시점은 스텝 노즈·전륜·콕핏·코크 보틀을 한 번에 비교하는 기본 검토 구도다.
-  hero: { label: "3/4 VIEW", position: [5.35, 2.15, -6.95] },
-  front: { label: "FRONT", position: [0, 2.05, -8.4] },
-  side: { label: "SIDE", position: [9.1, 1.95, 0.3] },
-  rear: { label: "REAR", position: [0, 2.25, 8.2] },
+  hero: { label: "3/4 VIEW", position: [5.35, 2.15, -6.95], target: [0, 0.58, 0], fovDeg: 32 },
+  front: { label: "FRONT", position: [0, 2.05, -8.4], target: [0, 0.6, -0.35], fovDeg: 34 },
+  side: { label: "SIDE", position: [9.1, 1.95, 0.3], target: [0, 0.62, 0], fovDeg: 32 },
+  rear: { label: "REAR", position: [0, 2.25, 8.2], target: [0, 0.7, 0.55], fovDeg: 34 },
+  // 운전자 눈높이에서 시트·칼라·스티어링 휠·노즈가 같은 시야에 들어오는 온보드 검토 구도다.
+  cockpit: { label: "COCKPIT", position: [0, 1.08, 0.02], target: [0, 0.82, -2.45], fovDeg: 58 },
 };
 
 /** 카메라 시점 설정에서 사용자에게 표시할 라벨을 반환한다. */

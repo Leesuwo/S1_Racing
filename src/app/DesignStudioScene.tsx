@@ -4,6 +4,9 @@
  * 차량 위치·속도·입력·AI 상태를 소유하지 않는다.
  */
 import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
+import { useEffect } from "react";
+import { useThree } from "@react-three/fiber";
+import * as THREE from "three";
 import { LowPolyCar } from "../world/LowPolyCar";
 import { DESIGN_STUDIO_CAMERA, type DesignStudioView } from "./DesignStudioConfig";
 
@@ -33,6 +36,17 @@ export function DesignStudioScene({
   autoRotate,
 }: DesignStudioSceneProps) {
   const camera = DESIGN_STUDIO_CAMERA[view];
+  const { camera: activeCamera } = useThree();
+
+  useEffect(() => {
+    // 시점 버튼은 OrbitControls의 이전 위치를 재사용하지 않고 프리셋의 검수 기준선으로 카메라를 되돌린다.
+    activeCamera.position.set(...camera.position);
+    activeCamera.lookAt(...camera.target);
+    if (activeCamera instanceof THREE.PerspectiveCamera) {
+      activeCamera.fov = camera.fovDeg;
+      activeCamera.updateProjectionMatrix();
+    }
+  }, [activeCamera, camera]);
 
   return (
     <>
@@ -50,19 +64,19 @@ export function DesignStudioScene({
         key={view}
         makeDefault
         position={camera.position}
-        fov={32}
+        fov={camera.fovDeg}
         near={0.1}
         far={100}
       />
       <OrbitControls
         makeDefault
-        target={[0, 0.58, 0]}
+        target={camera.target}
         enablePan={false}
         enableDamping
         dampingFactor={0.08}
-        minDistance={4.2}
-        maxDistance={11}
-        autoRotate={autoRotate}
+        minDistance={view === "cockpit" ? 0.2 : 4.2}
+        maxDistance={view === "cockpit" ? 4.2 : 11}
+        autoRotate={view === "cockpit" ? false : autoRotate}
         autoRotateSpeed={0.52}
       />
 
@@ -84,6 +98,8 @@ export function DesignStudioScene({
         emissiveColor={emissiveColor}
         detail="hero"
         steeringAngleRad={steeringAngleRad}
+        // 온보드 검토에서는 운전자 외피가 카메라를 가리지 않게 하고, 콕핏 셀·휠·노즈의 관계만 확인한다.
+        hideDriver={view === "cockpit"}
       />
     </>
   );

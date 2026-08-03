@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-08-03 — D-062
+
+**결정:** 차량 디자인 스튜디오의 시점 검수는 `3/4 VIEW`, `FRONT`, `SIDE`, `REAR`, `COCKPIT` 다섯 프리셋을 사용한다. 각 프리셋은 카메라 위치·주시점·FOV를 함께 재설정하며, 콕핏 검토에서는 외부 드라이버 메시만 숨긴다.
+
+**이유:** 기존 시점 버튼은 화면 상태만 바꾸고 `OrbitControls`의 이전 카메라 위치를 완전히 초기화하지 않아 정면·측면·후면을 동일한 기준으로 비교하기 어려웠다. 또한 운전자 헬멧이 카메라 앞을 가려 콕핏의 시트·휠·노즈 연결을 검수할 수 없었다. 디자인 검토 시점은 물리·입력·AI 상태와 분리된 렌더 전용 기준선으로 고정한다.
+
+**경계:** 변경은 `DesignStudioConfig`, `DesignStudioScene`, `DesignStudioPanel`의 렌더 검토 카메라와 표시 옵션에만 적용한다. 주행의 `COCKPIT_CAMERA`, `VehicleControlInput`, `VehicleSimulation`, Rapier 포즈, AI 위치 소유권은 변경하지 않는다. 카메라·차체 치수는 렌더 전용 `initial_assumption`이다.
+
+**검증:** 브라우저에서 다섯 프리셋을 순서대로 전환해 차체 전체·콕핏 시야가 재구성되는지 확인하고, 디자인 스튜디오 E2E와 전체 `npm run verify`를 완료 게이트로 사용한다.
+
+## 2026-08-03 — D-063
+
+**결정:** 전방 접점 보강은 프런트 윙 pylon의 노즈·메인 플레인 collar와 사이드포드 흡입구의 body surround를 추가하는 렌더 전용 패스로 고정한다. 기존 다층 wing, suspension link, intake cavity, undercut tunnel의 물리 위치는 변경하지 않는다.
+
+**이유:** 전면 화면에서 pylon의 선형 링크만 보이면 노즈와 wing이 분리된 판처럼 읽히고, intake cavity가 외피에 붙은 개구부가 아니라 검은 스티커처럼 보일 수 있다. 양 끝 collar와 body-colored surround를 실제 접점에 겹쳐 부품이 공중에 떠 보이는 인상을 줄인다.
+
+**경계:** 변경은 `LowPolyCar`의 hero geometry·material에만 적용한다. 공력 힘, 타이어 힘, 휠 축, 조향·구름 회전, 차량 포즈, AI·입력 경계는 변경하지 않는다. 추가 크기와 위치는 렌더 전용 `initial_assumption`이다.
+
+**검증:** 디자인 스튜디오 정면·3/4·측면에서 pylon 양 끝, intake surround·cavity·undercut 접점을 수동 확인하고, `npm run verify`를 완료 게이트로 사용한다.
+
 ## 2026-08-03 — D-061
 
 **결정:** 물리의 앞바퀴 조향각은 `physicsSteeringToThreeWheelYaw`를 통해서만 Three.js steering group에 전달한다. 물리 좌표계의 양의 조향은 앞바퀴 전방 벡터 `+X`를 의미하고, 차량 로컬 전방 `-Z`를 사용하는 Three.js 그룹에서는 같은 방향을 음의 `rotation.y`로 표현한다.

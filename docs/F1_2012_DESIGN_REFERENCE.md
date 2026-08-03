@@ -169,6 +169,7 @@ S1용 안전한 해석은 다음과 같다.
 - 스티어링 휠은 [`e20-italian-gp-steering-wheel-2012.jpg`](reference-images/f1-2012/e20-italian-gp-steering-wheel-2012.jpg)와 [`caterham-steering-wheel-goodwood-2012.jpg`](reference-images/f1-2012/caterham-steering-wheel-goodwood-2012.jpg)를 사용한다. 버튼·다이얼·상단 LED·디스플레이의 밀도만 추출하고 특정 팀의 휠 디자인은 복제하지 않는다.
 - 운전자 시야와 움직임은 [Brazil 2012: Best Onboards](https://www.formula1.com/en/video/brazil-2012-best-onboards.1687508295906982814), [2012 미국 GP Vettel pole lap](https://www.formula1.com/en/video/mega-quali-laps-sebastian-vettels-pole-lap-at-the-2012-united-states-grand-prix.1714053993819089057), [Mercedes W03 onboard](https://www.topgear.com/car-news/motorsport/new-mercedes-f1-car) 영상·페이지로 확인한다.
 - 영상은 전방 시야의 가림 정도, 스티어링 휠의 화면 하단 위치, 헬멧의 중앙 정렬, 조향 시 손·휠·노즈가 함께 움직이는 관계를 판단하는 자료다. 영상 파일 자체는 저장소에 복사하지 않는다.
+- 디자인 스튜디오의 `COCKPIT` 프리셋은 이 온보드 관계를 정지 상태에서 대조하기 위한 검수 카메라다. 실제 Driving의 `COCKPIT_CAMERA`와 분리된 렌더 전용 기준이며, 외부 드라이버 메시만 숨긴다.
 
 ## 7. Notion 기록 위치
 

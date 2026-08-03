@@ -891,11 +891,11 @@ export function LowPolyCar({
         </group>
       ))}
       {/* 낮은 앞 coaming은 운전자의 상체가 차체 속에 들어가 보이게 하되 콕핏 카메라의 전방 시야는 비운다. */}
-      <mesh position={[0, 0.9, -0.46]} scale={[1, 0.48, 0.66]} castShadow>
+      <mesh position={[0, 0.84, -0.46]} scale={[1, 0.3, 0.58]} castShadow>
         <sphereGeometry args={[0.25, 14, 8]} />
         <meshStandardMaterial color={bodyColor} roughness={0.45} metalness={0.14} />
       </mesh>
-      <mesh position={[0, 0.97, -0.53]} scale={[1, 0.36, 0.44]}>
+      <mesh position={[0, 0.91, -0.53]} scale={[1, 0.28, 0.4]}>
         <sphereGeometry args={[0.17, 12, 8]} />
         <meshStandardMaterial color={carbonColor} roughness={0.82} />
       </mesh>
@@ -1023,6 +1023,10 @@ export function LowPolyCar({
             <meshStandardMaterial color={carbonColor} roughness={0.88} flatShading />
           </mesh>
           {/* intake backing은 검은 면의 깊이를 만들고, 위·아래 lip은 개구부가 차체 표면에 붙어 있음을 보여 준다. */}
+          <mesh position={[side * 0.785, 0.69, -0.59]} rotation={[0, side * 0.11, side * 0.035]} castShadow>
+            <boxGeometry args={[0.055, 0.23, 0.48]} />
+            <meshStandardMaterial color={bodyColor} metalness={0.12} roughness={0.5} flatShading />
+          </mesh>
           <mesh position={[side * 0.814, 0.69, -0.59]} rotation={[0, side * 0.11, side * 0.035]}>
             <boxGeometry args={[0.03, 0.19, 0.4]} />
             <meshStandardMaterial color={carbonColor} roughness={0.9} flatShading />
@@ -1129,9 +1133,18 @@ export function LowPolyCar({
       {/* twin pylon은 노즈 하부 안쪽에서 시작해 메인 플레인에 파묻히도록 배치한다. */}
       {([-1, 1] as const).map((side) => (
         <group key={`front-wing-pylon-${side}`}>
+          {/* pylon의 상·하단 collar를 노즈와 메인 플레인에 겹쳐 양 끝 접점을 실제 부품처럼 읽게 한다. */}
+          <mesh position={[side * 0.13, 0.5, -1.63]} rotation={[0.2, 0, 0]} castShadow>
+            <boxGeometry args={[0.15, 0.1, 0.18]} />
+            <meshStandardMaterial color={bodyColor} roughness={0.56} metalness={0.08} flatShading />
+          </mesh>
           <Link color={aeroColor} start={[side * 0.13, 0.5, -1.64]} end={[side * 0.13, 0.32, -2.47]} width={0.085} />
           <mesh position={[side * 0.13, 0.39, -2.05]} rotation={[0.2, 0, 0]}>
             <boxGeometry args={[0.12, 0.09, 0.46]} />
+            <meshStandardMaterial color={aeroColor} roughness={0.7} metalness={0.12} flatShading />
+          </mesh>
+          <mesh position={[side * 0.13, 0.32, -2.47]} rotation={[0.08, 0, 0]} castShadow>
+            <boxGeometry args={[0.17, 0.07, 0.14]} />
             <meshStandardMaterial color={aeroColor} roughness={0.7} metalness={0.12} flatShading />
           </mesh>
           {/* outer cascade는 메인 플레인과 겹치는 짧은 면으로 두어 끝단이 독립 판처럼 떠 보이지 않게 한다. */}

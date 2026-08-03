@@ -309,8 +309,10 @@ G2의 공통 2012년형 차체를 유지하면서, 정지된 모형처럼 보이
 
 차량을 주행 화면의 추적 카메라가 아닌 정지된 스튜디오에서 확인할 수 있도록 `차 디자인` 모드를 추가한다.
 
-- `DesignStudioScene`: 기존 `LowPolyCar` hero 외관, 스튜디오 조명, grid 기준면, OrbitControls, 정면·측면·후면 초기 카메라
+- `DesignStudioScene`: 기존 `LowPolyCar` hero 외관, 스튜디오 조명, grid 기준면, OrbitControls, `3/4 · FRONT · SIDE · REAR · COCKPIT` 검수 카메라
 - `DesignStudioPanel`: 시점 프리셋, 무표식 도장 3종, 앞바퀴 조향 미리보기, 자동 회전, 2012년형 외관 포인트 설명
+- 모든 시점 버튼은 카메라 위치·주시점·FOV를 함께 재설정하며, 콕핏 검토에서는 외부 드라이버 메시만 숨겨 헬멧 occlusion을 막는다.
+- 전방 pylon collar와 intake body surround는 차체·aero 접점을 판독하기 위한 렌더 전용 geometry다.
 - 디자인 모드의 조작값은 렌더 검토 상태이며 `VehicleSimulation`, Rapier, `VehicleControlInput`, AI 상태를 변경하지 않는다.
 - 기존 모드의 단일 Canvas와 물리 장면은 유지하고, 새 production dependency는 추가하지 않는다.
 
