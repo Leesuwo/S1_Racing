@@ -54,7 +54,8 @@ export const S1_2012_OPEN_WHEEL_DIMENSIONS = {
   wheelRadiusM: 0.32,
   frontTyreWidthM: 0.27,
   rearTyreWidthM: 0.41,
-  frontWingZ: -2.78,
+  // 전륜 축(-1.815 m)보다 약 0.7 m 앞에 두어 노즈·윙·전륜이 같은 전방 패키지로 읽히게 하는 렌더 전용 초기 가정이다.
+  frontWingZ: -2.56,
   rearWingZ: 2.34,
 } as const;
 
@@ -137,36 +138,36 @@ const SIDEPOD_STATIONS: readonly SidepodStation[] = [
 
 /** 프런트 윙의 메인 플레인은 노즈보다 넓고 끝으로 갈수록 뒤로 스윕된다. */
 const FRONT_WING_MAIN_PLANFORM: readonly PlanformPoint[] = [
-  [-1.22, -2.84],
-  [-0.88, -2.76],
-  [-0.45, -2.66],
-  [0.45, -2.66],
-  [0.88, -2.76],
-  [1.22, -2.84],
-  [1.1, -2.98],
-  [0.42, -2.86],
-  [-0.42, -2.86],
-  [-1.1, -2.98],
+  [-1.18, -2.52],
+  [-0.86, -2.46],
+  [-0.44, -2.42],
+  [0.44, -2.42],
+  [0.86, -2.46],
+  [1.18, -2.52],
+  [1.08, -2.67],
+  [0.4, -2.58],
+  [-0.4, -2.58],
+  [-1.08, -2.67],
 ];
 
 /** 프런트 윙 플랩은 메인 플레인보다 짧고 후방에 겹친다. */
 const FRONT_WING_FLAP_PLANFORM: readonly PlanformPoint[] = [
-  [-1.08, -2.73],
-  [-0.62, -2.63],
-  [0.62, -2.63],
-  [1.08, -2.73],
-  [0.96, -2.82],
-  [-0.96, -2.82],
+  [-1.04, -2.42],
+  [-0.62, -2.36],
+  [0.62, -2.36],
+  [1.04, -2.42],
+  [0.94, -2.5],
+  [-0.94, -2.5],
 ];
 
 /** 메인 플레인 앞쪽에 겹치는 얇은 플랩으로 2012년형 다층 프런트 윙의 밀도를 만든다. */
 const FRONT_WING_UPPER_FLAP_PLANFORM: readonly PlanformPoint[] = [
-  [-1.02, -2.62],
-  [-0.58, -2.54],
-  [0.58, -2.54],
-  [1.02, -2.62],
-  [0.91, -2.69],
-  [-0.91, -2.69],
+  [-0.98, -2.34],
+  [-0.56, -2.29],
+  [0.56, -2.29],
+  [0.98, -2.34],
+  [0.89, -2.4],
+  [-0.89, -2.4],
 ];
 
 /** 노즈 단차의 평평한 상면을 별도 패널로 분리해 옆면 실루엣을 선명하게 한다. */
@@ -962,9 +963,9 @@ export function LowPolyCar({
         <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
       </mesh>
 
-      {/* 일부 2012 차량에서 보이는 낮은 엔진 커버 핀을 과장하지 않고 공통 시대감으로만 사용한다. */}
-      <mesh position={[0, 1.08, 0.92]} rotation={[0, 0, 0]}>
-        <boxGeometry args={[0.045, 0.28, 0.92]} />
+      {/* 엔진 커버 핀은 crown에 일부를 묻힌 낮은 단면으로 줄여 후방에서 떠 있는 수직 블록처럼 보이지 않게 한다. */}
+      <mesh position={[0, 0.82, 1.04]}>
+        <boxGeometry args={[0.035, 0.14, 0.62]} />
         <meshStandardMaterial color={carbonColor} roughness={0.82} flatShading />
       </mesh>
 
@@ -1048,136 +1049,96 @@ export function LowPolyCar({
         </group>
       ))}
 
-      {/* 노즈 지지대, 다층 메인 플레인, 플랩, 엔드플레이트로 프런트 윙을 구성한다. */}
-      <PlanformPanel color={aeroColor} points={FRONT_WING_MAIN_PLANFORM} position={[0, 0.25, 0]} thickness={0.07} />
-      <PlanformPanel color={carbonColor} points={FRONT_WING_FLAP_PLANFORM} position={[0, 0.33, 0]} thickness={0.05} />
-      <PlanformPanel color={carbonColor} points={FRONT_WING_UPPER_FLAP_PLANFORM} position={[0, 0.4, 0]} thickness={0.035} />
-      {/* 넓은 중앙 flap 두 장은 전방에서 보이는 흡입·노즈 사이의 빈 공간을 줄이고 2012년형 다층 단면을 만든다. */}
-      <mesh position={[0, 0.31, -2.71]} rotation={[0.07, 0, 0]} castShadow>
-        <boxGeometry args={[1.08, 0.035, 0.26]} />
+      {/* 프런트 윙은 전륜 축보다 앞에 붙은 하나의 패키지로 읽혀야 하므로, 세 층의 z 범위와 y 접점을 함께 맞춘다. */}
+      <PlanformPanel color={aeroColor} points={FRONT_WING_MAIN_PLANFORM} position={[0, 0.29, 0]} thickness={0.05} />
+      <PlanformPanel color={carbonColor} points={FRONT_WING_FLAP_PLANFORM} position={[0, 0.36, 0]} thickness={0.035} />
+      <PlanformPanel color={carbonColor} points={FRONT_WING_UPPER_FLAP_PLANFORM} position={[0, 0.42, 0]} thickness={0.025} />
+      {/* 중앙 플랩은 메인 플레인과 겹치는 짧은 면으로 제한해 앞쪽의 빈 틈과 두꺼운 블록감을 동시에 줄인다. */}
+      <mesh position={[0, 0.34, -2.43]} rotation={[0.06, 0, 0]} castShadow>
+        <boxGeometry args={[0.88, 0.028, 0.2]} />
         <meshStandardMaterial color={aeroColor} roughness={0.72} metalness={0.1} />
       </mesh>
-      <mesh position={[0, 0.39, -2.61]} rotation={[0.1, 0, 0]}>
-        <boxGeometry args={[0.92, 0.025, 0.19]} />
-        <meshStandardMaterial color={carbonColor} roughness={0.8} />
-      </mesh>
-      {/* RB8형 전방의 넓은 twin pylon은 노즈와 메인 플레인을 실제 구조물처럼 연결한다. */}
+      {/* twin pylon은 노즈 하부 안쪽에서 시작해 메인 플레인에 파묻히도록 배치한다. */}
       {([-1, 1] as const).map((side) => (
         <group key={`front-wing-pylon-${side}`}>
-          <mesh position={[side * 0.15, 0.43, -2.16]} rotation={[0.25, 0, 0]} castShadow>
-            <boxGeometry args={[0.055, 0.2, 0.5]} />
+          <Link color={aeroColor} start={[side * 0.13, 0.5, -1.64]} end={[side * 0.13, 0.32, -2.47]} width={0.085} />
+          <mesh position={[side * 0.13, 0.39, -2.05]} rotation={[0.2, 0, 0]}>
+            <boxGeometry args={[0.12, 0.09, 0.46]} />
             <meshStandardMaterial color={aeroColor} roughness={0.7} metalness={0.12} flatShading />
           </mesh>
-          <mesh position={[side * 0.69, 0.45, -2.58]} rotation={[0.12, side * 0.06, 0]}>
-            <boxGeometry args={[0.34, 0.028, 0.3]} />
+          {/* outer cascade는 메인 플레인과 겹치는 짧은 면으로 두어 끝단이 독립 판처럼 떠 보이지 않게 한다. */}
+          <mesh position={[side * 0.72, 0.35, -2.48]} rotation={[0.08, side * 0.06, 0]}>
+            <boxGeometry args={[0.28, 0.025, 0.18]} />
             <meshStandardMaterial color={carbonColor} roughness={0.76} flatShading />
           </mesh>
-          <mesh position={[side * 0.87, 0.51, -2.63]} rotation={[0.08, side * 0.08, 0]}>
-            <boxGeometry args={[0.22, 0.022, 0.24]} />
+          <mesh position={[side * 0.92, 0.38, -2.5]} rotation={[0.08, side * 0.08, 0]}>
+            <boxGeometry args={[0.16, 0.022, 0.2]} />
             <meshStandardMaterial color={aeroColor} roughness={0.72} flatShading />
           </mesh>
-          {/* pylon의 앞뒤 fairing은 노즈와 윙이 공중에서 끊어지지 않도록 얇은 타원형 연결면을 만든다. */}
-          <mesh position={[side * 0.15, 0.46, -2.12]} rotation={[0.22, 0, 0]} scale={[0.3, 0.7, 1.15]}>
-            <sphereGeometry args={[0.11, 10, 6]} />
-            <meshStandardMaterial color={aeroColor} roughness={0.68} metalness={0.14} />
-          </mesh>
-          {/* 노즈 하부에서 프런트 윙 메인 플레인까지 직접 닿는 지지대라야 윙이 떠 보이지 않는다. */}
-          <Link color={aeroColor} start={[side * 0.14, 0.49, -1.82]} end={[side * 0.14, 0.34, -2.52]} width={0.1} />
         </group>
       ))}
-      <mesh position={[0, 0.4, frontWingZ + 0.12]}>
-        <boxGeometry args={[0.78, 0.045, 0.08]} />
-        <meshStandardMaterial color={carbonColor} roughness={0.72} flatShading />
-      </mesh>
+      {/* 엔드플레이트는 메인 플레인에 걸치고 상단 플랩을 물리는 최소 높이로 줄인다. */}
       {([-1, 1] as const).map((side) => (
         <group key={`front-wing-endplate-${side}`}>
-          <mesh position={[side * 1.12, 0.4, frontWingZ + 0.01]} rotation={[0, side * 0.12, 0]}>
-            <boxGeometry args={[0.055, 0.24, 0.25]} />
+          <mesh position={[side * 1.08, 0.41, frontWingZ]} rotation={[0, side * 0.08, 0]}>
+            <boxGeometry args={[0.045, 0.22, 0.2]} />
             <meshStandardMaterial color={aeroColor} roughness={0.76} flatShading />
           </mesh>
-          <mesh position={[side * 1.1, 0.53, frontWingZ + 0.07]} rotation={[0, side * 0.09, 0]}>
-            <boxGeometry args={[0.045, 0.14, 0.34]} />
+          <mesh position={[side * 1.07, 0.51, frontWingZ + 0.015]} rotation={[0, side * 0.06, 0]}>
+            <boxGeometry args={[0.04, 0.07, 0.25]} />
             <meshStandardMaterial color={carbonColor} roughness={0.8} flatShading />
-          </mesh>
-          <mesh position={[side * 1.08, 0.29, frontWingZ - 0.12]} rotation={[0.08, side * 0.14, 0]}>
-            <boxGeometry args={[0.05, 0.08, 0.3]} />
-            <meshStandardMaterial color={carbonColor} roughness={0.82} />
-          </mesh>
-          <Link color={carbonColor} end={[side * 0.18, 0.66, -1.67]} start={[side * 0.18, 0.34, -2.51]} width={0.07} />
-          {/* 가는 rod를 따라 폭 있는 fairing을 덧대 노즈-윙 연결이 골조만 남는 것을 피한다. */}
-          <mesh position={[side * 0.18, 0.49, -2.08]} rotation={[-0.34, 0, 0]} castShadow>
-            <boxGeometry args={[0.105, 0.07, 0.72]} />
-            <meshStandardMaterial color={aeroColor} roughness={0.7} metalness={0.12} />
           </mesh>
         </group>
       ))}
-      {/* 메인 플레인 사이의 수직 스트레이크로 2012년형 다층 프런트 윙의 방향성을 강조한다. */}
-      {([-0.72, -0.32, 0.32, 0.72] as const).map((x) => (
-        <mesh key={`front-wing-strake-${x}`} position={[x, 0.34, frontWingZ + 0.03]}>
-          <boxGeometry args={[0.035, 0.13, 0.3]} />
+      {/* 수직 스트레이크는 메인 플레인에 직접 닿는 짧은 단면으로만 남긴다. */}
+      {([-0.68, -0.3, 0.3, 0.68] as const).map((x) => (
+        <mesh key={`front-wing-strake-${x}`} position={[x, 0.34, frontWingZ + 0.01]}>
+          <boxGeometry args={[0.028, 0.1, 0.22]} />
           <meshStandardMaterial color={carbonColor} roughness={0.8} flatShading />
         </mesh>
       ))}
-      {/* 중앙의 짧은 상단 flap은 노즈 아래가 비어 보이지 않게 하고 다층 전면 면적을 완성한다. */}
-      <mesh position={[0, 0.47, -2.57]} rotation={[0.1, 0, 0]}>
-        <boxGeometry args={[0.62, 0.025, 0.16]} />
-        <meshStandardMaterial color={carbonColor} roughness={0.78} />
-      </mesh>
 
-      {/* 리어 윙, DRS 플랩, 빔 윙, 중앙 지지대를 높이 계층으로 배치한다. */}
-      <PlanformPanel color={aeroColor} points={REAR_WING_MAIN_PLANFORM} position={[0, 1.06, 0]} thickness={0.08} />
+      {/* 리어 윙과 beam wing은 기어박스 중심선에 얇게 겹치는 두 aero 층으로 정리한다. */}
+      <PlanformPanel color={aeroColor} points={REAR_WING_MAIN_PLANFORM} position={[0, 1.0, 0]} thickness={0.045} />
       <PlanformPanel
         color={carbonColor}
         points={[
-          [-0.82, 2.28],
-          [0.82, 2.28],
-          [0.76, 2.52],
-          [-0.76, 2.52],
+          [-0.8, 2.25],
+          [0.8, 2.25],
+          [0.74, 2.48],
+          [-0.74, 2.48],
         ]}
-        position={[0, 1.22, 0]}
-        thickness={0.055}
+        position={[0, 1.13, 0]}
+        thickness={0.03}
       />
-      <mesh position={[0, 0.82, rearWingZ - 0.25]}>
-        <boxGeometry args={[1.54, 0.065, 0.1]} />
+      <mesh position={[0, 0.71, rearWingZ - 0.27]}>
+        <boxGeometry args={[1.38, 0.045, 0.075]} />
         <meshStandardMaterial color={aeroColor} roughness={0.72} flatShading />
       </mesh>
       {([-1, 1] as const).map((side) => (
         <group key={`rear-wing-support-${side}`}>
-          <mesh position={[side * 0.76, 1.02, rearWingZ]} rotation={[0, side * 0.1, 0]}>
-            <boxGeometry args={[0.055, 0.48, 0.18]} />
-            <meshStandardMaterial color={aeroColor} roughness={0.78} flatShading />
-          </mesh>
-          <Link color={carbonColor} end={[side * 0.36, 0.76, 1.62]} start={[side * 0.76, 0.76, 2.15]} width={0.055} />
-          {/* 중앙 지지대 두 개를 기어박스에서 메인 윙까지 직접 연결해 후면 날개가 공중에 떠 보이지 않게 한다. */}
-          <Link color={aeroColor} start={[side * 0.22, 0.68, 1.62]} end={[side * 0.22, 1.02, 2.23]} width={0.085} />
-          <mesh position={[side * 0.22, 0.69, 1.64]}>
-            <sphereGeometry args={[0.07, 8, 6]} />
-            <meshStandardMaterial color={carbonColor} roughness={0.8} />
-          </mesh>
+          {/* central support의 시작점을 기어박스 내부에 겹쳐 실제 하중 전달 경로처럼 보이게 한다. */}
+          <Link color={aeroColor} start={[side * 0.16, 0.56, 1.78]} end={[side * 0.16, 0.99, 2.22]} width={0.065} />
         </group>
       ))}
-      {/* 리어 윙 끝판은 날개 폭과 차체 중심선을 분리해 후면 실루엣을 강화한다. */}
+      {/* 리어 윙 끝판은 main/DRS 두 층에 동시에 걸리는 얇은 판으로 제한한다. */}
       {([-1, 1] as const).map((side) => (
-        <mesh key={`rear-wing-endplate-${side}`} position={[side * 0.9, 1.1, rearWingZ]} rotation={[0, side * 0.08, 0]}>
-          <boxGeometry args={[0.045, 0.42, 0.24]} />
+        <mesh key={`rear-wing-endplate-${side}`} position={[side * 0.9, 1.08, rearWingZ]} rotation={[0, side * 0.06, 0]}>
+          <boxGeometry args={[0.035, 0.34, 0.18]} />
           <meshStandardMaterial color={aeroColor} roughness={0.76} flatShading />
         </mesh>
       ))}
-      <mesh position={[0, 1.32, 2.39]}>
-        <boxGeometry args={[0.62, 0.035, 0.04]} />
-        <meshStandardMaterial color={carbonColor} roughness={0.72} flatShading />
-      </mesh>
 
-      {/* 후방 바닥에는 디퓨저 스트레이크를 남겨 리어 윙과 다른 층을 만든다. */}
-      <PlanformPanel color={aeroColor} points={REAR_DIFFUSER_PLANFORM} position={[0, 0.31, 0]} thickness={0.06} />
+      {/* 후방 바닥은 얇은 diffuser exit와 짧은 strake만 남겨 aero 블록이 차체와 분리돼 보이지 않게 한다. */}
+      <PlanformPanel color={aeroColor} points={REAR_DIFFUSER_PLANFORM} position={[0, 0.31, 0]} thickness={0.035} />
       {([-2, -1, 0, 1, 2] as const).map((side) => (
         <mesh key={`diffuser-${side}`} position={[side * 0.17, 0.34, 1.62]}>
-          <boxGeometry args={[0.045, 0.16, 0.58]} />
+          <boxGeometry args={[0.03, 0.11, 0.48]} />
           <meshStandardMaterial color={carbonColor} roughness={0.9} flatShading />
         </mesh>
       ))}
-      <mesh position={[0, 0.31, 1.86]} rotation={[0.18, 0, 0]}>
-        <boxGeometry args={[0.74, 0.035, 0.32]} />
+      <mesh position={[0, 0.34, 1.82]} rotation={[0.18, 0, 0]}>
+        <boxGeometry args={[0.62, 0.025, 0.2]} />
         <meshStandardMaterial color="#07090c" roughness={0.9} />
       </mesh>
 
