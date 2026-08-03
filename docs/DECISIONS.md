@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-08-03 — D-064
+
+**결정:** S1 Racing의 그래픽·게임 감성은 Google 이미지와 Reddit의 `PS2 nostalgia` moodboard에서 추출한 신호를 특정 작품 복제 없이 재해석하는 **moodboard-first PS2 nostalgia circuit racer** 방향으로 진행한다. 저폴리 Geometry, 약간 부드러운 표준해상도 인상, 계단진 실루엣, 제한된 색상 수, 버텍스/fake lighting, 강한 명암과 안개, 낮은 추적 카메라, 큰 숫자 중심의 각진 HUD, 짧고 강한 주행 피드백을 공통 기준으로 삼는다.
+
+**이유:** 현재 프로젝트의 `LowPolyCar`, 절차적 트랙 Geometry, 공통 `VisualPalette`, 제한된 shadow 설정은 PS2 세대 레이싱 게임의 화면 언어와 결합하기 적합하다. Google 이미지에서 반복되는 노을·안개·큰 실루엣·큰 HUD와 Reddit에서 반복되는 표준해상도 softness·계단진 외곽선·fake lighting·motion blur·CRT/선명도 취향 차이를 함께 반영하면, 사용자가 원하는 향수 인상을 특정 게임 복제 없이 구현할 수 있다. Gran Turismo 4의 차량·트랙 판독성, Formula One 04 계열의 콕핏·레이스 정보, Ridge Racer V 계열의 속도감, Burnout 3 계열의 충돌 피드백은 레이싱 문법을 보완하는 보조 레퍼런스로만 사용한다.
+
+**경계:** 이는 PlayStation·Gran Turismo·Formula One·Ridge Racer·Burnout의 로고, UI, 차량, 트랙, 사운드, 리버리 또는 브랜드를 사용한다는 의미가 아니다. 물리·입력·AI·Rapier collider·120Hz fixed-step은 변경하지 않으며, 화면 효과는 렌더 전용 스냅샷과 이벤트에서만 계산한다. `nostalgia-soft`, `nostalgia-sharp`, `clean-debug` 세 화면 프로필을 제공하되, texture warping·심한 flicker·강제 CRT scanline은 기본값으로 넣지 않는다.
+
+**실행 계획:** Google 이미지·Reddit moodboard를 기준으로 `nostalgia-soft`·`nostalgia-sharp`·`clean-debug` 캡처를 먼저 고정한 뒤, 트랙 가독성·차량 실루엣·카메라 피드백·HUD·선택적 픽셀/오디오 순서로 진행한다. 상세 기준과 자료·검색 링크는 `docs/PS2_VISUAL_DIRECTION_PLAN.md`에 기록한다.
+
+**검증:** 각 시각 단계에서 기존 물리·입력·AI 회귀를 함께 확인하고, 사용자에게 보이는 변경은 Playwright E2E와 `npm run verify`를 완료 게이트로 사용한다. 모듈 경계가 바뀌는 경우 `npm run architecture:check`를 추가 실행한다.
+
 ## 2026-08-03 — D-062
 
 **결정:** 차량 디자인 스튜디오의 시점 검수는 `3/4 VIEW`, `FRONT`, `SIDE`, `REAR`, `COCKPIT` 다섯 프리셋을 사용한다. 각 프리셋은 카메라 위치·주시점·FOV를 함께 재설정하며, 콕핏 검토에서는 외부 드라이버 메시만 숨긴다.
