@@ -34,9 +34,9 @@ export type DrivingCameraView = "chase" | "cockpit";
  */
 const COCKPIT_CAMERA = {
   /** 휠 뒤쪽의 운전자 눈 위치에 두기 위한 차량 로컬 후방 오프셋(m)이다. */
-  forwardOffsetM: -0.25,
-  /** 낮은 2012년형 착좌 자세를 읽게 하는 차체 기준 높이(m)다. */
-  heightM: 1,
+  forwardOffsetM: -0.45,
+  /** 낮은 2012년형 착좌 자세를 유지하면서 차체 외피에 가리지 않게 하는 기준 높이(m)다. */
+  heightM: 1.18,
   /** 노즈·프런트 윙과 전방 트랙을 함께 보게 하는 바라보기 거리(m)다. */
   lookAheadM: 18,
   /** 수평선보다 약간 아래를 보게 해 스티어링 휠·노즈가 화면 하단에 남도록 하는 오프셋(m)이다. */
@@ -47,6 +47,28 @@ const COCKPIT_CAMERA = {
 
 /** 외부 추적 시점은 차량 자세와 트랙을 함께 읽기 위한 기존 수직 시야각(deg)이다. */
 const CHASE_CAMERA_FOV_DEG = 55;
+
+/** 속도·접촉 피드백은 렌더 전용이며 물리 포즈를 직접 수정하지 않는 초기 가정 모음이다. */
+const CAMERA_FEEDBACK = {
+  /** 이 속도(m/s)에서 속도 FOV kick이 최대치에 도달한다. */
+  speedForMaxFovKickMps: 30,
+  /** 직선 가속에서 추가할 최대 시야각(deg)이다. */
+  maxFovKickDeg: 3,
+  /** 연석·벽 impulse가 화면에서 사라지는 속도(1/s)다. */
+  impulseDecayPerSecond: 14,
+  /** 연석 접촉 상승 1건당 위로 밀어 올리는 화면 이동(m)이다. */
+  curbVerticalImpulseM: 0.045,
+  /** 벽 접촉 상승 1건당 위로 밀어 올리는 화면 이동(m)이다. */
+  wallVerticalImpulseM: 0.08,
+  /** 연석 접촉 상승 1건당 차량 후방으로 주는 화면 이동(m)이다. */
+  curbLongitudinalImpulseM: 0.025,
+  /** 벽 접촉 상승 1건당 차량 후방으로 주는 화면 이동(m)이다. */
+  wallLongitudinalImpulseM: 0.045,
+  /** 조향 중 연석을 밟을 때 추가하는 카메라 roll(rad)이다. */
+  curbRollRad: 0.018,
+  /** 벽 접촉 순간에 추가하는 카메라 roll(rad)이다. */
+  wallRollRad: 0.028,
+} as const;
 
 /** R3F 장면과 플레이어·AI 텔레메트리 콜백 사이의 통합 경계다. */
 interface DrivingSceneProps {
@@ -261,6 +283,13 @@ export function DrivingScene({
   const desiredCamera = useMemo(() => new THREE.Vector3(), []);
   // 차량 yaw에서 계산한 -Z 전방 벡터 버퍼다.
   const forward = useMemo(() => new THREE.Vector3(), []);
+  // 연석·벽 impulse를 차량 이동축 기준으로 누적하는 렌더 전용 이동 버퍼다.
+  const cameraImpulse = useMemo(() => new THREE.Vector3(), []);
+  // lookAt 이후 화면 축으로 적용할 짧은 렌더 전용 roll(rad)이다.
+  const cameraRollImpulse = useRef(0);
+  // 접촉 수의 상승분만 이벤트로 취급해 매 프레임 흔들리지 않게 하는 이전값이다.
+  const previousWallContactCount = useRef(0);
+  const previousCurbContactCount = useRef(0);
   // HUD 콜백을 100 ms 간격으로 샘플링하는 누적 시계(초)다.
   const telemetryClock = useRef(0);
   // 플레이어 Rapier world의 생명주기와 힘 적용 대상을 참조한다.
@@ -365,6 +394,11 @@ export function DrivingScene({
       opponentRig?.reset();
       if (rig) syncRigFromSimulation(rig, simulation);
       if (opponentRig) syncRigFromSimulation(opponentRig, opponentSimulation);
+      // 리셋 직후 정지 상태에서 이전 접촉을 새 이벤트로 재생하지 않도록 렌더 피드백을 비운다.
+      cameraImpulse.set(0, 0, 0);
+      cameraRollImpulse.current = 0;
+      previousWallContactCount.current = 0;
+      previousCurbContactCount.current = 0;
     }
 
     // 누적기에서 반환하는 렌더 보간 계수(0..1)다.
@@ -408,8 +442,32 @@ export function DrivingScene({
 
     // 차량 전방을 기준으로 후방·콕핏 카메라가 공유할 차량 로컬 전방 벡터를 계산한다.
     forward.set(Math.sin(snapshot.yawRad), 0, -Math.cos(snapshot.yawRad));
-    // Rapier 차체의 승차 높이는 콕핏에서만 필요하므로 외부 추적 시점의 프레임 비용에 넣지 않는다.
-    const cockpitRigTelemetry = cameraView === "cockpit" ? suspensionRig.current?.getTelemetry() : null;
+    // 승차 높이와 접촉 이벤트는 같은 읽기 전용 Rapier 텔레메트리 샘플을 공유한다.
+    const suspensionTelemetry = suspensionRig.current?.getTelemetry() ?? null;
+    const cockpitRigTelemetry = cameraView === "cockpit" ? suspensionTelemetry : null;
+    // 접촉 수의 상승만 순간 충격으로 바꿔 지속 접촉이 카메라를 계속 흔들지 않게 한다.
+    const wallContactCount = suspensionTelemetry?.wallContactCount ?? 0;
+    const curbContactCount = suspensionTelemetry?.curbContactCount ?? 0;
+    const wallContactRise = Math.max(0, wallContactCount - previousWallContactCount.current);
+    const curbContactRise = Math.max(0, curbContactCount - previousCurbContactCount.current);
+    previousWallContactCount.current = wallContactCount;
+    previousCurbContactCount.current = curbContactCount;
+    if (!paused && (wallContactRise > 0 || curbContactRise > 0)) {
+      const turnDirection = Math.sign(snapshot.yawRateRadS || snapshot.steeringAngleRad || 1);
+      cameraImpulse.y +=
+        curbContactRise * CAMERA_FEEDBACK.curbVerticalImpulseM +
+        wallContactRise * CAMERA_FEEDBACK.wallVerticalImpulseM;
+      cameraImpulse.addScaledVector(
+        forward,
+        -(
+          curbContactRise * CAMERA_FEEDBACK.curbLongitudinalImpulseM +
+          wallContactRise * CAMERA_FEEDBACK.wallLongitudinalImpulseM
+        ),
+      );
+      cameraRollImpulse.current +=
+        turnDirection *
+        (curbContactRise * CAMERA_FEEDBACK.curbRollRad + wallContactRise * CAMERA_FEEDBACK.wallRollRad);
+    }
     // 차량 내부에서 카메라만 수직으로 떠 보이지 않게 현재 승차 높이 차이를 읽기 전용으로 사용한다.
     const cockpitVisualHeight = cockpitRigTelemetry
       ? cockpitRigTelemetry.chassisHeightM - cockpitRigTelemetry.referenceRideHeightM
@@ -440,6 +498,27 @@ export function DrivingScene({
       );
     }
     camera.lookAt(target);
+
+    // 속도가 올라갈수록 시야를 최대 3도만 넓혀 속도감을 만들고, 저속 판독성은 유지한다.
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const speedMps = Math.hypot(snapshot.velocity.x, snapshot.velocity.z);
+      const speedRatio = Math.min(1, speedMps / CAMERA_FEEDBACK.speedForMaxFovKickMps);
+      const baseFovDeg = cameraView === "cockpit" ? COCKPIT_CAMERA.fovDeg : CHASE_CAMERA_FOV_DEG;
+      const nextFovDeg = baseFovDeg + speedRatio * CAMERA_FEEDBACK.maxFovKickDeg;
+      if (Math.abs(camera.fov - nextFovDeg) > 0.001) {
+        camera.fov = nextFovDeg;
+        camera.updateProjectionMatrix();
+      }
+    }
+
+    // 카메라 impulse는 lookAt 이후에 더해 렌더 프레임만 흔들고, 물리 스냅샷과 차량 포즈는 보존한다.
+    camera.position.add(cameraImpulse);
+    camera.rotateZ(cameraRollImpulse.current);
+    const impulseDecay = Math.exp(
+      -CAMERA_FEEDBACK.impulseDecayPerSecond * Math.min(deltaSeconds, 0.1),
+    );
+    cameraImpulse.multiplyScalar(impulseDecay);
+    cameraRollImpulse.current *= impulseDecay;
 
     // 물리 루프는 120Hz지만 HUD는 10Hz 샘플로 충분해 렌더 상태 갱신을 줄인다.
     telemetryClock.current += deltaSeconds;

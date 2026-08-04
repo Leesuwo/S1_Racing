@@ -175,6 +175,23 @@ test("moves the vehicle when throttle is held in driving mode", async ({ page })
   await expect(page.locator(".speed-readout strong")).not.toHaveText("0");
 });
 
+test("keeps speed feedback and camera switching responsive during acceleration", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "주행 모드" }).click();
+  await page.getByLabel("입력 프리셋").selectOption("keyboard");
+  await page.locator("canvas").click({ position: { x: 12, y: 12 } });
+  await page.keyboard.down("w");
+  await page.waitForTimeout(700);
+  await page.keyboard.up("w");
+
+  // 속도 변화와 렌더 전용 카메라 feedback이 같은 주행 입력에서 끊기지 않는 사용자 경계다.
+  await expect(page.locator(".speed-readout strong")).not.toHaveText("0");
+  await page.getByRole("button", { name: "콕핏뷰" }).click();
+  await expect(page.locator(".canvas-label")).toHaveText("COCKPIT VIEW / S1 2012 OPEN-WHEEL");
+  await page.getByRole("button", { name: "추적 시점" }).click();
+  await expect(page.locator(".canvas-label")).toHaveText("PHYSICS PROTOTYPE / TEST TRACK");
+});
+
 test("switches between chase and cockpit camera views without changing the driving flow", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("tab", { name: "주행 모드" }).click();

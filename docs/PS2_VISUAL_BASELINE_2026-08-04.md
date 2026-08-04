@@ -138,10 +138,29 @@ Driving 장면이 마운트되거나 Chase/Cockpit 시점을 전환할 때, 현�
 | Race Weekend | ![P2 Race Weekend 480x270](visual-baseline/2026-08-04/p2/480x270/weekend.png) | ![P2 Race Weekend 960x540](visual-baseline/2026-08-04/p2/960x540/weekend.png) | ![P2 Race Weekend 1440x900](visual-baseline/2026-08-04/p2/1440x900/weekend.png) |
 | Design Studio | ![P2 Design Studio 480x270](visual-baseline/2026-08-04/p2/480x270/design.png) | ![P2 Design Studio 960x540](visual-baseline/2026-08-04/p2/960x540/design.png) | ![P2 Design Studio 1440x900](visual-baseline/2026-08-04/p2/1440x900/design.png) |
 
+## PS2-P3 결과
+
+주행 카메라에 속도·접촉 피드백을 추가했다. 모두 렌더 스냅샷과 Rapier 텔레메트리를 읽어 계산하며, `VehicleSimulation`의 위치·속도·타이어 힘·입력에는 쓰지 않는다.
+
+- 차량 속도에 따라 FOV를 최대 3°까지 넓혀 직선 가속의 속도감을 추가했다. 30m/s에서 최대치에 도달하고 저속에서는 기본 FOV를 유지한다.
+- 연석·벽 접촉 수의 상승분만 이벤트로 감지해 짧은 상향 이동·후방 이동·roll을 적용했다. 지속 접촉을 매 프레임 누적하지 않으며 지수 감쇠로 빠르게 복귀한다.
+- 콕핏 시점은 차체 외피에 가려지지 않도록 로컬 전방 오프셋 `-0.45m`, 높이 `1.18m`로 보정했다. 노즈·주행 방향·차체 가장자리를 함께 남긴다.
+- 가속 입력 후 추적/콕핏 전환을 검증하는 E2E 시나리오를 추가했다.
+
+최종 캡처에서 추적 시점은 차량·AI 상대·다음 경계를 계속 판독할 수 있었고, 콕핏 시점은 차체가 화면 하단에 남으면서 전방 도로와 연석을 확인할 수 있었다. 카메라 impulse는 물리 포즈를 변경하지 않는 렌더 전용 상태로 제한했다.
+
+### P3 캡처
+
+| 화면 | 960×540 | 1440×900 |
+| --- | --- | --- |
+| Driving / 추적 시점 · 가속 후 | ![P3 Driving speed 960x540](visual-baseline/2026-08-04/p3/960x540/driving-speed.png) | ![P3 Driving speed 1440x900](visual-baseline/2026-08-04/p3/1440x900/driving-speed.png) |
+| Driving / 콕핏 시점 · 가속 후 | ![P3 Cockpit speed 960x540](visual-baseline/2026-08-04/p3/960x540/cockpit-speed.png) | ![P3 Cockpit speed 1440x900](visual-baseline/2026-08-04/p3/1440x900/cockpit-speed.png) |
+
 ## 버전 이력
 
 | 날짜 | 버전 | 변경 |
 | --- | --- | --- |
+| 2026-08-04 | 0.4.0 | PS2-P3 속도 FOV kick·연석/벽 impulse·콕핏 시야 보정과 가속 입력 E2E·2개 viewport 캡처를 추가 |
 | 2026-08-04 | 0.3.0 | PS2-P2 차량 차체 재질·flat shading을 통일하고 480×270·960×540·1440×900 캡처를 추가 |
 | 2026-08-04 | 0.2.0 | PS2-P1 트랙 어깨·경계 띠·벽 상단 캡을 적용하고 3개 트랙 장면의 2개 viewport 캡처를 추가 |
 | 2026-08-04 | 0.1.0 | 네 화면의 960×540·1440×900 기준 캡처, 렌더 설정 기록, 문제 분류와 첫 카메라 수정 대상 확정 |
