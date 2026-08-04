@@ -118,9 +118,30 @@ Driving 장면이 마운트되거나 Chase/Cockpit 시점을 전환할 때, 현�
 | Driving | ![P1 Driving 960x540](visual-baseline/2026-08-04/p1/960x540/driving.png) | ![P1 Driving 1440x900](visual-baseline/2026-08-04/p1/1440x900/driving.png) |
 | Race Weekend | ![P1 Race Weekend 960x540](visual-baseline/2026-08-04/p1/960x540/weekend.png) | ![P1 Race Weekend 1440x900](visual-baseline/2026-08-04/p1/1440x900/weekend.png) |
 
+## PS2-P2 결과
+
+`LowPolyCar`의 큰 차체 면과 보조 차체 패널을 렌더 전용 저폴리·무광 기준으로 통일했다.
+
+- 차체 재질의 금속성을 낮추고 거칠기를 높여 환경 반사보다 면 분할과 그림자가 먼저 읽히게 했다.
+- 노즈·사이드포드·콕핏·에어박스·배기 주변·윙 지지부의 차체색 패널에 `flatShading`을 적용했다.
+- 플레이어와 AI 차량의 색 계약, hero/grid 공통 `LowPolyCar` 외관 계약, 차량 포즈·물리 스냅샷은 변경하지 않았다.
+- 960×540 캡처를 480×270으로 정확히 축소해 차량의 방향·색·주요 파츠 접점이 유지되는지 확인했다.
+
+시각 검수 결과, Design Studio에서는 노즈·전륜·콕핏·리어 윙이 낮은 폴리곤 면으로 분리되어 읽혔고, Training·Driving에서는 플레이어와 AI 차량이 배경 및 서로 다른 차체색에서 분리되었다. 50% 축소에서도 차체 방향과 색 구분은 유지되지만, 작은 윙 지지부와 타이어 내부 디테일은 의도적으로 단순화된다.
+
+### P2 캡처
+
+| 화면 | 480×270 축소 | 960×540 | 1440×900 |
+| --- | --- | --- | --- |
+| Training | ![P2 Training 480x270](visual-baseline/2026-08-04/p2/480x270/training.png) | ![P2 Training 960x540](visual-baseline/2026-08-04/p2/960x540/training.png) | ![P2 Training 1440x900](visual-baseline/2026-08-04/p2/1440x900/training.png) |
+| Driving | ![P2 Driving 480x270](visual-baseline/2026-08-04/p2/480x270/driving.png) | ![P2 Driving 960x540](visual-baseline/2026-08-04/p2/960x540/driving.png) | ![P2 Driving 1440x900](visual-baseline/2026-08-04/p2/1440x900/driving.png) |
+| Race Weekend | ![P2 Race Weekend 480x270](visual-baseline/2026-08-04/p2/480x270/weekend.png) | ![P2 Race Weekend 960x540](visual-baseline/2026-08-04/p2/960x540/weekend.png) | ![P2 Race Weekend 1440x900](visual-baseline/2026-08-04/p2/1440x900/weekend.png) |
+| Design Studio | ![P2 Design Studio 480x270](visual-baseline/2026-08-04/p2/480x270/design.png) | ![P2 Design Studio 960x540](visual-baseline/2026-08-04/p2/960x540/design.png) | ![P2 Design Studio 1440x900](visual-baseline/2026-08-04/p2/1440x900/design.png) |
+
 ## 버전 이력
 
 | 날짜 | 버전 | 변경 |
 | --- | --- | --- |
+| 2026-08-04 | 0.3.0 | PS2-P2 차량 차체 재질·flat shading을 통일하고 480×270·960×540·1440×900 캡처를 추가 |
 | 2026-08-04 | 0.2.0 | PS2-P1 트랙 어깨·경계 띠·벽 상단 캡을 적용하고 3개 트랙 장면의 2개 viewport 캡처를 추가 |
 | 2026-08-04 | 0.1.0 | 네 화면의 960×540·1440×900 기준 캡처, 렌더 설정 기록, 문제 분류와 첫 카메라 수정 대상 확정 |

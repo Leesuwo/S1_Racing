@@ -19,6 +19,12 @@ export const VISUAL_PALETTE = {
     brakeMarker: "#ffcf5b",
     checkpoint: "#a6dbe3",
   },
+  vehicle: {
+    /** 큰 차체 면의 반사량을 낮춰 저폴리 면 명암이 먼저 읽히게 한다. */
+    bodyMetalness: 0.08,
+    /** 고무·무광 도료에 가까운 차체 표면을 위한 렌더 전용 초기 가정이다. */
+    bodyRoughness: 0.62,
+  },
   scene: {
     background: "#b96d6e",
     fog: "#b96d6e",

@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { physicsSteeringToThreeWheelYaw } from "../rendering/physicsTransform";
+import { VISUAL_PALETTE } from "./VisualPalette";
 
 /** 렌더링용 차량의 외관만 전달하는 읽기 전용 입력이다. */
 export interface LowPolyCarProps {
@@ -426,15 +427,15 @@ function HullPanel({
 
   return (
       <mesh geometry={geometry} castShadow receiveShadow>
-      <meshStandardMaterial
-        color={color}
-        emissive={emissiveColor}
-        emissiveIntensity={0.08}
-        metalness={0.16}
-        roughness={0.42}
-        flatShading={false}
-      />
-    </mesh>
+        <meshStandardMaterial
+          color={color}
+          emissive={emissiveColor}
+          emissiveIntensity={0.08}
+          metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+          roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+          flatShading
+        />
+      </mesh>
   );
 }
 
@@ -445,7 +446,13 @@ function SidepodPanel({ color, stations, side }: { color: string; stations: read
 
   return (
     <mesh geometry={geometry} castShadow receiveShadow>
-      <meshStandardMaterial color={color} metalness={0.16} roughness={0.44} flatShading={false} side={THREE.DoubleSide} />
+      <meshStandardMaterial
+        color={color}
+        metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+        roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+        flatShading
+        side={THREE.DoubleSide}
+      />
     </mesh>
   );
 }
@@ -822,7 +829,12 @@ export function LowPolyCar({
       {([-1, 1] as const).map((side) => (
         <mesh key={`sidepod-shoulder-shell-${side}`} position={[side * 0.57, 0.67, -0.28]} scale={[1.05, 0.62, 1.7]} castShadow>
           <sphereGeometry args={[0.29, 14, 8]} />
-          <meshStandardMaterial color={bodyColor} metalness={0.14} roughness={0.44} />
+          <meshStandardMaterial
+            color={bodyColor}
+            metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+            roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+            flatShading
+          />
         </mesh>
       ))}
       {/* 스텝 노즈의 상면을 분리해 둥근 단일 노즈가 아닌 2012년형 단차를 보존한다. */}
@@ -877,7 +889,12 @@ export function LowPolyCar({
         <group key={`cockpit-safety-cell-${side}`}>
           <mesh position={[side * 0.33, 0.8, -0.03]} rotation={[0, side * 0.12, side * 0.08]} castShadow>
             <boxGeometry args={[0.12, 0.18, 0.62]} />
-            <meshStandardMaterial color={bodyColor} roughness={0.54} metalness={0.08} flatShading />
+            <meshStandardMaterial
+              color={bodyColor}
+              metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+              roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+              flatShading
+            />
           </mesh>
           <mesh position={[side * 0.29, 0.9, -0.28]} rotation={[0, side * 0.1, 0]}>
             <boxGeometry args={[0.075, 0.11, 0.25]} />
@@ -886,14 +903,24 @@ export function LowPolyCar({
           {/* 둥근 shoulder fairing은 사각 기둥처럼 보이던 안전 셀을 차체 외피와 연속되게 연결한다. */}
           <mesh position={[side * 0.325, 0.84, 0.12]} scale={[0.42, 0.78, 1.18]} castShadow>
             <sphereGeometry args={[0.19, 12, 8]} />
-            <meshStandardMaterial color={bodyColor} roughness={0.46} metalness={0.14} />
+            <meshStandardMaterial
+              color={bodyColor}
+              metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+              roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+              flatShading
+            />
           </mesh>
         </group>
       ))}
       {/* 낮은 앞 coaming은 운전자의 상체가 차체 속에 들어가 보이게 하되 콕핏 카메라의 전방 시야는 비운다. */}
       <mesh position={[0, 0.84, -0.46]} scale={[1, 0.3, 0.58]} castShadow>
         <sphereGeometry args={[0.25, 14, 8]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.45} metalness={0.14} />
+        <meshStandardMaterial
+          color={bodyColor}
+          metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+          roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+          flatShading
+        />
       </mesh>
       <mesh position={[0, 0.91, -0.53]} scale={[1, 0.28, 0.4]}>
         <sphereGeometry args={[0.17, 12, 8]} />
@@ -946,7 +973,12 @@ export function LowPolyCar({
           <Link color={carbonColor} start={[side * 0.3, 0.87, -0.48]} end={[side * 0.47, 0.96, -0.58]} width={0.035} />
           <mesh position={[side * 0.48, 0.91, -0.58]} rotation={[0, side * 0.12, 0]}>
             <boxGeometry args={[0.075, 0.035, 0.105]} />
-            <meshStandardMaterial color={bodyColor} metalness={0.2} roughness={0.42} />
+            <meshStandardMaterial
+              color={bodyColor}
+              metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+              roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+              flatShading
+            />
           </mesh>
           <mesh position={[side * 0.375, 0.91, -0.53]} rotation={[0, side * 0.32, 0]}>
             <boxGeometry args={[0.035, 0.035, 0.22]} />
@@ -958,7 +990,12 @@ export function LowPolyCar({
       {/* 에어박스 외피는 body 색으로 엔진 커버 spine에 묻히고, 전면 throat만 carbon으로 남긴다. */}
       <mesh position={[0, 1.04, 0.62]} scale={[1, 1.22, 0.92]} castShadow>
         <sphereGeometry args={[0.19, 8, 6]} />
-        <meshStandardMaterial color={bodyColor} metalness={0.12} roughness={0.46} flatShading />
+        <meshStandardMaterial
+          color={bodyColor}
+          metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+          roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+          flatShading
+        />
       </mesh>
       {/* inlet lip은 black throat의 위·아래와 양옆에 겹쳐 에어박스가 엔진 커버에서 솟은 단일 파츠로 읽히게 한다. */}
       <mesh position={[0, 1.105, 0.452]}>
@@ -1025,7 +1062,12 @@ export function LowPolyCar({
           {/* intake backing은 검은 면의 깊이를 만들고, 위·아래 lip은 개구부가 차체 표면에 붙어 있음을 보여 준다. */}
           <mesh position={[side * 0.785, 0.69, -0.59]} rotation={[0, side * 0.11, side * 0.035]} castShadow>
             <boxGeometry args={[0.055, 0.23, 0.48]} />
-            <meshStandardMaterial color={bodyColor} metalness={0.12} roughness={0.5} flatShading />
+            <meshStandardMaterial
+              color={bodyColor}
+              metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+              roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+              flatShading
+            />
           </mesh>
           <mesh position={[side * 0.814, 0.69, -0.59]} rotation={[0, side * 0.11, side * 0.035]}>
             <boxGeometry args={[0.03, 0.19, 0.4]} />
@@ -1063,7 +1105,12 @@ export function LowPolyCar({
           {/* RB8의 특징인 상부 배기와 하향 ramp를 시각화한다. 경사 아래 채널은 exhaust plume과 분리된 공기 통로다. */}
           <mesh position={[side * 0.34, 0.86, 1.13]} rotation={[0.42, side * 0.08, 0]}>
             <boxGeometry args={[0.24, 0.04, 0.76]} />
-            <meshStandardMaterial color={bodyColor} roughness={0.54} metalness={0.08} flatShading />
+            <meshStandardMaterial
+              color={bodyColor}
+              metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+              roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+              flatShading
+            />
           </mesh>
           {/* exhaust surround는 출구와 ramp 사이의 열 차폐 표면으로, 배기 원통이 차체 밖에 떠 보이지 않게 한다. */}
           <mesh position={[side * 0.34, 0.93, 0.83]} rotation={[0, side * 0.08, 0]}>
@@ -1076,7 +1123,12 @@ export function LowPolyCar({
           </mesh>
           <mesh position={[side * 0.34, 0.94, 0.88]} rotation={[0.32, side * 0.1, 0]} scale={[0.82, 0.52, 1.1]}>
             <sphereGeometry args={[0.12, 10, 7]} />
-            <meshStandardMaterial color={bodyColor} roughness={0.46} metalness={0.14} />
+            <meshStandardMaterial
+              color={bodyColor}
+              metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+              roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+              flatShading
+            />
           </mesh>
           <mesh position={[side * 0.36, 0.54, 1.08]} rotation={[0, side * 0.1, 0]}>
             <boxGeometry args={[0.22, 0.09, 0.58]} />
@@ -1136,7 +1188,12 @@ export function LowPolyCar({
           {/* pylon의 상·하단 collar를 노즈와 메인 플레인에 겹쳐 양 끝 접점을 실제 부품처럼 읽게 한다. */}
           <mesh position={[side * 0.13, 0.5, -1.63]} rotation={[0.2, 0, 0]} castShadow>
             <boxGeometry args={[0.15, 0.1, 0.18]} />
-            <meshStandardMaterial color={bodyColor} roughness={0.56} metalness={0.08} flatShading />
+            <meshStandardMaterial
+              color={bodyColor}
+              metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+              roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+              flatShading
+            />
           </mesh>
           <Link color={aeroColor} start={[side * 0.13, 0.5, -1.64]} end={[side * 0.13, 0.32, -2.47]} width={0.085} />
           <mesh position={[side * 0.13, 0.39, -2.05]} rotation={[0.2, 0, 0]}>
@@ -1200,7 +1257,12 @@ export function LowPolyCar({
       <Link color={aeroColor} start={[0, 0.56, 1.78]} end={[0, 1.0, 2.22]} width={0.09} />
       <mesh position={[0, 0.61, 1.78]} rotation={[0.12, 0, 0]}>
         <boxGeometry args={[0.2, 0.08, 0.24]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.52} metalness={0.08} flatShading />
+        <meshStandardMaterial
+          color={bodyColor}
+          metalness={VISUAL_PALETTE.vehicle.bodyMetalness}
+          roughness={VISUAL_PALETTE.vehicle.bodyRoughness}
+          flatShading
+        />
       </mesh>
       {([-1, 1] as const).map((side) => (
         <group key={`rear-wing-support-${side}`}>
