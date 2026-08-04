@@ -26,7 +26,7 @@ M4에서 고정한 RaceSession의 물리·전략·운영 상태를 동일한 120
 
 ## 남은 위험
 
-현재 replay JSON은 검증된 grid snapshot의 digest와 입력을 저장하지만, 독립 실행에 필요한 차량 정의·AI 설정 전체를 파일에 포함하지 않는다. 따라서 M5의 재생 검증은 동일한 RaceSession 초기 설정을 주입하는 오프라인 계약이며, 독립 공유·온라인 동기화는 다음 단계에서 grid/config manifest를 별도 고정해야 한다.
+이 제한은 후속 M6에서 해소했다. `s1-racing-replay-v2`는 차량 정의·AI 프로필/시드·grid·타이어·셋업·연료·종료 fixed-step을 manifest로 보존하며, `verifyRaceReplayIndependently`가 새 RaceSession을 독립 생성해 재생한다. 온라인 동기화는 여전히 별도 권한·서명 설계가 필요한 후속 범위다.
 
 ## 다음 마일스톤
 

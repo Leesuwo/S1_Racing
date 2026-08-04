@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-08-04 — D-066
+
+**결정:** M6~M9는 하나의 결정적 운영 확장으로 구현한다. replay는 manifest만으로 재구성하고, 주말은 Grand Prix/Sprint 상태 전이를 명시하며, 셋업·연료·AI 프로필은 기존 공통 `VehicleSimulation`과 `VehicleControlInput` 경계에만 연결한다.
+
+**이유:** 새로운 주말 포맷과 셋업·연료·AI 변수를 replay에 기록하지 않으면 같은 입력이라도 새 세션에서 결과를 재현할 수 없다. 반대로 AI별 물리 보정을 허용하면 실력 차이는 보여도 차량 물리와 리플레이의 검증 기준이 무너진다.
+
+**경계:** manifest는 현재 내장 Test Track·차량·규정 버전만 지원하며 보안 서명이 아니다. 셋업·연료 수치는 `initial_assumption`이고, DRS·ERS·날씨·챔피언십·온라인 동기화는 포함하지 않는다. AI 오류는 시드 기반 입력 보정만 사용하며 위치·그립·출력·연료 상태를 직접 바꾸지 않는다.
+
+**검증:** manifest 독립 재생, sprint 전이·잠금, 연료 소진/재급유, AI 시드 재현 단위 테스트와 Race Weekend E2E를 추가한다. 구조 변경은 Archify 원본·HTML을 함께 갱신하고 전체 `npm run verify`를 완료 게이트로 사용한다.
+
 ## 2026-08-04 — D-065
 
 **결정:** PS2 화면 프로필은 `nostalgia-soft`를 기본으로 하고, `nostalgia-sharp`와 `clean-debug`를 선택지로 제공한다. 후처리는 Canvas에만 적용하는 CSS filter로 제한하며 내부 저해상도 render target·dithering·CRT scanline·색수차·새 post-processing 패키지는 이번 단계에 추가하지 않는다.

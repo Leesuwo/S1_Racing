@@ -1,5 +1,5 @@
 /**
- * M2B~M3D 레이스 주말의 R3F 표시 장면이다.
+ * M2B~M9 레이스 주말의 R3F 표시 장면이다.
  * RaceWeekendSession이 소유한 VehicleSimulation 스냅샷을 그리며, AI나 렌더러가 위치를 직접 변경하지 않는다.
  */
 import { useFrame, useThree } from "@react-three/fiber";
@@ -112,7 +112,7 @@ export function RaceWeekendScene({ session, input, paused, onSnapshot }: RaceWee
       if (
         paused
         || nowMs - lastRenderFrameAtMs.current < WEEKEND_RENDER_STALL_MS
-        || liveSnapshot.stage !== "race"
+        || (liveSnapshot.stage !== "race" && liveSnapshot.stage !== "sprint")
         || liveSnapshot.status !== "running"
       ) return;
       session.getRaceSession().setCollisionWorld(collisionWorldRef.current ?? undefined);
@@ -132,7 +132,7 @@ export function RaceWeekendScene({ session, input, paused, onSnapshot }: RaceWee
   useFrame((_, deltaSeconds) => {
     lastRenderFrameAtMs.current = performance.now();
     const liveSnapshot = session.getSnapshot();
-    if (!paused && liveSnapshot.stage === "race" && liveSnapshot.status === "running") {
+    if (!paused && (liveSnapshot.stage === "race" || liveSnapshot.stage === "sprint") && liveSnapshot.status === "running") {
       // 브라우저 입력은 공통 VehicleControlInput으로 변환되어 RaceSession의 120Hz 경계를 통과한다.
       // RaceWeekendSession은 레이스 시작 때 RaceSession 인스턴스를 교체하므로 매 프레임 현재 세션에 연결한다.
       session.getRaceSession().setCollisionWorld(collisionWorldRef.current ?? undefined);

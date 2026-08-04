@@ -92,8 +92,24 @@ TestTrackDefinition의 정적 벽·연석을 렌더링·Rapier가 공유하고, 
 
 상세 범위와 검증 결과는 [Milestone 4 상세 문서](./MILESTONE_4.md)에 기록한다.
 
-## Milestone 5 — Deterministic race replay (진행 중)
+## Milestone 5 — Deterministic race replay (완료)
 
 RaceSession의 120Hz 입력과 물리·전략·운영 digest를 기록하고, 동일한 초기 grid에서 step별 결정성을 검증한다. Race Weekend는 완료된 리플레이를 `s1-racing-replay-v1` JSON으로 저장·불러오며, 현재 트랙·랩·참가자 수와 파일 호환성을 확인한다. 온라인 동기화와 연료·DRS·KERS·날씨는 이 기록 계약을 기반으로 하는 후속 범위다.
 
 상세 범위와 검증 결과는 [M5 상세 문서](./MILESTONE_5.md)에 기록한다.
+
+## Milestone 6 — Independent race replay manifest (완료)
+
+리플레이 JSON v2는 track·grid·AI 프로필/시드·타이어·셋업·연료·종료 fixed-step을 manifest로 보존한다. 새 세션은 이 manifest만으로 생성되어 frame digest를 독립 검증한다. [M6 상세 문서](./MILESTONE_6.md)를 따른다.
+
+## Milestone 7 — Weekend format and sprint flow (완료)
+
+Grand Prix와 Sprint 주말 포맷을 제공하며, Sprint는 Qualifying→Sprint→Main Race의 명시적 상태 전이와 결과 grid를 사용한다. [M7 상세 문서](./MILESTONE_7.md)를 따른다.
+
+## Milestone 8 — Public setup and fuel operations (완료)
+
+공개 셋업 프리셋과 차량별 시작 연료·소모·구동 제한·피트 재급유를 공통 물리와 replay manifest에 연결한다. [M8 상세 문서](./MILESTONE_8.md)를 따른다.
+
+## Milestone 9 — AI field profiles and deterministic mistakes (완료)
+
+AI field의 실력대·일관성·결정적 입력 오류를 프로필로 분리하고, 숨은 물리 보정 없이 공유 `VehicleControlInput` 경계를 유지한다. [M9 상세 문서](./MILESTONE_9.md)를 따른다.

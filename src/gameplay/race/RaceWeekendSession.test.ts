@@ -1,5 +1,5 @@
 /**
- * M2D~M5 주말 단계 전이와 전략·타이어·운영·리플레이 입력 경계를 검증한다.
+ * M2D~M9 주말 단계 전이와 전략·포맷·연료·운영·리플레이 입력 경계를 검증한다.
  * 실제 피트 시각 효과가 아니라 순수 fixed-step 상태 계약과 결과 수렴을 검사한다.
  */
 import { describe, expect, it } from "vitest";
@@ -63,6 +63,25 @@ describe("RaceWeekendSession", () => {
       pitStopLap: 2,
       pitStopCompound: "medium",
     });
+  });
+
+  it("runs a sprint before the main race and locks race choices during the sprint", () => {
+    const weekend = new RaceWeekendSession(undefined, 2, 2, undefined, { format: "sprint", sprintLaps: 1 });
+    weekend.runDeterministicQualifying();
+    let snapshot = weekend.beginRace();
+
+    expect(snapshot.stage).toBe("sprint");
+    expect(() => weekend.selectTyre("soft")).toThrow();
+    for (let step = 0; step < 2400 && snapshot.stage === "sprint"; step += 1) {
+      snapshot = weekend.advanceRace({ ...neutralVehicleControlInput(), throttle: 1 }, 4);
+    }
+    expect(snapshot.sprintCompleted).toBe(true);
+    expect(snapshot.stage).toBe("race");
+    expect(snapshot.status).toBe("ready");
+
+    snapshot = weekend.beginRace();
+    expect(snapshot.stage).toBe("race");
+    expect(snapshot.status).toBe("running");
   });
 
   it("resets every weekend stage and race clock", () => {

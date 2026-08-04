@@ -30,6 +30,19 @@ describe("SingleOpponentAI", () => {
     expect(first.update(BASE_STATE, 1 / 120)).toEqual(second.update(BASE_STATE, 1 / 120));
   });
 
+  // 동일 시드의 오류 모델은 별도 난수원 없이 같은 fixed-step에서 같은 입력 보정을 재현해야 한다.
+  it("repeats seeded mistake inputs without modifying the vehicle state", () => {
+    const config = { mistakeRatePerMinute: 120, mistakeDurationSeconds: 0.1, randomSeed: 42 };
+    const first = new SingleOpponentAI(undefined, config);
+    const second = new SingleOpponentAI(undefined, config);
+    const state = { ...BASE_STATE, speedMps: 24, forwardSpeedMps: 24, rpm: 8_000, gear: 4 };
+
+    for (let step = 0; step < 120; step += 1) {
+      expect(first.update(state, 1 / 120)).toEqual(second.update(state, 1 / 120));
+    }
+    expect(state.position).toEqual(BASE_STATE.position);
+  });
+
   // 직선 목표 속도와 코너 미리보기 속도가 달라야 AI가 데이터 기반 제동 지점을 사용한다.
   it("selects a faster straight-line target and a slower preview at the brake point", () => {
     // 테스트 상태에 접근하는 순수 AI 컨트롤러다.

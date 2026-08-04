@@ -5,8 +5,10 @@
  */
 import type { VehicleControlInput } from "../../game/input/VehicleControlInput";
 import { neutralVehicleControlInput } from "../../game/input/VehicleControlInput";
+import { createAIFieldProfiles, type AIFieldProfile } from "../ai/AIField";
 import { SingleOpponentAI, type SingleOpponentAIConfig } from "../ai/SingleOpponentAI";
 import { VehicleSimulation, type VehicleRenderSnapshot } from "../../game/physics/VehicleSimulation";
+import { getVehicleSetup, type VehicleSetupPresetId } from "../../game/physics/VehicleSetup";
 import {
   sampleTestTrackLocation,
   TEST_TRACK_DATA,
@@ -26,6 +28,23 @@ import {
   type RaceFlag,
   type RaceOperationsSnapshot,
 } from "./RaceOperations";
+import {
+  createRaceFuelState,
+  getRaceFuelSnapshot,
+  limitInputForFuel,
+  normalizeRaceFuelPlan,
+  refuelRaceFuel,
+  stepRaceFuel,
+  DEFAULT_RACE_FUEL_PLAN,
+  type RaceFuelPlan,
+  type RaceFuelSnapshot,
+  type RaceFuelState,
+} from "./RaceFuel";
+import {
+  RACE_REPLAY_MANIFEST_VERSION,
+  type RaceReplayManifest,
+  validateRaceReplayManifest,
+} from "./RaceReplayManifest";
 
 /** 레이스 세션에 참가하는 차량의 제어 주체다. */
 export type RaceParticipantKind = "player" | "ai";
@@ -37,7 +56,9 @@ export interface RaceParticipantDefinition {
   kind: RaceParticipantKind;
   gridSlot: number;
   startPose: TestTrackStartPose;
-  aiConfig?: SingleOpponentAIConfig;
+  /** M9 프로필은 AI 입력만 조절하며 물리 상태는 공통 VehicleSimulation이 소유한다. */
+  aiProfileId?: string;
+  aiConfig?: Partial<SingleOpponentAIConfig>;
 }
 
 /** 레이스 전체에 적용할 시작 컴파운드와 선택적 피트 교체 계획이다. */
@@ -51,6 +72,14 @@ export interface RaceTyrePlan {
 export const DEFAULT_RACE_TYRE_PLAN: RaceTyrePlan = {
   startCompound: "medium",
 };
+
+/** M6~M8에서 RaceSession 생성 시 고정하는 replay·셋업·연료 경계다. */
+export interface RaceSessionOptions {
+  vehicleSetupId?: VehicleSetupPresetId;
+  fuelPlan?: RaceFuelPlan;
+  sessionSeed?: number;
+  rulesetVersion?: "s1-race-regulations-v1";
+}
 
 /** 순위 계산과 렌더링에 필요한 차량 한 대의 읽기 전용 상태다. */
 export interface RaceParticipantSnapshot {
@@ -68,6 +97,9 @@ export interface RaceParticipantSnapshot {
   retired: boolean;
   trackLimits: TrackLimitsSnapshot;
   tyreCondition: TyreConditionSnapshot;
+  fuel: RaceFuelSnapshot;
+  aiProfileId?: string;
+  aiMistakeRemainingSeconds?: number;
   racecraft: RacecraftSnapshot;
   operations: RaceOperationsSnapshot;
   pitLane: PitLaneSnapshot;
@@ -92,6 +124,8 @@ export interface RaceSessionSnapshot {
   pitLaneViolationCount: number;
   flag: RaceFlag;
   regulations: RaceRegulationSnapshot;
+  vehicleSetupId: VehicleSetupPresetId;
+  fuelPlan: RaceFuelPlan;
   standings: readonly RaceParticipantSnapshot[];
 }
 
@@ -138,6 +172,12 @@ export function createRaceDeterminismDigest(snapshot: RaceSessionSnapshot): stri
       number(participant.tyreCondition.averageTemperatureC, 3),
       number(participant.tyreCondition.averageWearRatio, 6),
       number(participant.tyreCondition.averagePressureKPa, 3),
+      number(participant.fuel.remainingFuelKg, 6),
+      number(participant.fuel.consumedFuelKg, 6),
+      number(participant.fuel.refuelledFuelKg, 6),
+      String(participant.fuel.engineLimited),
+      participant.aiProfileId ?? "",
+      number(participant.aiMistakeRemainingSeconds ?? 0, 6),
       participant.racecraft.mode,
       String(participant.racecraft.overtakeMode),
       participant.operations.flag,
@@ -185,6 +225,7 @@ interface RaceParticipantState {
   racecraft: RacecraftStateMachine;
   operations: RaceOperations;
   pitLane: PitLaneMonitor;
+  fuel: RaceFuelState;
   noProgressSeconds: number;
 }
 
@@ -252,7 +293,8 @@ function signedTrackDeltaM(previousDistanceM: number, nextDistanceM: number, tra
 export function createRaceGrid(
   track: TestTrackDefinition = TEST_TRACK_DATA,
   count = DEFAULT_RACE_GRID_SIZE,
-  aiConfig?: SingleOpponentAIConfig,
+  aiConfig?: Partial<SingleOpponentAIConfig>,
+  aiProfiles: readonly AIFieldProfile[] = createAIFieldProfiles(Math.max(0, count - 1)),
 ): readonly RaceParticipantDefinition[] {
   const safeCount = Math.max(2, Math.min(20, Math.floor(count)));
   const pose = track.startPose;
@@ -263,6 +305,7 @@ export function createRaceGrid(
     const side = gridSlot % 2 === 0 ? -1 : 1;
     const longitudinalOffsetM = row * 5.2 + 1.1;
     const lateralOffsetM = side * 1.45;
+    const profile = gridSlot === 0 ? undefined : aiProfiles[gridSlot - 1];
     return {
       id: gridSlot === 0 ? "player" : "ai-" + String(gridSlot),
       label: gridSlot === 0 ? "PLAYER" : "AI " + String(gridSlot),
@@ -275,7 +318,9 @@ export function createRaceGrid(
         },
         yawRad: pose.yawRad,
       },
-      aiConfig,
+      aiProfileId: profile?.id,
+      // 호출자가 준 AI 설정은 필드 프로필보다 나중에 병합해 QA가 특정 제어 상수만 고정할 수 있게 한다.
+      aiConfig: gridSlot === 0 ? undefined : { ...profile?.config, ...aiConfig },
     };
   });
 }
@@ -308,6 +353,14 @@ export class RaceSession {
   private collisionWorld: RaceCollisionWorld | undefined;
   private raceFlag: RaceFlag = "green";
   private readonly tyrePlan: RaceTyrePlan;
+  /** M8 셋업은 참가자 전원에게 같은 공개 프리셋으로 적용한다. */
+  private readonly vehicleSetupId: VehicleSetupPresetId;
+  /** 연료 계획은 각 차량의 독립 상태를 초기화하는 불변 입력이다. */
+  private readonly fuelPlan: RaceFuelPlan;
+  /** M6 manifest가 고정하는 결정적 세션 시드다. */
+  private readonly sessionSeed: number;
+  /** 규정 확장 시 replay 호환성을 구분하는 버전이다. */
+  private readonly rulesetVersion: "s1-race-regulations-v1";
 
   constructor(
     definitions: readonly RaceParticipantDefinition[] = createRaceGrid(),
@@ -315,6 +368,7 @@ export class RaceSession {
     totalLaps = 1,
     maxSteps = DEFAULT_RACE_MAX_STEPS,
     tyrePlan: RaceTyrePlan = DEFAULT_RACE_TYRE_PLAN,
+    options: RaceSessionOptions = {},
   ) {
     // 빈 그리드는 순위를 계산할 수 없으므로 방어적으로 두 대 이상의 참가자만 허용한다.
     if (definitions.length < 2) throw new Error("RaceSession requires at least two participants");
@@ -327,8 +381,13 @@ export class RaceSession {
       ...tyrePlan,
       startCompound: tyrePlan.startCompound,
     };
+    this.vehicleSetupId = options.vehicleSetupId ?? "balanced";
+    this.fuelPlan = normalizeRaceFuelPlan(options.fuelPlan ?? DEFAULT_RACE_FUEL_PLAN);
+    this.sessionSeed = typeof options.sessionSeed === "number" && Number.isInteger(options.sessionSeed) ? options.sessionSeed : 1;
+    this.rulesetVersion = options.rulesetVersion ?? "s1-race-regulations-v1";
     this.participants = definitions.map((definition) => {
       const simulation = new VehicleSimulation(undefined, track, definition.startPose, this.tyrePlan.startCompound);
+      simulation.setVehicleSetup(this.vehicleSetupId);
       const projectedDistanceM = projectDistanceM(simulation.current.position, track, this.distanceMap);
       return {
         definition: { ...definition, startPose: { ...definition.startPose, position: { ...definition.startPose.position } } },
@@ -343,6 +402,7 @@ export class RaceSession {
         racecraft: new RacecraftStateMachine(),
         operations: new RaceOperations(),
         pitLane: new PitLaneMonitor(track),
+        fuel: createRaceFuelState(this.fuelPlan),
         noProgressSeconds: 0,
       };
     });
@@ -400,6 +460,7 @@ export class RaceSession {
       participant.racecraft.reset();
       participant.operations.reset();
       participant.pitLane.reset();
+      participant.fuel = createRaceFuelState(this.fuelPlan);
       participant.noProgressSeconds = 0;
     });
     this.status = "grid";
@@ -440,7 +501,7 @@ export class RaceSession {
       }
       const progressBeforeStepM = participant.progressM;
       const pitLaneSnapshot = participant.pitLane.getSnapshot();
-      const input = pitLaneSnapshot.requested
+      const requestedInput = pitLaneSnapshot.requested
         ? participant.pitLane.createControlInput(
           participant.simulation.current.position,
           participant.simulation.current.velocity,
@@ -454,7 +515,10 @@ export class RaceSession {
           participant.racecraft.getSnapshot(),
         )
           ?? neutralVehicleControlInput();
+      // 연료가 소진된 차량은 조향·제동을 유지하지만 공통 입력 경계의 구동만 잃는다.
+      const input = limitInputForFuel(requestedInput, participant.fuel);
       participant.simulation.step(input, dtSeconds);
+      participant.fuel = stepRaceFuel(participant.fuel, this.fuelPlan, input.throttle, dtSeconds);
       participant.trackLimits.update(participant.simulation.current.position, dtSeconds);
       this.updateProgress(participant);
       const current = participant.simulation.current;
@@ -478,6 +542,7 @@ export class RaceSession {
           participant.operations.getSnapshot().damage.performanceMultiplier,
         );
         participant.tyreChangeApplied = true;
+        participant.fuel = refuelRaceFuel(participant.fuel, this.fuelPlan);
         participant.pitLane.markServicing(current.position, current.speedMps);
         this.tyreChangeCount += 1;
       }
@@ -618,6 +683,37 @@ export class RaceSession {
     };
   }
 
+  /**
+   * 현재 세션을 새 프로세스에서도 재구성할 수 있는 M6 manifest를 만든다.
+   * 라이브 물리 상태가 아닌 grid 정의·설정만 담아, 기록 시점에 따라 manifest가 변하지 않게 한다.
+   */
+  getReplayManifest(): RaceReplayManifest {
+    return {
+      schemaVersion: RACE_REPLAY_MANIFEST_VERSION,
+      trackId: "test-track-v1",
+      trackName: this.track.name,
+      vehicleDefinitionId: "s1-open-wheel-v1",
+      rulesetVersion: this.rulesetVersion,
+      totalLaps: this.totalLaps,
+      maxSteps: this.maxSteps,
+      fixedStepHz: 120,
+      sessionSeed: this.sessionSeed,
+      vehicleSetupId: this.vehicleSetupId,
+      tyrePlan: { ...this.tyrePlan },
+      fuelPlan: { ...this.fuelPlan },
+      participants: this.participants.map((participant) => ({
+        id: participant.definition.id,
+        label: participant.definition.label,
+        kind: participant.definition.kind,
+        gridSlot: participant.definition.gridSlot,
+        startPositionM: { ...participant.definition.startPose.position },
+        startYawRad: participant.definition.startPose.yawRad,
+        aiProfileId: participant.definition.aiProfileId,
+        aiConfig: participant.definition.aiConfig ? { ...participant.definition.aiConfig } : undefined,
+      })),
+    };
+  }
+
   /** UI와 테스트에 전달할 읽기 전용 세션 상태를 생성한다. */
   getSnapshot(): RaceSessionSnapshot {
     const standings = this.participants
@@ -647,6 +743,8 @@ export class RaceSession {
       pitLaneViolationCount: standings.reduce((sum, participant) => sum + participant.pitLane.speedViolationCount, 0),
       flag: this.raceFlag,
       regulations: this.regulations.getSnapshot(),
+      vehicleSetupId: this.vehicleSetupId,
+      fuelPlan: { ...this.fuelPlan },
       standings,
     };
   }
@@ -727,6 +825,7 @@ export class RaceSession {
           participant.operations.getSnapshot().damage.performanceMultiplier,
         );
         participant.tyreChangeApplied = true;
+        participant.fuel = refuelRaceFuel(participant.fuel, this.fuelPlan);
         this.tyreChangeCount += 1;
       }
     }
@@ -755,6 +854,9 @@ export class RaceSession {
       finished: participant.finished,
       retired: participant.retired,
       tyreCondition: participant.simulation.getTyreCondition(),
+      fuel: getRaceFuelSnapshot(participant.fuel),
+      aiProfileId: participant.definition.aiProfileId,
+      aiMistakeRemainingSeconds: participant.ai?.getControlSnapshot().mistakeRemainingSeconds,
       racecraft: participant.racecraft.getSnapshot(),
       operations: participant.operations.getSnapshot(flag),
       pitLane: participant.pitLane.getSnapshot(),
@@ -768,4 +870,35 @@ export class RaceSession {
           + participant.pitLane.getSnapshot().speedViolationCount * PIT_SPEED_PENALTY_SECONDS,
     };
   }
+}
+
+/** M6 manifest만으로 내장 Test Track 세션을 다시 만드는 독립 replay 경계다. */
+export function createRaceSessionFromReplayManifest(manifest: RaceReplayManifest): RaceSession {
+  validateRaceReplayManifest(manifest);
+  if (manifest.trackName !== TEST_TRACK_DATA.name) throw new Error("Replay manifest track is not available locally");
+  const definitions: RaceParticipantDefinition[] = manifest.participants.map((participant) => ({
+    id: participant.id,
+    label: participant.label,
+    kind: participant.kind,
+    gridSlot: participant.gridSlot,
+    startPose: {
+      position: { ...participant.startPositionM },
+      yawRad: participant.startYawRad,
+    },
+    aiProfileId: participant.aiProfileId,
+    aiConfig: participant.aiConfig as Partial<SingleOpponentAIConfig> | undefined,
+  }));
+  return new RaceSession(
+    definitions,
+    TEST_TRACK_DATA,
+    manifest.totalLaps,
+    manifest.maxSteps,
+    manifest.tyrePlan,
+    {
+      vehicleSetupId: manifest.vehicleSetupId,
+      fuelPlan: manifest.fuelPlan,
+      sessionSeed: manifest.sessionSeed,
+      rulesetVersion: manifest.rulesetVersion,
+    },
+  );
 }

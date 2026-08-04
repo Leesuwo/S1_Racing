@@ -65,6 +65,12 @@ AI 차량도 플레이어와 같은 `VehicleSimulation` 안에서 타이어 온�
 
 접촉 손상으로 성능 배율이 낮아지고 임계치 도달 시 차량이 퇴역한다. 피트 서비스 중에는 AI 입력을 물리에 전달하지 않으며, 서비스가 끝난 뒤 공통 물리 경계를 재개한다. 플래그·손상·피트 상태는 RaceSession 스냅샷으로만 UI에 전달한다.
 
+## Milestone 9 — AI field profiles
+
+AI field는 academy, club, pro, elite 프로필을 순환 배치한다. 프로필은 `cornerSpeedScale`, 오류 발생률, 오류 시간, throttle scale, steering bias와 AI별 정수 시드만 설정한다. 오류 이벤트는 LCG와 fixed-step 시간으로 결정되며 replay manifest와 RaceSession digest에 보존된다.
+
+프로필은 `VehicleControlInput`을 통해서만 효과를 낸다. 위치 순간이동, 숨은 그립·출력 보정, 연료 면제, 충돌 무시는 금지한다.
+
 ## 예정 계층
 
 1. 교육 트랙과 결정적 평가기 — M2A-0

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="archify 2.10.0">
-  <title>S1 Racing — Milestone 2B~5 Diagram</title>
+  <title>S1 Racing — Milestone 2B~9 Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
     // see a dark flash. The toolbar script below re-applies with UI state.
@@ -525,14 +525,14 @@
     <div class="header">
       <div class="header-row">
         <div class="pulse-dot"></div>
-        <h1>S1 Racing — Milestone 2B~5</h1>
+        <h1>S1 Racing — Milestone 2B~9</h1>
       </div>
-      <p class="subtitle">다차량 세션·타이어·레이스크래프트·운영·결정적 리플레이</p>
+      <p class="subtitle">다차량 세션·주말 포맷·셋업·연료·AI 필드·독립 리플레이</p>
     </div>
 
     <!-- Main Diagram -->
     <div class="diagram-container">
-      <svg viewBox="0 0 1810 912" role="img" aria-label="S1 Racing — Milestone 2B~5 — 다차량 세션·타이어·레이스크래프트·운영·결정적 리플레이 (architecture diagram)">
+      <svg viewBox="0 0 1810 1002" role="img" aria-label="S1 Racing — Milestone 2B~9 — 다차량 세션·주말 포맷·셋업·연료·AI 필드·독립 리플레이 (architecture diagram)">
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -556,10 +556,10 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect x="10" y="90" width="1760" height="754" rx="12" class="c-region" stroke-width="1"/>
+        <rect x="10" y="90" width="1760" height="844" rx="12" class="c-region" stroke-width="1"/>
         <text x="18" y="108" class="t-cloud" font-size="9" font-weight="600">브라우저 런타임</text>
 
-        <rect x="10" y="90" width="1760" height="754" rx="8" class="c-security-group" stroke-width="1"/>
+        <rect x="10" y="90" width="1760" height="844" rx="8" class="c-security-group" stroke-width="1"/>
         <text x="18" y="108" class="t-security" font-size="9" font-weight="600">순수 도메인 경계</text>
 
         <!-- Connection paths (before components for correct z-order) -->
@@ -638,6 +638,12 @@
         <path d="M 855 532 L 1024.5 532 Q 1032.5 532 1032.5 540 L 1032.5 736 Q 1032.5 744 1040.5 744 L 1210 744" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 870 392 L 987 392 Q 995 392 995 400 L 995 704 Q 995 712 1003 712 L 1120 712" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 870 392 L 1202 392 Q 1210 392 1210 400 L 1210 784 Q 1210 792 1218 792 L 1550 792" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 1645 824 L 1645 850" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 995 664 L 1094.5 664 Q 1102.5 664 1102.5 672 L 1102.5 752 Q 1102.5 760 1110.5 760 L 1210 760" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 1210 760 L 1108 760 Q 1100 760 1100 752 L 1100 352 Q 1100 344 1092 344 L 990 344" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path d="M 995 664 L 1204.5 664 Q 1212.5 664 1212.5 672 L 1212.5 752 Q 1212.5 760 1220.5 760 L 1430 760" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path d="M 1430 760 L 1113 760 Q 1105 760 1105 752 L 1105 432 Q 1105 424 1097 424 L 780 424" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path d="M 345 780 L 345 264" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path d="M 1090 632 L 1312 632 Q 1320 632 1320 640 L 1320 784 Q 1320 792 1328 792 L 1550 792" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path d="M 1550 792 L 1433 792 Q 1425 792 1425 784 L 1425 720 Q 1425 712 1417 712 L 1300 712" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path d="M 1550 792 L 998 792 Q 990 792 990 784 L 990 640 Q 990 632 982 632 L 430 632" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
@@ -686,8 +692,8 @@
         <rect x="690" y="360" width="180" height="64" rx="6" class="c-mask"/>
         <rect x="690" y="360" width="180" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
         <text x="780" y="390" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">다차량 레이스 세션</text>
-        <text x="780" y="406" class="t-muted" font-size="9" text-anchor="middle">랩·순위·타이어·racecraft·운영</text>
-        <text x="780" y="416" class="t-backend" font-size="7" text-anchor="middle">M2B~3D</text>
+        <text x="780" y="406" class="t-muted" font-size="9" text-anchor="middle">랩·순위·타이어·연료·racecraft·운영</text>
+        <text x="780" y="416" class="t-backend" font-size="7" text-anchor="middle">M2B~M9</text>
 
         <rect x="470" y="600" width="190" height="64" rx="6" class="c-mask"/>
         <rect x="470" y="600" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
@@ -698,8 +704,8 @@
         <rect x="900" y="600" width="190" height="64" rx="6" class="c-mask"/>
         <rect x="900" y="600" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
         <text x="995" y="630" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">레이스 주말 상태</text>
-        <text x="995" y="646" class="t-muted" font-size="9" text-anchor="middle">Practice·Qualifying·Race·전략 경계</text>
-        <text x="995" y="656" class="t-backend" font-size="7" text-anchor="middle">M2D~M5</text>
+        <text x="995" y="646" class="t-muted" font-size="9" text-anchor="middle">Practice·Qualifying·Sprint·Race·전략</text>
+        <text x="995" y="656" class="t-backend" font-size="7" text-anchor="middle">M2D~M8</text>
 
         <rect x="250" y="600" width="180" height="64" rx="6" class="c-mask"/>
         <rect x="250" y="600" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
@@ -870,14 +876,38 @@
         <rect x="1550" y="760" width="190" height="64" rx="6" class="c-mask"/>
         <rect x="1550" y="760" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
         <text x="1645" y="790" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">결정적 리플레이 코어</text>
-        <text x="1645" y="806" class="t-muted" font-size="9" text-anchor="middle">120Hz 입력 기록·digest 재생·JSON v1</text>
-        <text x="1645" y="816" class="t-backend" font-size="7" text-anchor="middle">M5</text>
+        <text x="1645" y="806" class="t-muted" font-size="9" text-anchor="middle">120Hz 입력·manifest·독립 재생·JSON v2</text>
+        <text x="1645" y="816" class="t-backend" font-size="7" text-anchor="middle">M5~M6</text>
+
+        <rect x="1550" y="850" width="190" height="64" rx="6" class="c-mask"/>
+        <rect x="1550" y="850" width="190" height="64" rx="6" class="c-database" stroke-width="1.5"/>
+        <text x="1645" y="880" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Replay Manifest</text>
+        <text x="1645" y="896" class="t-muted" font-size="9" text-anchor="middle">트랙·grid·타이어·셋업·연료·시드</text>
+        <text x="1645" y="906" class="t-database" font-size="7" text-anchor="middle">M6</text>
+
+        <rect x="1120" y="760" width="180" height="64" rx="6" class="c-mask"/>
+        <rect x="1120" y="760" width="180" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+        <text x="1210" y="790" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">공개 차량 셋업</text>
+        <text x="1210" y="806" class="t-muted" font-size="9" text-anchor="middle">공력 그립·출력·브레이크 프리셋</text>
+        <text x="1210" y="816" class="t-backend" font-size="7" text-anchor="middle">M8</text>
+
+        <rect x="1340" y="760" width="180" height="64" rx="6" class="c-mask"/>
+        <rect x="1340" y="760" width="180" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+        <text x="1430" y="790" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">연료 운영</text>
+        <text x="1430" y="806" class="t-muted" font-size="9" text-anchor="middle">소모·구동 제한·피트 재급유</text>
+        <text x="1430" y="816" class="t-backend" font-size="7" text-anchor="middle">M8</text>
+
+        <rect x="250" y="780" width="190" height="64" rx="6" class="c-mask"/>
+        <rect x="250" y="780" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+        <text x="345" y="810" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">AI Field Profile</text>
+        <text x="345" y="826" class="t-muted" font-size="9" text-anchor="middle">실력·일관성·결정적 입력 오류</text>
+        <text x="345" y="836" class="t-backend" font-size="7" text-anchor="middle">M9</text>
 
         <rect x="690" y="500" width="165" height="64" rx="6" class="c-mask"/>
         <rect x="690" y="500" width="165" height="64" rx="6" class="c-cloud" stroke-width="1.5"/>
         <text x="772.5" y="530" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">검증 하네스</text>
         <text x="772.5" y="546" class="t-muted" font-size="9" text-anchor="middle">Vitest + Playwright + 코드·최적화 리뷰</text>
-        <text x="772.5" y="556" class="t-cloud" font-size="7" text-anchor="middle">M1F~M6</text>
+        <text x="772.5" y="556" class="t-cloud" font-size="7" text-anchor="middle">M1F~M9</text>
 
         <rect x="900" y="500" width="160" height="64" rx="6" class="c-mask"/>
         <rect x="900" y="500" width="160" height="64" rx="6" class="c-cloud" stroke-width="1.5"/>
@@ -1033,8 +1063,20 @@
         <text x="940" y="690" class="t-messagebus" font-size="8" text-anchor="middle">동일 입력 리플레이</text>
         <rect x="884.6" y="668" width="110.8" height="14" rx="3" class="c-mask"/>
         <text x="940" y="678" class="t-messagebus" font-size="8" text-anchor="middle">물리·전략·운영 스냅샷</text>
-        <rect x="1385" y="750" width="130" height="14" rx="3" class="c-mask"/>
-        <text x="1450" y="760" class="t-security" font-size="8" text-anchor="middle">fixed-step 입력·상태 기록</text>
+        <rect x="1385" y="828" width="130" height="14" rx="3" class="c-mask"/>
+        <text x="1450" y="838" class="t-security" font-size="8" text-anchor="middle">fixed-step 입력·상태 기록</text>
+        <rect x="1589.6" y="828" width="110.8" height="14" rx="3" class="c-mask"/>
+        <text x="1645" y="838" class="t-security" font-size="8" text-anchor="middle">독립 실행 전제·digest</text>
+        <rect x="1046.4" y="748" width="77.2" height="14" rx="3" class="c-mask"/>
+        <text x="1085" y="758" class="t-security" font-size="8" text-anchor="middle">공개 셋업 선택</text>
+        <rect x="1059.4" y="486" width="101.2" height="14" rx="3" class="c-mask"/>
+        <text x="1110" y="496" class="t-backend" font-size="8" text-anchor="middle">공력·출력·제동 배율</text>
+        <rect x="1169.4" y="748" width="101.2" height="14" rx="3" class="c-mask"/>
+        <text x="1220" y="758" class="t-security" font-size="8" text-anchor="middle">시작·피트 연료 계획</text>
+        <rect x="1064.6" y="486" width="110.8" height="14" rx="3" class="c-mask"/>
+        <text x="1120" y="496" class="t-backend" font-size="8" text-anchor="middle">차량별 소비·구동 제한</text>
+        <rect x="289.6" y="488" width="110.8" height="14" rx="3" class="c-mask"/>
+        <text x="345" y="498" class="t-security" font-size="8" text-anchor="middle">프로필·시드·입력 오류</text>
         <rect x="1250.2" y="748" width="139.6" height="14" rx="3" class="c-mask"/>
         <text x="1320" y="758" class="t-messagebus" font-size="8" text-anchor="middle">Race Weekend recording 상태</text>
         <rect x="1371.8" y="690" width="96.39999999999999" height="14" rx="3" class="c-mask"/>
@@ -1045,19 +1087,19 @@
         <text x="975" y="578" class="t-messagebus" font-size="8" text-anchor="middle">계약 적용</text>
 
         <!-- Legend -->
-        <text x="40" y="883" class="t-primary" font-size="9" font-weight="600">Legend</text>
-        <rect x="40" y="888" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
-        <text x="60" y="896" class="t-muted" font-size="8">External</text>
-        <rect x="138" y="888" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
-        <text x="158" y="896" class="t-muted" font-size="8">Frontend</text>
-        <rect x="236" y="888" width="14" height="9" rx="2" class="c-messagebus" stroke-width="1"/>
-        <text x="256" y="896" class="t-muted" font-size="8">Message bus</text>
-        <rect x="349" y="888" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
-        <text x="369" y="896" class="t-muted" font-size="8">Backend</text>
-        <rect x="442" y="888" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
-        <text x="462" y="896" class="t-muted" font-size="8">Database</text>
-        <rect x="540" y="888" width="14" height="9" rx="2" class="c-cloud" stroke-width="1"/>
-        <text x="560" y="896" class="t-muted" font-size="8">Cloud</text>
+        <text x="40" y="973" class="t-primary" font-size="9" font-weight="600">Legend</text>
+        <rect x="40" y="978" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
+        <text x="60" y="986" class="t-muted" font-size="8">External</text>
+        <rect x="138" y="978" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
+        <text x="158" y="986" class="t-muted" font-size="8">Frontend</text>
+        <rect x="236" y="978" width="14" height="9" rx="2" class="c-messagebus" stroke-width="1"/>
+        <text x="256" y="986" class="t-muted" font-size="8">Message bus</text>
+        <rect x="349" y="978" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
+        <text x="369" y="986" class="t-muted" font-size="8">Backend</text>
+        <rect x="442" y="978" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
+        <text x="462" y="986" class="t-muted" font-size="8">Database</text>
+        <rect x="540" y="978" width="14" height="9" rx="2" class="c-cloud" stroke-width="1"/>
+        <text x="560" y="986" class="t-muted" font-size="8">Cloud</text>
       </svg>
     </div>
 
@@ -1066,12 +1108,12 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Milestone 2B~5</h3>
+          <h3>Milestone 2B~9</h3>
         </div>
         <ul>
-          <li>&bull; 다차량 그리드·퀄리파잉·주말 운영</li>
-          <li>&bull; Rapier 차체 충돌·실제 피트 레인·규정</li>
-          <li>&bull; 120Hz 입력·digest 리플레이 JSON</li>
+          <li>&bull; 다차량 그리드·퀄리파잉·스프린트 주말</li>
+          <li>&bull; 공개 셋업·연료·AI 필드 프로필</li>
+          <li>&bull; 120Hz 입력·manifest·독립 리플레이 JSON</li>
         </ul>
       </div>
 
@@ -1093,9 +1135,9 @@
           <h3>다음 경계</h3>
         </div>
         <ul>
-          <li>&bull; 독립 replay manifest·검증 도구</li>
-          <li>&bull; 연료·DRS·KERS·날씨 중 선택</li>
-          <li>&bull; 온라인 동기화와 콘텐츠 확장</li>
+          <li>&bull; DRS·ERS·날씨의 별도 규칙 모듈</li>
+          <li>&bull; 온라인 동기화와 권한 경계</li>
+          <li>&bull; 멀티 트랙·차량·장기 시즌 콘텐츠</li>
         </ul>
       </div>
     </div>

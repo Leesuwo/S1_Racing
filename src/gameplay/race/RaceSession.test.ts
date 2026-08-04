@@ -16,6 +16,22 @@ describe("RaceSession", () => {
     expect(new Set(positions).size).toBe(6);
     expect(grid[0]?.kind).toBe("player");
     expect(grid.slice(1).every((participant) => participant.kind === "ai")).toBe(true);
+    expect(new Set(grid.slice(1).map((participant) => participant.aiProfileId)).size).toBe(5);
+  });
+
+  it("applies public setup and fuel state through the shared race simulation", () => {
+    const session = new RaceSession(createRaceGrid(undefined, 2), undefined, 1, 240, undefined, {
+      vehicleSetupId: "low-downforce",
+      fuelPlan: { startFuelKg: 0.25, pitRefuelKg: 0, fullThrottleConsumptionKgPerSecond: 0.2 },
+    });
+    session.start();
+    let snapshot = session.getSnapshot();
+    for (let step = 0; step < 240; step += 1) snapshot = session.step({ ...neutralVehicleControlInput(), throttle: 1 });
+
+    expect(snapshot.vehicleSetupId).toBe("low-downforce");
+    const player = snapshot.standings.find((participant) => participant.kind === "player");
+    expect(player?.fuel.remainingFuelKg).toBe(0);
+    expect(player?.fuel.engineLimited).toBe(true);
   });
 
   it("reproduces standings and finite fixed-step metrics for the same inputs", () => {

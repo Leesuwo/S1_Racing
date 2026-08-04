@@ -40,6 +40,16 @@ export interface SingleOpponentAIConfig {
   upshiftRpm: number;
   downshiftRpm: number;
   shiftCooldownSeconds: number;
+  /** 분당 입력 오류 발생 횟수의 initial_assumption이다. 0이면 오류를 만들지 않는다. */
+  mistakeRatePerMinute?: number;
+  /** 한 번의 오류가 스로틀·조향에 남는 시간(s)이다. */
+  mistakeDurationSeconds?: number;
+  /** 오류 중 목표 스로틀에 곱하는 배율이다. */
+  mistakeThrottleScale?: number;
+  /** 오류 중 추가하는 조향 편향의 최대 절댓값이다. */
+  mistakeSteeringBias?: number;
+  /** 같은 grid에서 동일한 오류 시퀀스를 재현하는 정수 시드다. */
+  randomSeed?: number;
 }
 
 /** 현재 차량 상태에서 선택한 레이싱 라인 목표와 제동 미리보기다. */
@@ -79,6 +89,11 @@ export const DEFAULT_SINGLE_OPPONENT_AI_CONFIG: SingleOpponentAIConfig = {
   upshiftRpm: 16_500,
   downshiftRpm: 5_000,
   shiftCooldownSeconds: 0.25,
+  mistakeRatePerMinute: 1.2,
+  mistakeDurationSeconds: 0.42,
+  mistakeThrottleScale: 0.82,
+  mistakeSteeringBias: 0.1,
+  randomSeed: 1,
 };
 
 /** 입력 제어값을 허용 범위로 제한해 NaN이 아닌 유한한 명령을 유지한다. */
@@ -145,11 +160,21 @@ export class SingleOpponentAI {
   private readonly segmentLengths: readonly number[];
   // 변속 입력을 한 step만 내보내기 위해 유지하는 남은 쿨다운(s)이다.
   private shiftCooldownSeconds = 0;
+  /** 오류가 남아 있는 시간(s)이다. 오류도 fixed-step 상태로 관리해 replay를 보존한다. */
+  private mistakeRemainingSeconds = 0;
+  /** 현재 오류가 요구하는 좌·우 조향 편향이다. */
+  private mistakeSteeringOffset = 0;
+  /** 외부 난수원 없이 AI별 시드에서만 진행하는 LCG 상태다. */
+  private randomState: number;
+  /** 기본값과 부분 프로필을 결합한 실제 제어 설정이다. */
+  private readonly config: Required<SingleOpponentAIConfig>;
 
   constructor(
     private readonly track: TestTrackDefinition = TEST_TRACK_DATA,
-    private readonly config: SingleOpponentAIConfig = DEFAULT_SINGLE_OPPONENT_AI_CONFIG,
+    config: Partial<SingleOpponentAIConfig> = DEFAULT_SINGLE_OPPONENT_AI_CONFIG,
   ) {
+    this.config = { ...DEFAULT_SINGLE_OPPONENT_AI_CONFIG, ...config } as Required<SingleOpponentAIConfig>;
+    this.randomState = this.config.randomSeed >>> 0;
     this.segmentLengths = track.racingLine.map((point, index) => (
       distanceBetween(point.position, track.racingLine[(index + 1) % track.racingLine.length].position)
     ));
@@ -158,6 +183,17 @@ export class SingleOpponentAI {
   /** 변속 쿨다운을 초기화하여 리셋 후 동일한 입력 시퀀스를 재현한다. */
   reset(): void {
     this.shiftCooldownSeconds = 0;
+    this.mistakeRemainingSeconds = 0;
+    this.mistakeSteeringOffset = 0;
+    this.randomState = this.config.randomSeed >>> 0;
+  }
+
+  /** HUD·AI 필드가 입력 보정 상태만 관찰할 수 있게 하는 읽기 전용 스냅샷이다. */
+  getControlSnapshot(): { mistakeRemainingSeconds: number; mistakeActive: boolean } {
+    return {
+      mistakeRemainingSeconds: this.mistakeRemainingSeconds,
+      mistakeActive: this.mistakeRemainingSeconds > 0,
+    };
   }
 
   /** 현재 상태에서 조향 목표와 코너 진입 전 속도 미리보기를 계산한다. */
@@ -222,6 +258,7 @@ export class SingleOpponentAI {
     // 잘못된 프레임 dt를 고정 120Hz 간격으로 대체해 상태 전이를 유한하게 유지한다.
     const safeDtSeconds = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : 1 / 120;
     this.shiftCooldownSeconds = Math.max(0, this.shiftCooldownSeconds - safeDtSeconds);
+    this.stepMistakeState(safeDtSeconds);
     // 현재 차량 상태에서 계산한 조향·속도 제어 목표다.
     const target = this.getTarget(state);
     // 목표점까지의 평면 오차(m)이며 프로젝트 좌표계의 x/z 성분이다.
@@ -250,7 +287,7 @@ export class SingleOpponentAI {
         + bodySlipAngleRad * this.config.slipRecoverySteeringGain,
       -1,
       1,
-    ) + (racecraft?.steeringBias ?? 0);
+    ) + (racecraft?.steeringBias ?? 0) + this.mistakeSteeringOffset;
     const racecraftSteering = clamp(
       steering,
       -1,
@@ -291,7 +328,10 @@ export class SingleOpponentAI {
         0,
         1,
       );
-    const throttle = requestedThrottle * slipThrottleScale * (racecraft?.throttleScale ?? 1);
+    const throttle = requestedThrottle
+      * slipThrottleScale
+      * (racecraft?.throttleScale ?? 1)
+      * (this.mistakeRemainingSeconds > 0 ? this.config.mistakeThrottleScale : 1);
     // RPM과 현재 기어에 따른 one-shot 변속 상승·하강 요청이다.
     const shiftUp = this.shiftCooldownSeconds <= 0
       && state.rpm >= this.config.upshiftRpm
@@ -330,6 +370,26 @@ export class SingleOpponentAI {
     if (curvatureRadPerM < 0.02) return Number.POSITIVE_INFINITY;
     // 12 m/s²는 현재 initial_assumption 물리에서 코너 안정성을 우선하는 시작값이다.
     return Math.sqrt(12 / curvatureRadPerM) * this.config.cornerSpeedScale;
+  }
+
+  /** LCG 한 단계로 플랫폼별 Math.random 차이 없이 [0, 1) 값을 만든다. */
+  private nextRandom(): number {
+    this.randomState = (Math.imul(1_664_525, this.randomState) + 1_013_904_223) >>> 0;
+    return this.randomState / 4_294_967_296;
+  }
+
+  /** 분당 오류율을 fixed-step 확률로 변환하고, 활성 오류는 짧은 입력 편향으로만 유지한다. */
+  private stepMistakeState(dtSeconds: number): void {
+    if (this.mistakeRemainingSeconds > 0) {
+      this.mistakeRemainingSeconds = Math.max(0, this.mistakeRemainingSeconds - dtSeconds);
+      if (this.mistakeRemainingSeconds === 0) this.mistakeSteeringOffset = 0;
+      return;
+    }
+    const probability = Math.max(0, this.config.mistakeRatePerMinute) / 60 * dtSeconds;
+    if (this.nextRandom() >= probability) return;
+    this.mistakeRemainingSeconds = Math.max(0, this.config.mistakeDurationSeconds);
+    const direction = this.nextRandom() < 0.5 ? -1 : 1;
+    this.mistakeSteeringOffset = direction * Math.max(0, this.config.mistakeSteeringBias);
   }
 
   /** 현재 차량 위치와 유클리드 거리가 가장 작은 레이싱 라인 점을 선택한다. */

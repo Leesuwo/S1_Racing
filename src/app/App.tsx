@@ -37,9 +37,12 @@ import {
 import {
   RaceWeekendSession,
   type RaceStrategy,
+  type RaceWeekendFormat,
   type RaceWeekendSnapshot,
   type TyreCompound,
 } from "../gameplay/race/RaceWeekendSession";
+import type { VehicleSetupPresetId } from "../game/physics/VehicleSetup";
+import type { RaceFuelPlan } from "../gameplay/race/RaceFuel";
 import { parseRaceReplay, serializeRaceReplay } from "../gameplay/race/RaceReplay";
 import type { DrivingCameraView } from "./DrivingScene";
 
@@ -120,6 +123,7 @@ function trainingStatusLabel(status: AITrainingSnapshot["status"]): string {
 function weekendStatusLabel(snapshot: RaceWeekendSnapshot): string {
   if (snapshot.stage === "practice") return "연습 준비";
   if (snapshot.stage === "qualifying") return snapshot.status === "complete" ? "퀄리파잉 완료" : "퀄리파잉 진행";
+  if (snapshot.stage === "sprint") return "스프린트 진행 중";
   if (snapshot.stage === "race") return snapshot.status === "running" ? "레이스 진행 중" : "레이스 대기";
   return "결과 확인";
 }
@@ -506,7 +510,7 @@ export function App() {
       completedSnapshot: AITrainingSnapshot;
     }) | null
   >(null);
-  // M2B~M3D 세션은 React 렌더와 분리된 하나의 mutable owner로 유지한다.
+  // M2B~M9 세션은 React 렌더와 분리된 하나의 mutable owner로 유지한다.
   const raceWeekendSession = useMemo(() => new RaceWeekendSession(), []);
   // 주말 패널은 세션 내부 객체가 아니라 복사된 스냅샷만 구독한다.
   const [raceWeekendSnapshot, setRaceWeekendSnapshot] = useState<RaceWeekendSnapshot>(
@@ -626,6 +630,24 @@ export function App() {
     setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
   }, [raceWeekendSession]);
 
+  // M7 포맷 선택은 아직 Practice일 때만 허용해 완료된 세션의 grid·replay 전제를 바꾸지 않는다.
+  const updateWeekendFormat = useCallback((format: RaceWeekendFormat) => {
+    raceWeekendSession.setFormat(format);
+    setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
+  }, [raceWeekendSession]);
+
+  // M8 셋업은 VehicleSimulation의 입력·그립 배율로 전달되며, 실제 레이스 시작 뒤에는 잠긴다.
+  const updateWeekendVehicleSetup = useCallback((setupId: VehicleSetupPresetId) => {
+    raceWeekendSession.setVehicleSetup(setupId);
+    setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
+  }, [raceWeekendSession]);
+
+  // M8 연료 선택은 피트 재급유 계획과 함께 manifest에 들어가므로 세션 생성 전만 갱신한다.
+  const updateWeekendFuelPlan = useCallback((fuelPlan: RaceFuelPlan) => {
+    raceWeekendSession.setFuelPlan(fuelPlan);
+    setRaceWeekendSnapshot(raceWeekendSession.getSnapshot());
+  }, [raceWeekendSession]);
+
   // 퀄리파잉 결과가 확정된 뒤 순서를 레이스 그리드에 반영한다.
   const startWeekendRace = useCallback(() => {
     setRaceReplayError(null);
@@ -703,7 +725,7 @@ export function App() {
             {trainingMode
               ? "S1 RACING / M2A-0 · AI TRAINING LAB"
               : weekendMode
-                ? "S1 RACING / M2B → M3D · RACE WEEKEND"
+                ? "S1 RACING / M2B → M9 · RACE WEEKEND"
                 : designMode
                   ? "S1 RACING / DESIGN REVIEW · RB8 FORM STUDY"
                 : "S1 RACING / MILESTONE 2A · 단일 AI 상대"}
@@ -932,6 +954,9 @@ export function App() {
           onReset={resetWeekend}
           onSelectTyre={selectWeekendTyre}
           onStrategy={updateWeekendStrategy}
+          onFormat={updateWeekendFormat}
+          onVehicleSetup={updateWeekendVehicleSetup}
+          onFuelPlan={updateWeekendFuelPlan}
           onSaveReplay={saveWeekendReplay}
           onLoadReplay={loadWeekendReplay}
           replayError={raceReplayError}

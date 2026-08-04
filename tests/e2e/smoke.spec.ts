@@ -320,7 +320,7 @@ test("shows M3B to M3D tyre, racecraft, and race-operations state", async ({ pag
   await expect(page.getByText(/FOLLOW|ATTACK|DEFEND|AVOID/).first()).toBeVisible();
 });
 
-test("starts deterministic replay recording when the visible race begins", async ({ page }) => {
+test("starts manifest-backed deterministic replay recording when the visible race begins", async ({ page }) => {
   await page.goto("/");
   await openRaceWeekend(page);
   await page.getByRole("button", { name: "퀄리파잉 실행" }).click();
@@ -331,7 +331,26 @@ test("starts deterministic replay recording when the visible race begins", async
   await expect(page.locator(".weekend-stage")).toHaveText("레이스 진행 중");
   await expect(page.getByRole("button", { name: "주말 리셋" })).toBeVisible();
   await expect(page.getByText("현재 레이스 순위", { exact: true })).toBeVisible();
-  await expect(page.getByText("M5 · DETERMINISTIC REPLAY", { exact: true })).toBeVisible();
+  await expect(page.getByText("M6 · REPLAY MANIFEST + DETERMINISTIC REPLAY", { exact: true })).toBeVisible();
   await expect(page.locator(".weekend-replay strong")).toHaveText("RECORDING");
   await expect(page.locator(".weekend-replay em")).toHaveText(/0 frames · 120 Hz|[1-9]\d* frames · 120 Hz/u);
+});
+
+test("configures sprint format, public setup, and fuel before the sprint begins", async ({ page }) => {
+  await page.goto("/");
+  await openRaceWeekend(page);
+
+  await expect(page.getByText("M7 · 세션 정의", { exact: true })).toBeVisible();
+  await expect(page.getByText("M8 · 셋업·연료", { exact: true })).toBeVisible();
+  await expect(page.getByText("M9 · AI FIELD", { exact: true })).toBeVisible();
+  await page.getByLabel("주말 포맷").selectOption("sprint");
+  await page.getByLabel("차량 셋업").selectOption("high-downforce");
+  await page.getByLabel("시작 연료").selectOption("7");
+  await page.getByLabel("피트 재급유").selectOption("3");
+  await page.getByRole("button", { name: "퀄리파잉 실행" }).click();
+  await page.getByRole("button", { name: "스프린트 시작" }).click();
+
+  await expect(page.locator("header").getByText("스프린트 진행 중", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("주말 포맷")).toBeDisabled();
+  await expect(page.getByLabel("차량 셋업")).toBeDisabled();
 });

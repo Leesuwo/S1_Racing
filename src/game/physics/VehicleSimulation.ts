@@ -30,6 +30,12 @@ import {
   type TyreConditionState,
   type TyreConditionSnapshot,
 } from "./TyreCondition";
+import {
+  DEFAULT_VEHICLE_SETUP,
+  getVehicleSetup,
+  type VehicleSetup,
+  type VehicleSetupPresetId,
+} from "./VehicleSetup";
 
 /** 렌더러가 보간해 표시할 차량 평면 상태의 읽기 전용 스냅샷이다. */
 export interface VehicleRenderSnapshot {
@@ -124,6 +130,8 @@ export class VehicleSimulation {
   private previous: VehicleState;
   /** 타이어 열화 상태는 차량 물리와 함께 fixed-step으로 갱신한다. */
   private tyreCondition: TyreConditionState;
+  /** 레이스 주말이 선택한 제한형 셋업이며 AI와 플레이어에 같은 물리 경계를 적용한다. */
+  private vehicleSetup: VehicleSetup = { ...DEFAULT_VEHICLE_SETUP };
   /** 손상으로 인한 그립 저하는 레이스 세션이 설정하는 읽기 전용 배율이다. */
   private damagePerformanceMultiplier = 1;
   /** 각 바퀴의 화면 회전량이며 물리 위치·속도와 별도로 렌더러에 전달한다. */
@@ -163,6 +171,12 @@ export class VehicleSimulation {
 
     // 차량 위치에서 노면을 샘플링해 동일한 입력이 표면별 그립을 받게 한다.
     const surface = sampleTrackSurface(this.current.position, this.track);
+    // 셋업은 입력·그립 배율만 조정하며 차량 위치나 힘을 외부에서 직접 쓰지 않는다.
+    const setupInput: VehicleControlInput = {
+      ...input,
+      throttle: Math.max(0, Math.min(1, input.throttle * this.vehicleSetup.enginePowerMultiplier)),
+      brake: Math.max(0, Math.min(1, input.brake * this.vehicleSetup.brakePressureMultiplier)),
+    };
     // 실제 슬립각을 별도 타이어 힘 계산기에서 재사용하지 않고, 현재 차량 축 속도와 입력으로
     // 열화 스트레스를 추정해 물리 계층을 순수 상태로 유지한다.
     this.tyreCondition = stepTyreCondition(this.tyreCondition, {
@@ -170,17 +184,18 @@ export class VehicleSimulation {
       speedMps: this.current.speedMps,
       forwardSpeedMps: this.current.forwardSpeedMps,
       lateralSpeedMps: this.current.lateralSpeedMps,
-      throttleInput: input.throttle,
-      brakeInput: input.brake,
+      throttleInput: setupInput.throttle,
+      brakeInput: setupInput.brake,
       steeringInput: input.steering,
       surfaceGripMultiplier: surface.gripMultiplier,
     });
     const tyreCondition = getTyreConditionSnapshot(this.tyreCondition);
-    stepVehicle(this.current, input, dt, this.config, {
+    stepVehicle(this.current, setupInput, dt, this.config, {
       ...surface,
       gripMultiplier: surface.gripMultiplier
         * tyreCondition.gripMultiplier
-        * this.damagePerformanceMultiplier,
+        * this.damagePerformanceMultiplier
+        * this.vehicleSetup.aeroGripMultiplier,
     });
     // Rapier가 없는 AI 교육·순수 단위 테스트에서도 속도에 비례한 바퀴 회전을 제공한다.
     this.advanceFallbackWheelSpin(dt);
@@ -194,6 +209,16 @@ export class VehicleSimulation {
     this.damagePerformanceMultiplier = 1;
     this.wheelSpinRad = zeroWheelValues();
     this.lastFallbackWheelSpinDeltaRad = zeroWheelValues();
+  }
+
+  /** 레이스 시작 전 선택한 프리셋을 복사해 이후 UI 객체 변경과 물리 상태를 분리한다. */
+  setVehicleSetup(id: VehicleSetupPresetId): void {
+    this.vehicleSetup = getVehicleSetup(id);
+  }
+
+  /** 현재 물리 입력에 반영 중인 셋업의 읽기 전용 복사본이다. */
+  getVehicleSetup(): VehicleSetup {
+    return { ...this.vehicleSetup };
   }
 
   /** 피트 정지나 전략 전환에서 타이어 세트를 새 컴파운드로 교체한다. */

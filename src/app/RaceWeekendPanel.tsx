@@ -1,5 +1,5 @@
 /**
- * M2B~M5의 레이스 주말 단계·전략·운영·결정적 리플레이 UI다.
+ * M2B~M9의 레이스 주말 단계·포맷·셋업·연료·AI 필드·독립 리플레이 UI다.
  * 세션을 직접 변경하지 않고 앱 셸이 제공한 명령 콜백만 호출한다.
  */
 import type {
@@ -8,11 +8,16 @@ import type {
   TyreCompound,
 } from "../gameplay/race/RaceWeekendSession";
 import { TYRE_COMPOUNDS } from "../gameplay/race/RaceWeekendSession";
+import { VEHICLE_SETUP_PRESETS, type VehicleSetupPresetId } from "../game/physics/VehicleSetup";
+import type { RaceFuelPlan } from "../gameplay/race/RaceFuel";
+import type { RaceWeekendFormat } from "../gameplay/race/RaceWeekendSession";
 
 /** 주말 단계의 사용자 표시명이다. */
 function stageLabel(snapshot: RaceWeekendSnapshot): string {
   if (snapshot.stage === "practice") return "연습 준비";
   if (snapshot.stage === "qualifying") return snapshot.status === "complete" ? "퀄리파잉 완료" : "퀄리파잉 진행";
+  if (snapshot.stage === "sprint") return "스프린트 진행 중";
+  if (snapshot.stage === "race" && snapshot.status === "ready") return "메인 레이스 대기";
   if (snapshot.stage === "race") return "레이스 진행 중";
   return "레이스 결과";
 }
@@ -38,12 +43,15 @@ export interface RaceWeekendPanelProps {
   onReset: () => void;
   onSelectTyre: (compound: TyreCompound) => void;
   onStrategy: (strategy: RaceStrategy) => void;
+  onFormat: (format: RaceWeekendFormat) => void;
+  onVehicleSetup: (setupId: VehicleSetupPresetId) => void;
+  onFuelPlan: (fuelPlan: RaceFuelPlan) => void;
   onSaveReplay: () => void;
   onLoadReplay: (file: File) => void;
   replayError: string | null;
 }
 
-/** M2B~M3D의 다차량·퀄리파잉·전략·주행 운영 상태를 한 화면에 표시한다. */
+/** M2B~M9의 다차량·퀄리파잉·주말 포맷·운영 상태를 한 화면에 표시한다. */
 export function RaceWeekendPanel({
   snapshot,
   onRunQualifying,
@@ -51,12 +59,21 @@ export function RaceWeekendPanel({
   onReset,
   onSelectTyre,
   onStrategy,
+  onFormat,
+  onVehicleSetup,
+  onFuelPlan,
   onSaveReplay,
   onLoadReplay,
   replayError,
 }: RaceWeekendPanelProps) {
   const qualifyingComplete = snapshot.qualifying.status === "complete";
-  const raceStarted = snapshot.stage === "race" || snapshot.stage === "results";
+  const raceStarted = snapshot.stage === "sprint" || (snapshot.stage === "race" && snapshot.status === "running") || snapshot.stage === "results";
+  const raceLocked = snapshot.stage === "sprint" || snapshot.stage === "race" || snapshot.stage === "results";
+  const nextRaceLabel = snapshot.format === "sprint" && !snapshot.sprintCompleted
+    ? "스프린트 시작"
+    : snapshot.format === "sprint" && snapshot.sprintCompleted
+      ? "메인 레이스 시작"
+      : "레이스 시작";
   const pitCompounds = TYRE_COMPOUNDS.filter((compound) => compound !== snapshot.strategy.startCompound);
   const player = snapshot.race.standings.find((participant) => participant.kind === "player");
   const tyre = player?.tyreCondition;
@@ -67,7 +84,7 @@ export function RaceWeekendPanel({
     <section className="weekend-dashboard" aria-label="레이스 주말 관리">
       <div className="weekend-dashboard__header">
         <div>
-          <span className="section-kicker">M2B / M2C / M2D / M3B / M3C / M3D · RACE WEEKEND CONTROL</span>
+          <span className="section-kicker">M2B → M9 · RACE WEEKEND CONTROL</span>
           <h2>레이스 주말을 운영하십시오</h2>
         </div>
         <span className="weekend-stage" aria-label="레이스 주말 단계">{stageLabel(snapshot)}</span>
@@ -124,14 +141,29 @@ export function RaceWeekendPanel({
           <strong>{snapshot.race.regulations.raceControl.toUpperCase()}</strong>
           <em>시간 패널티 {snapshot.race.regulations.totalTimePenaltySeconds.toFixed(1)} s · 청색기 포함</em>
         </article>
+        <article className="weekend-summary-card weekend-summary-card--m7">
+          <span>M7 · 세션 정의</span>
+          <strong>{snapshot.format === "sprint" ? "SPRINT WEEKEND" : "GRAND PRIX"}</strong>
+          <em>{snapshot.sprintCompleted ? "스프린트 그리드 확정" : snapshot.format === "sprint" ? "퀄리파잉 → 스프린트 → 메인 레이스" : "퀄리파잉 → 메인 레이스"}</em>
+        </article>
+        <article className="weekend-summary-card weekend-summary-card--m8">
+          <span>M8 · 셋업·연료</span>
+          <strong>{snapshot.vehicleSetup.label}</strong>
+          <em>{snapshot.fuelPlan.startFuelKg.toFixed(1)} kg 시작 · 피트 +{snapshot.fuelPlan.pitRefuelKg.toFixed(1)} kg</em>
+        </article>
+        <article className="weekend-summary-card weekend-summary-card--m9">
+          <span>M9 · AI FIELD</span>
+          <strong>{snapshot.race.standings.filter((participant) => participant.kind === "ai").length} PROFILES</strong>
+          <em>{snapshot.race.standings.filter((participant) => participant.aiMistakeRemainingSeconds && participant.aiMistakeRemainingSeconds > 0).length}대 입력 오류 보정 중</em>
+        </article>
       </div>
 
       <div className="weekend-controls" aria-label="레이스 주말 조작">
         <button type="button" className="training-button training-button--primary" onClick={onRunQualifying} disabled={raceStarted}>
           퀄리파잉 실행
         </button>
-        <button type="button" className="training-button" onClick={onStartRace} disabled={!qualifyingComplete || raceStarted}>
-          레이스 시작
+        <button type="button" className="training-button" onClick={onStartRace} disabled={!qualifyingComplete || raceStarted || snapshot.stage === "results"}>
+          {nextRaceLabel}
         </button>
         <button type="button" className="training-button training-button--quiet" onClick={onReset}>
           주말 리셋
@@ -140,7 +172,7 @@ export function RaceWeekendPanel({
 
       <section className="weekend-replay" aria-label="결정적 리플레이">
         <div>
-          <span className="section-kicker">M5 · DETERMINISTIC REPLAY</span>
+          <span className="section-kicker">M6 · REPLAY MANIFEST + DETERMINISTIC REPLAY</span>
           <strong>{snapshot.replay.status.toUpperCase()}</strong>
           <em>
             {snapshot.replay.frameCount} frames · {snapshot.replay.fixedStepHz} Hz
@@ -178,11 +210,56 @@ export function RaceWeekendPanel({
 
       <div className="weekend-strategy" aria-label="타이어 및 피트 전략">
         <label>
+          <span>주말 포맷</span>
+          <select
+            aria-label="주말 포맷"
+            value={snapshot.format}
+            disabled={snapshot.stage !== "practice"}
+            onChange={(event) => onFormat(event.target.value as RaceWeekendFormat)}
+          >
+            <option value="grand-prix">GRAND PRIX</option>
+            <option value="sprint">SPRINT</option>
+          </select>
+        </label>
+        <label>
+          <span>차량 셋업</span>
+          <select
+            aria-label="차량 셋업"
+            value={snapshot.vehicleSetup.id}
+            disabled={raceLocked}
+            onChange={(event) => onVehicleSetup(event.target.value as VehicleSetupPresetId)}
+          >
+            {VEHICLE_SETUP_PRESETS.map((setup) => <option key={setup.id} value={setup.id}>{setup.label}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>시작 연료</span>
+          <select
+            aria-label="시작 연료"
+            value={snapshot.fuelPlan.startFuelKg}
+            disabled={raceLocked}
+            onChange={(event) => onFuelPlan({ ...snapshot.fuelPlan, startFuelKg: Number(event.target.value) })}
+          >
+            {[3, 5, 7, 9].map((fuelKg) => <option key={fuelKg} value={fuelKg}>{fuelKg.toFixed(1)} kg</option>)}
+          </select>
+        </label>
+        <label>
+          <span>피트 재급유</span>
+          <select
+            aria-label="피트 재급유"
+            value={snapshot.fuelPlan.pitRefuelKg}
+            disabled={raceLocked}
+            onChange={(event) => onFuelPlan({ ...snapshot.fuelPlan, pitRefuelKg: Number(event.target.value) })}
+          >
+            {[0, 1.5, 3].map((fuelKg) => <option key={fuelKg} value={fuelKg}>+{fuelKg.toFixed(1)} kg</option>)}
+          </select>
+        </label>
+        <label>
           <span>타이어 선택</span>
           <select
             aria-label="타이어 선택"
             value={snapshot.selectedCompound}
-            disabled={raceStarted}
+            disabled={raceLocked}
             onChange={(event) => onSelectTyre(event.target.value as TyreCompound)}
           >
             {TYRE_COMPOUNDS.map((compound) => <option key={compound} value={compound}>{compound.toUpperCase()}</option>)}
@@ -193,7 +270,7 @@ export function RaceWeekendPanel({
           <select
             aria-label="피트 정지 랩"
             value={snapshot.strategy.pitStopLap}
-            disabled={raceStarted}
+            disabled={raceLocked}
             onChange={(event) => onStrategy({ ...snapshot.strategy, pitStopLap: Number(event.target.value) })}
           >
             {Array.from({ length: Math.max(1, snapshot.totalLaps - 1) }, (_, index) => {
@@ -207,13 +284,13 @@ export function RaceWeekendPanel({
           <select
             aria-label="피트 타이어"
             value={snapshot.strategy.pitStopCompound}
-            disabled={raceStarted}
+            disabled={raceLocked}
             onChange={(event) => onStrategy({ ...snapshot.strategy, pitStopCompound: event.target.value as TyreCompound })}
           >
             {pitCompounds.map((compound) => <option key={compound} value={compound}>{compound.toUpperCase()}</option>)}
           </select>
         </label>
-        <p>선택한 컴파운드는 차량 물리와 레이스 전략에 공유되며, 지정 랩에서 실제 피트 서비스 시간이 차감됩니다.</p>
+        <p>셋업·연료·타이어 선택은 모든 차량의 공통 물리 경계와 replay manifest에 저장되며, 지정 랩에서 실제 피트 서비스가 진행됩니다.</p>
       </div>
 
       <div className="weekend-results-grid">
@@ -245,7 +322,7 @@ export function RaceWeekendPanel({
             {snapshot.race.standings.slice(0, 8).map((participant) => (
               <div className="weekend-standing-row" role="row" key={participant.id}>
                 <b>{participant.position}</b>
-                <span>{participant.label}</span>
+              <span>{participant.label}{participant.aiProfileId ? ` · ${participant.aiProfileId.toUpperCase()}` : ""}</span>
                 <em>{participant.finished ? "FIN" : participant.retired ? "OUT" : `${participant.operations.flag.toUpperCase()} · ${formatDistance(participant.raceDistanceM)}`}</em>
               </div>
             ))}

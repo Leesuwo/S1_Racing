@@ -1,17 +1,23 @@
 /**
- * M5 결정적 레이스 리플레이의 순수 데이터·검증 경계다.
+ * M5~M6 결정적 레이스 리플레이의 순수 데이터·검증 경계다.
  * React, R3F, Rapier 장면을 참조하지 않고 RaceSession의 120Hz 입력과 digest만 기록해
  * 같은 초기 상태에서 동일한 물리·운영 결과가 재생되는지를 검증한다.
  */
 import type { VehicleControlInput } from "../../game/input/VehicleControlInput";
 import {
+  createRaceSessionFromReplayManifest,
   createRaceDeterminismDigest,
   type RaceSession,
   type RaceSessionSnapshot,
 } from "./RaceSession";
+import {
+  createRaceReplayManifestDigest,
+  validateRaceReplayManifest,
+  type RaceReplayManifest,
+} from "./RaceReplayManifest";
 
-/** 저장 파일과 메모리 구조가 호환되는지 판별하는 M5 replay schema 버전이다. */
-export const RACE_REPLAY_SCHEMA_VERSION = "s1-racing-replay-v1" as const;
+/** 저장 파일과 메모리 구조가 호환되는지 판별하는 M6 replay schema 버전이다. */
+export const RACE_REPLAY_SCHEMA_VERSION = "s1-racing-replay-v2" as const;
 
 /** 물리 도메인이 목표로 하는 fixed-step 주파수(Hz)다. */
 export const RACE_REPLAY_FIXED_STEP_HZ = 120 as const;
@@ -46,6 +52,10 @@ export interface RaceReplayMetadata {
   fixedStepHz: typeof RACE_REPLAY_FIXED_STEP_HZ;
   /** 레이스 시작 직전 grid snapshot의 digest다. */
   initialDigest: string;
+  /** 독립 RaceSession을 복원하는 M6 설정 문서다. */
+  manifest: RaceReplayManifest;
+  /** 저장 뒤 manifest가 바뀌었는지 빠르게 판별하는 FNV-1a 식별자다. */
+  manifestDigest: string;
 }
 
 /** 입력 프레임과 시작·종료 상태를 묶은 저장 가능한 replay 문서다. */
@@ -114,8 +124,8 @@ function validateFrame(frame: RaceReplayFrame, expectedStepIndex: number): void 
   if (!/^[0-9a-f]{8}$/u.test(frame.digest)) throw new Error("Replay frame digest must be an 8-character hexadecimal string");
 }
 
-/** RaceSession 시작 상태에서 M5 metadata를 구성한다. */
-function createMetadata(snapshot: RaceSessionSnapshot): RaceReplayMetadata {
+/** RaceSession 시작 상태에서 M6 metadata를 구성한다. */
+function createMetadata(snapshot: RaceSessionSnapshot, manifest: RaceReplayManifest): RaceReplayMetadata {
   return {
     schemaVersion: RACE_REPLAY_SCHEMA_VERSION,
     trackName: snapshot.trackName,
@@ -123,6 +133,8 @@ function createMetadata(snapshot: RaceSessionSnapshot): RaceReplayMetadata {
     participantCount: snapshot.participantCount,
     fixedStepHz: RACE_REPLAY_FIXED_STEP_HZ,
     initialDigest: createRaceDeterminismDigest(snapshot),
+    manifest,
+    manifestDigest: createRaceReplayManifestDigest(manifest),
   };
 }
 
@@ -135,9 +147,17 @@ export class RaceReplayRecorder {
   private finalStatus: RaceSessionSnapshot["status"] | undefined;
 
   /** grid 상태를 시작점으로 하는 새 recorder를 만든다. */
-  constructor(initialSnapshot: RaceSessionSnapshot) {
+  constructor(initialSnapshot: RaceSessionSnapshot, manifest: RaceReplayManifest) {
     if (initialSnapshot.status !== "grid") throw new Error("Replay recording must start from a grid snapshot");
-    this.metadata = createMetadata(initialSnapshot);
+    validateRaceReplayManifest(manifest);
+    if (
+      manifest.trackName !== initialSnapshot.trackName
+      || manifest.totalLaps !== initialSnapshot.totalLaps
+      || manifest.participants.length !== initialSnapshot.participantCount
+    ) {
+      throw new Error("Replay manifest does not match the initial RaceSession snapshot");
+    }
+    this.metadata = createMetadata(initialSnapshot, manifest);
   }
 
   /** 한 fixed-step 입력과 직후 snapshot digest를 기록한다. */
@@ -177,7 +197,19 @@ export class RaceReplayRecorder {
       throw new Error("Replay recording is not finalized");
     }
     return {
-      metadata: { ...this.metadata },
+      metadata: {
+        ...this.metadata,
+        manifest: {
+          ...this.metadata.manifest,
+          tyrePlan: { ...this.metadata.manifest.tyrePlan },
+          fuelPlan: { ...this.metadata.manifest.fuelPlan },
+          participants: this.metadata.manifest.participants.map((participant) => ({
+            ...participant,
+            startPositionM: { ...participant.startPositionM },
+            aiConfig: participant.aiConfig ? { ...participant.aiConfig } : undefined,
+          })),
+        },
+      },
       frames: this.frames.map((frame) => ({ ...frame, input: cloneInput(frame.input) })),
       finalDigest: this.finalDigest,
       finalStatus: this.finalStatus,
@@ -203,7 +235,7 @@ export function parseRaceReplay(serialized: string): RaceReplayRecording {
   return parsed;
 }
 
-/** 외부에서 읽은 unknown 값이 M5 replay 계약을 모두 만족하는지 확인한다. */
+/** 외부에서 읽은 unknown 값이 M6 replay 계약을 모두 만족하는지 확인한다. */
 export function validateRaceReplayRecording(value: unknown): asserts value is RaceReplayRecording {
   if (!value || typeof value !== "object") throw new Error("Replay document must be an object");
   const recording = value as Partial<RaceReplayRecording> & { metadata?: Partial<RaceReplayMetadata> };
@@ -214,6 +246,14 @@ export function validateRaceReplayRecording(value: unknown): asserts value is Ra
   if (!Number.isInteger(metadata.participantCount) || metadata.participantCount < 2) throw new Error("Replay participantCount is invalid");
   if (metadata.fixedStepHz !== RACE_REPLAY_FIXED_STEP_HZ) throw new Error("Replay fixedStepHz is unsupported");
   if (typeof metadata.initialDigest !== "string" || !/^[0-9a-f]{8}$/u.test(metadata.initialDigest)) throw new Error("Replay initialDigest is invalid");
+  validateRaceReplayManifest(metadata.manifest);
+  if (metadata.manifest.trackName !== metadata.trackName || metadata.manifest.totalLaps !== metadata.totalLaps
+    || metadata.manifest.participants.length !== metadata.participantCount) {
+    throw new Error("Replay metadata and manifest do not agree");
+  }
+  if (metadata.manifestDigest !== createRaceReplayManifestDigest(metadata.manifest)) {
+    throw new Error("Replay manifest digest is invalid");
+  }
   if (!Array.isArray(recording.frames)) throw new Error("Replay frames must be an array");
   recording.frames.forEach((frame, index) => validateFrame(frame, index + 1));
   if (typeof recording.finalDigest !== "string" || !/^[0-9a-f]{8}$/u.test(recording.finalDigest)) throw new Error("Replay finalDigest is invalid");
@@ -232,7 +272,8 @@ export function verifyRaceReplay(
   const expectedMetadata = recording.metadata;
   const metadataMatches = initialSnapshot.trackName === expectedMetadata.trackName
     && initialSnapshot.totalLaps === expectedMetadata.totalLaps
-    && initialSnapshot.participantCount === expectedMetadata.participantCount;
+    && initialSnapshot.participantCount === expectedMetadata.participantCount
+    && createRaceReplayManifestDigest(session.getReplayManifest()) === expectedMetadata.manifestDigest;
   if (!metadataMatches) {
     return {
       matched: false,
@@ -297,6 +338,12 @@ export function verifyRaceReplay(
     };
   }
   return { matched: true, frameCount: recording.frames.length, finalDigest };
+}
+
+/** manifest만 사용해 새 RaceSession을 만들고 완료 replay를 독립 검증한다. */
+export function verifyRaceReplayIndependently(recording: RaceReplayRecording): RaceReplayVerificationResult {
+  validateRaceReplayRecording(recording);
+  return verifyRaceReplay(createRaceSessionFromReplayManifest(recording.metadata.manifest), recording);
 }
 
 /** 완료된 recording을 UI용 loaded 상태로 변환한다. */
