@@ -99,8 +99,28 @@ Driving 장면이 마운트되거나 Chase/Cockpit 시점을 전환할 때, 현�
 | Race Weekend | ![Race Weekend 1440x900](visual-baseline/2026-08-04/1440x900/weekend.png) |
 | Design Studio | ![Design Studio 1440x900](visual-baseline/2026-08-04/1440x900/design.png) |
 
+## PS2-P1 결과
+
+`TestTrackVisual`에 물리 경계와 분리된 렌더 전용 높이 계층을 추가했다.
+
+- Northfield 중심선 트랙: 어깨 띠를 노면보다 낮게 배치하고, 양쪽에 따뜻한 경계 색 띠를 추가했다.
+- 사각 테스트 루프: 외곽·인필드 양쪽으로 낮은 어깨 링을 확장했다.
+- 정적 벽: 충돌 geometry는 그대로 두고 상단 캡만 추가해 수직 경계를 분리했다.
+- 바깥 잔디: 인필드보다 한 단계 어두운 `grassShadow`로 트랙 면적을 분리했다.
+
+모든 변경은 `TestTrackDefinition`의 폭·경계·콜라이더를 변경하지 않는 렌더 전용 변경이다. P1 캡처에서 주행 가능 영역, 경계선, 다음 코너가 첫 화면에서 즉시 구분되는 것을 확인했다.
+
+### P1 캡처
+
+| 화면 | 960×540 | 1440×900 |
+| --- | --- | --- |
+| Training | ![P1 Training 960x540](visual-baseline/2026-08-04/p1/960x540/training.png) | ![P1 Training 1440x900](visual-baseline/2026-08-04/p1/1440x900/training.png) |
+| Driving | ![P1 Driving 960x540](visual-baseline/2026-08-04/p1/960x540/driving.png) | ![P1 Driving 1440x900](visual-baseline/2026-08-04/p1/1440x900/driving.png) |
+| Race Weekend | ![P1 Race Weekend 960x540](visual-baseline/2026-08-04/p1/960x540/weekend.png) | ![P1 Race Weekend 1440x900](visual-baseline/2026-08-04/p1/1440x900/weekend.png) |
+
 ## 버전 이력
 
 | 날짜 | 버전 | 변경 |
 | --- | --- | --- |
+| 2026-08-04 | 0.2.0 | PS2-P1 트랙 어깨·경계 띠·벽 상단 캡을 적용하고 3개 트랙 장면의 2개 viewport 캡처를 추가 |
 | 2026-08-04 | 0.1.0 | 네 화면의 960×540·1440×900 기준 캡처, 렌더 설정 기록, 문제 분류와 첫 카메라 수정 대상 확정 |

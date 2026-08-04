@@ -7,7 +7,10 @@
 export const VISUAL_PALETTE = {
   track: {
     road: "#292d2c",
+    shoulder: "#454332",
+    roadEdge: "#d8b36a",
     grass: "#3c5939",
+    grassShadow: "#33452f",
     curb: "#d25f58",
     wallOuter: "#b7a68d",
     wallInner: "#c99d51",

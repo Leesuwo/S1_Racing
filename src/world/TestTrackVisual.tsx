@@ -17,6 +17,16 @@ interface TestTrackVisualProps {
 const TRACK_EDGE_Y = -0.39;
 /** 사각 트랙의 도로 링을 잔디 바닥보다 올려 depth buffer 겹침을 막는 높이(m)다. */
 const RECTANGULAR_ROAD_Y = -0.42;
+/** 중심선 트랙의 시각 어깨를 노면보다 낮게 두어 도로·경계·잔디의 높이 순서를 만든다. */
+const CENTERLINE_SHOULDER_Y = -0.415;
+/** 중심선 트랙의 얇은 경계선이 도로보다 살짝 높게 보이도록 하는 렌더 전용 높이(m)다. */
+const CENTERLINE_EDGE_Y = -0.382;
+/** 중심선 도로 양쪽에 추가하는 평탄한 어깨 폭(m)이며 물리 폭에는 사용하지 않는다. */
+const CENTERLINE_SHOULDER_EXTRA_M = 0.78;
+/** 중심선 도로 가장자리의 색 띠 폭(m)이며 경계 판정과 분리된 시각 표식이다. */
+const CENTERLINE_EDGE_BAND_M = 0.16;
+/** 사각 트랙의 시각 어깨가 도로 바깥·인필드 안쪽으로 확장되는 폭(m)이다. */
+const RECTANGULAR_SHOULDER_EXTRA_M = 0.62;
 
 /** 축 정렬 범위의 길이(m)를 계산한다. */
 function boundsSize(min: number, max: number): number {
@@ -28,19 +38,27 @@ function boundsCenter(min: number, max: number): number {
   return (min + max) * 0.5;
 }
 
-/** 중심선 폐곡선을 일정한 폭의 평면 도로 메시로 변환한다. */
-function createCenterlineRoadGeometry(track: TestTrackDefinition): THREE.BufferGeometry | null {
+/** 중심선 폐곡선의 좌우 띠를 평면 geometry로 변환한다. */
+function createCenterlineBandGeometry(
+  track: TestTrackDefinition,
+  innerHalfWidthM: number,
+  outerHalfWidthM: number,
+  y: number,
+): THREE.BufferGeometry | null {
   if (!track.centerline || track.centerline.length < 3 || !track.trackWidthM) return null;
+
+  // 폭 순서가 뒤집히면 삼각형 winding과 도로 경계가 뒤틀리므로 렌더 전용 입력을 방어한다.
+  const safeInnerHalfWidthM = Math.max(0, innerHalfWidthM);
+  const safeOuterHalfWidthM = Math.max(safeInnerHalfWidthM, outerHalfWidthM);
 
   // Catmull-Rom 보간은 데이터 샘플 사이의 급격한 방향 단절을 시각적으로 완화한다.
   const curve = new THREE.CatmullRomCurve3(
-    track.centerline.map((point) => new THREE.Vector3(point.x, TRACK_EDGE_Y, point.z)),
+    track.centerline.map((point) => new THREE.Vector3(point.x, y, point.z)),
     true,
     "centripetal",
     0.2,
   );
   const sampleCount = Math.max(96, track.centerline.length * 8);
-  const halfWidthM = track.trackWidthM * 0.5;
   const vertices: number[] = [];
   const indices: number[] = [];
 
@@ -51,17 +69,28 @@ function createCenterlineRoadGeometry(track: TestTrackDefinition): THREE.BufferG
     const tangent = curve.getTangentAt(ratio).normalize();
     // +X/+Z 평면에서 tangent의 왼쪽을 구해 양쪽 도로 가장자리를 만든다.
     const left = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-    const leftPoint = point.clone().addScaledVector(left, halfWidthM);
-    const rightPoint = point.clone().addScaledVector(left, -halfWidthM);
+    // 좌우 두 겹의 띠를 한 geometry에 넣어 중심선 샘플과 도로 폭의 위상 차이를 줄인다.
+    const leftOuterPoint = point.clone().addScaledVector(left, safeOuterHalfWidthM);
+    const leftInnerPoint = point.clone().addScaledVector(left, safeInnerHalfWidthM);
+    const rightInnerPoint = point.clone().addScaledVector(left, -safeInnerHalfWidthM);
+    const rightOuterPoint = point.clone().addScaledVector(left, -safeOuterHalfWidthM);
     vertices.push(
-      leftPoint.x, leftPoint.y, leftPoint.z,
-      rightPoint.x, rightPoint.y, rightPoint.z,
+      leftOuterPoint.x, leftOuterPoint.y, leftOuterPoint.z,
+      leftInnerPoint.x, leftInnerPoint.y, leftInnerPoint.z,
+      rightInnerPoint.x, rightInnerPoint.y, rightInnerPoint.z,
+      rightOuterPoint.x, rightOuterPoint.y, rightOuterPoint.z,
     );
 
     const nextIndex = (index + 1) % sampleCount;
-    const currentVertex = index * 2;
-    const nextVertex = nextIndex * 2;
-    indices.push(currentVertex, nextVertex, currentVertex + 1, currentVertex + 1, nextVertex, nextVertex + 1);
+    const currentVertex = index * 4;
+    const nextVertex = nextIndex * 4;
+    // 왼쪽·오른쪽 띠를 분리해 중앙 도로 면은 기존 geometry가 계속 소유하게 한다.
+    indices.push(
+      currentVertex, nextVertex, currentVertex + 1,
+      currentVertex + 1, nextVertex, nextVertex + 1,
+      currentVertex + 2, nextVertex + 2, currentVertex + 3,
+      currentVertex + 3, nextVertex + 2, nextVertex + 3,
+    );
   }
 
   const geometry = new THREE.BufferGeometry();
@@ -71,18 +100,63 @@ function createCenterlineRoadGeometry(track: TestTrackDefinition): THREE.BufferG
   return geometry;
 }
 
-/** 중심선 도로 메시의 생명주기를 장면 수명에 맞춰 정리한다. */
-function CenterlineRoad({ track }: { track: TestTrackDefinition }) {
-  const geometry = useMemo(() => createCenterlineRoadGeometry(track), [track]);
+/** 중심선 도로 주변의 낮은 어깨 띠를 표시해 잔디와 노면을 빠르게 분리한다. */
+function CenterlineShoulder({ track }: { track: TestTrackDefinition }) {
+  const geometry = useMemo(() => {
+    const halfWidthM = (track.trackWidthM ?? 0) * 0.5;
+    return createCenterlineBandGeometry(
+      track,
+      halfWidthM,
+      halfWidthM + CENTERLINE_SHOULDER_EXTRA_M,
+      CENTERLINE_SHOULDER_Y,
+    );
+  }, [track]);
 
-  useEffect(() => () => {
-    geometry?.dispose();
-  }, [geometry]);
+  useEffect(() => () => geometry?.dispose(), [geometry]);
 
   if (!geometry) return null;
   return (
     <mesh geometry={geometry} receiveShadow>
-      <meshStandardMaterial color={VISUAL_PALETTE.track.road} roughness={0.96} flatShading />
+      <meshStandardMaterial color={VISUAL_PALETTE.track.shoulder} roughness={1} flatShading side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
+/** 중심선 도로의 양쪽에 따뜻한 경계 색 띠를 추가해 다음 코너의 폭을 읽게 한다. */
+function CenterlineEdgeBands({ track }: { track: TestTrackDefinition }) {
+  const geometry = useMemo(() => {
+    const halfWidthM = (track.trackWidthM ?? 0) * 0.5;
+    return createCenterlineBandGeometry(
+      track,
+      halfWidthM + 0.02,
+      halfWidthM + 0.02 + CENTERLINE_EDGE_BAND_M,
+      CENTERLINE_EDGE_Y,
+    );
+  }, [track]);
+
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+
+  if (!geometry) return null;
+  return (
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial color={VISUAL_PALETTE.track.roadEdge} roughness={0.88} flatShading side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
+/** 중심선 도로 geometry를 어깨와 경계선 위에 올리는 기존 주행 면이다. */
+function CenterlineRoad({ track }: { track: TestTrackDefinition }) {
+  const geometry = useMemo(() => {
+    const halfWidthM = (track.trackWidthM ?? 0) * 0.5;
+    return createCenterlineBandGeometry(track, 0, halfWidthM, TRACK_EDGE_Y);
+  }, [track]);
+
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+
+  if (!geometry) return null;
+  return (
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial color={VISUAL_PALETTE.track.road} roughness={0.96} flatShading side={THREE.DoubleSide} />
     </mesh>
   );
 }
@@ -111,6 +185,49 @@ function createRectangularRoadGeometry(track: TestTrackDefinition): THREE.ShapeG
   geometry.rotateX(-Math.PI / 2);
   geometry.translate(0, RECTANGULAR_ROAD_Y, 0);
   return geometry;
+}
+
+/** 사각 트랙의 물리 도로보다 낮고 넓은 시각 어깨 링을 생성한다. */
+function createRectangularShoulderGeometry(track: TestTrackDefinition): THREE.ShapeGeometry {
+  const { outerBounds, innerGrassBounds } = track;
+  const extra = RECTANGULAR_SHOULDER_EXTRA_M;
+  const outerMinZ = outerBounds.minZ - extra;
+  const outerMaxZ = outerBounds.maxZ + extra;
+  const holeMinZ = innerGrassBounds.minZ + extra;
+  const holeMaxZ = innerGrassBounds.maxZ - extra;
+  const shape = new THREE.Shape();
+  shape.moveTo(outerBounds.minX - extra, -outerMinZ);
+  shape.lineTo(outerBounds.maxX + extra, -outerMinZ);
+  shape.lineTo(outerBounds.maxX + extra, -outerMaxZ);
+  shape.lineTo(outerBounds.minX - extra, -outerMaxZ);
+  shape.closePath();
+
+  // 내부 hole을 줄여 어깨가 안쪽 도로 경계에서도 같은 높이 계층을 갖게 한다.
+  const hole = new THREE.Path();
+  hole.moveTo(innerGrassBounds.minX + extra, -holeMinZ);
+  hole.lineTo(innerGrassBounds.minX + extra, -holeMaxZ);
+  hole.lineTo(innerGrassBounds.maxX - extra, -holeMaxZ);
+  hole.lineTo(innerGrassBounds.maxX - extra, -holeMinZ);
+  hole.closePath();
+  shape.holes.push(hole);
+
+  const geometry = new THREE.ShapeGeometry(shape);
+  geometry.rotateX(-Math.PI / 2);
+  geometry.translate(0, CENTERLINE_SHOULDER_Y, 0);
+  return geometry;
+}
+
+/** 사각 테스트 루프의 낮은 어깨 띠를 렌더링하는 전용 컴포넌트다. */
+function RectangularShoulder({ track }: { track: TestTrackDefinition }) {
+  const geometry = useMemo(() => createRectangularShoulderGeometry(track), [track]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  return (
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial color={VISUAL_PALETTE.track.shoulder} roughness={1} flatShading />
+    </mesh>
+  );
 }
 
 /** 사각 테스트 루프의 도로를 잔디와 겹치지 않는 단일 링으로 표시한다. */
@@ -175,15 +292,25 @@ function TrackCollisionVisuals({ track }: { track: TestTrackDefinition }) {
       {track.collisionWalls?.map((wall) => {
         const transform = segmentTransform(wall.start, wall.end);
         return (
-          <mesh
-            key={wall.id}
-            position={[transform.centerX, TRACK_EDGE_Y + wall.heightM * 0.5, transform.centerZ]}
-            rotation={[0, transform.rotationRad, 0]}
-            castShadow
-          >
-            <boxGeometry args={[transform.lengthM, wall.heightM, wall.thicknessM]} />
-        <meshStandardMaterial color={wall.id.startsWith("inner-") ? VISUAL_PALETTE.track.wallInner : VISUAL_PALETTE.track.wallOuter} roughness={0.82} flatShading />
-          </mesh>
+          <group key={wall.id}>
+            <mesh
+              position={[transform.centerX, TRACK_EDGE_Y + wall.heightM * 0.5, transform.centerZ]}
+              rotation={[0, transform.rotationRad, 0]}
+              castShadow
+            >
+              <boxGeometry args={[transform.lengthM, wall.heightM, wall.thicknessM]} />
+              <meshStandardMaterial color={wall.id.startsWith("inner-") ? VISUAL_PALETTE.track.wallInner : VISUAL_PALETTE.track.wallOuter} roughness={0.82} flatShading />
+            </mesh>
+            <mesh
+              position={[transform.centerX, TRACK_EDGE_Y + wall.heightM + 0.018, transform.centerZ]}
+              rotation={[0, transform.rotationRad, 0]}
+              castShadow
+            >
+              {/* 상단 캡은 충돌 높이를 바꾸지 않고 벽의 수직 면과 외곽선을 분리한다. */}
+              <boxGeometry args={[transform.lengthM + 0.02, 0.036, wall.thicknessM + 0.025]} />
+              <meshStandardMaterial color={VISUAL_PALETTE.track.wallTop} roughness={0.78} flatShading />
+            </mesh>
+          </group>
         );
       })}
       {track.curbs?.map((curb) => {
@@ -248,6 +375,7 @@ function RectangularTestLoop({ track }: { track: TestTrackDefinition }) {
 
   return (
     <>
+      <RectangularShoulder track={track} />
       <RectangularRoad track={track} />
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
@@ -272,7 +400,7 @@ function TrackGround({ track }: { track: TestTrackDefinition }) {
       receiveShadow
     >
       <planeGeometry args={[groundWidth, groundLength]} />
-      <meshStandardMaterial color={VISUAL_PALETTE.track.grass} roughness={1} flatShading />
+      <meshStandardMaterial color={VISUAL_PALETTE.track.grassShadow} roughness={1} flatShading />
     </mesh>
   );
 }
@@ -283,7 +411,13 @@ export function TestTrackVisual({ track = TEST_TRACK_DATA }: TestTrackVisualProp
   return (
     <group>
       <TrackGround track={track} />
-      {hasCenterline ? <CenterlineRoad track={track} /> : <RectangularTestLoop track={track} />}
+      {hasCenterline ? (
+        <>
+          <CenterlineShoulder track={track} />
+          <CenterlineRoad track={track} />
+          <CenterlineEdgeBands track={track} />
+        </>
+      ) : <RectangularTestLoop track={track} />}
       <TrackCollisionVisuals track={track} />
       <PitLaneVisual track={track} />
       <TrackMarkers track={track} />
