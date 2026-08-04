@@ -196,10 +196,33 @@ Driving 장면이 마운트되거나 Chase/Cockpit 시점을 전환할 때, 현�
 | `nostalgia-sharp` | ![P5 nostalgia sharp](visual-baseline/2026-08-04/p5/nostalgia-sharp.png) |
 | `clean-debug` | ![P5 clean debug](visual-baseline/2026-08-04/p5/clean-debug.png) |
 
+## PS2-P6 통합 결과
+
+최종 기본 프로필 `nostalgia-soft`를 실제 로컬 웹에서 Training·Driving·Race Weekend·Design Studio에 적용하고, `960×540`과 `1440×900` 두 viewport를 다시 캡처했다.
+
+| 기준 | 결과 |
+| --- | --- |
+| 차량 실루엣·AI 색 구분 | P2 50% 축소 캡처에서 방향·색 구분 유지 |
+| 도로·잔디·연석·벽 경계 | P1·최종 캡처에서 높이·명도 계층 유지, 물리 경계 불변 |
+| 카메라·속도·접촉 피드백 | P3 가속·콕핏 캡처와 입력 E2E로 확인 |
+| HUD·메뉴 판독성 | P4 불투명 계기판·amber 선택 상태로 확인 |
+| 선택 효과 | P5 세 프로필 전환 E2E·동일 장면 A/B 캡처로 확인 |
+| 물리·AI·입력 회귀 | `npm run verify`의 111 단위 테스트·24 E2E 통과 |
+
+### 최종 캡처 매트릭스
+
+| 화면 | 960×540 | 1440×900 |
+| --- | --- | --- |
+| Training | ![Final Training 960x540](visual-baseline/2026-08-04/p6/960x540/training.png) | ![Final Training 1440x900](visual-baseline/2026-08-04/p6/1440x900/training.png) |
+| Driving | ![Final Driving 960x540](visual-baseline/2026-08-04/p6/960x540/driving.png) | ![Final Driving 1440x900](visual-baseline/2026-08-04/p6/1440x900/driving.png) |
+| Race Weekend | ![Final Race Weekend 960x540](visual-baseline/2026-08-04/p6/960x540/weekend.png) | ![Final Race Weekend 1440x900](visual-baseline/2026-08-04/p6/1440x900/weekend.png) |
+| Design Studio | ![Final Design Studio 960x540](visual-baseline/2026-08-04/p6/960x540/design.png) | ![Final Design Studio 1440x900](visual-baseline/2026-08-04/p6/1440x900/design.png) |
+
 ## 버전 이력
 
 | 날짜 | 버전 | 변경 |
 | --- | --- | --- |
+| 2026-08-04 | 0.7.0 | PS2-P6 최종 기본 프로필의 4개 화면·2개 viewport 통합 캡처와 기준별 결과를 추가 |
 | 2026-08-04 | 0.6.0 | PS2-P5 Canvas 화면 프로필 3종과 선택적 후처리 범위를 실제 웹에서 비교하고, 저해상도·오디오 보류 결정을 기록 |
 | 2026-08-04 | 0.5.0 | PS2-P4 HUD 핵심/진단 계층, 불투명 패널, amber 메뉴 상태를 적용하고 4개 화면의 2개 viewport 캡처를 추가 |
 | 2026-08-04 | 0.4.0 | PS2-P3 속도 FOV kick·연석/벽 impulse·콕핏 시야 보정과 가속 입력 E2E·2개 viewport 캡처를 추가 |
