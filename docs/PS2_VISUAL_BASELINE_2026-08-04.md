@@ -156,10 +156,31 @@ Driving 장면이 마운트되거나 Chase/Cockpit 시점을 전환할 때, 현�
 | Driving / 추적 시점 · 가속 후 | ![P3 Driving speed 960x540](visual-baseline/2026-08-04/p3/960x540/driving-speed.png) | ![P3 Driving speed 1440x900](visual-baseline/2026-08-04/p3/1440x900/driving-speed.png) |
 | Driving / 콕핏 시점 · 가속 후 | ![P3 Cockpit speed 960x540](visual-baseline/2026-08-04/p3/960x540/cockpit-speed.png) | ![P3 Cockpit speed 1440x900](visual-baseline/2026-08-04/p3/1440x900/cockpit-speed.png) |
 
+## PS2-P4 결과
+
+주행 HUD와 모드 메뉴를 현대적인 glassmorphism보다 2000년대 콘솔 계기판에 가까운 불투명 정보판으로 재구성했다.
+
+- 주행 HUD를 속도·기어·RPM의 핵심 계기판과 노면·트랙·타이어·접지의 저밀도 진단 영역으로 분리했다.
+- 핵심 숫자는 큰 monospace 수치로 유지하고, 진단 텍스트는 2열 정보 블록으로 낮춰 다음 코너와 차량을 덜 가리게 했다.
+- Canvas 위 HUD·Training 디버그 오버레이·입력 툴바에서 `backdrop-filter`를 제거하고 사각 모서리·하드 선택 상태·amber 강조색을 적용했다.
+- 모드 전환 탭과 주행 카메라 선택 상태를 같은 직사각형 선택 문법으로 통일했으며, 기존 role·aria-label·입력 계약은 유지했다.
+
+실제 로컬 웹 화면을 960×540과 1440×900에서 확인한 결과, Driving에서는 차량과 오른쪽 다음 경계가 HUD 밖에 남았고, Training에서는 레이싱 라인과 브레이크 마커가 오버레이 뒤에서 계속 읽혔다. Race Weekend와 Design Studio는 상단 메뉴의 선택 상태만 amber로 강조되어 Canvas의 차량 색과 충돌하지 않았다.
+
+### P4 캡처
+
+| 화면 | 960×540 | 1440×900 |
+| --- | --- | --- |
+| Training | ![P4 Training 960x540](visual-baseline/2026-08-04/p4/960x540/training.png) | ![P4 Training 1440x900](visual-baseline/2026-08-04/p4/1440x900/training.png) |
+| Driving | ![P4 Driving 960x540](visual-baseline/2026-08-04/p4/960x540/driving.png) | ![P4 Driving 1440x900](visual-baseline/2026-08-04/p4/1440x900/driving.png) |
+| Race Weekend | ![P4 Race Weekend 960x540](visual-baseline/2026-08-04/p4/960x540/weekend.png) | ![P4 Race Weekend 1440x900](visual-baseline/2026-08-04/p4/1440x900/weekend.png) |
+| Design Studio | ![P4 Design Studio 960x540](visual-baseline/2026-08-04/p4/960x540/design.png) | ![P4 Design Studio 1440x900](visual-baseline/2026-08-04/p4/1440x900/design.png) |
+
 ## 버전 이력
 
 | 날짜 | 버전 | 변경 |
 | --- | --- | --- |
+| 2026-08-04 | 0.5.0 | PS2-P4 HUD 핵심/진단 계층, 불투명 패널, amber 메뉴 상태를 적용하고 4개 화면의 2개 viewport 캡처를 추가 |
 | 2026-08-04 | 0.4.0 | PS2-P3 속도 FOV kick·연석/벽 impulse·콕핏 시야 보정과 가속 입력 E2E·2개 viewport 캡처를 추가 |
 | 2026-08-04 | 0.3.0 | PS2-P2 차량 차체 재질·flat shading을 통일하고 480×270·960×540·1440×900 캡처를 추가 |
 | 2026-08-04 | 0.2.0 | PS2-P1 트랙 어깨·경계 띠·벽 상단 캡을 적용하고 3개 트랙 장면의 2개 viewport 캡처를 추가 |

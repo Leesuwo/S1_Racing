@@ -1222,3 +1222,140 @@ h1 {
     min-height: 70vh;
   }
 }
+
+/* PS2-P4: 유리 패널 대신 불투명한 계기판과 단일 amber 선택색을 사용한다. */
+:root {
+  --ui-accent: #f0c35c;
+  --ui-accent-deep: #74531f;
+  --ui-radius: 3px;
+  --ui-radius-small: 2px;
+  --ui-shadow: 0 10px 24px rgb(0 0 0 / 0.3);
+}
+
+/* Canvas 위 UI는 화면을 흐리지 않고 CRT·SD 시대의 단단한 정보판처럼 남긴다. */
+.telemetry-hud,
+.training-overlay,
+.training-controls,
+.simulation-toolbar {
+  border-radius: 2px;
+  background: rgb(5 10 13 / 0.95);
+  box-shadow: 0 7px 0 rgb(0 0 0 / 0.26);
+  backdrop-filter: none;
+}
+
+.telemetry-hud {
+  display: block;
+  padding: 12px;
+  border-top: 2px solid var(--ui-accent);
+  border-left: 1px solid rgb(240 195 92 / 0.36);
+}
+
+.telemetry-hud__core {
+  display: grid;
+  grid-template-columns: minmax(94px, 0.75fr) minmax(58px, 0.45fr) minmax(120px, 1fr);
+  align-items: end;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ui-line);
+}
+
+.telemetry-hud__diagnostics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  padding-top: 9px;
+}
+
+.telemetry-hud .speed-readout {
+  grid-row: auto;
+  min-height: 40px;
+}
+
+.telemetry-hud .speed-readout strong {
+  font-size: 2.7rem;
+}
+
+.telemetry-hud .gear-readout,
+.telemetry-hud .rpm-readout {
+  min-height: 32px;
+}
+
+.telemetry-hud .surface-readout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+
+.telemetry-hud .surface-readout strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.telemetry-hud .wheel-load-readout {
+  grid-column: 1 / -1;
+  padding-top: 2px;
+}
+
+.simulation-toolbar,
+.training-controls {
+  gap: 6px;
+  padding: 6px;
+}
+
+.simulation-toolbar button,
+.simulation-toolbar select,
+.training-controls button,
+.training-controls select,
+.mode-switch,
+.mode-switch__tab,
+.camera-view-toggle,
+.camera-view-toggle__button {
+  border-radius: 2px;
+}
+
+.simulation-toolbar button,
+.training-button,
+.input-preset-control select,
+.training-scenario-control select {
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.22);
+}
+
+.training-overlay--debug {
+  border-top: 2px solid var(--ui-accent);
+  border-left: 1px solid rgb(240 195 92 / 0.36);
+}
+
+.mode-switch__tab--active,
+.training-button--primary,
+.simulation-toolbar .camera-view-toggle__button--active {
+  color: #171108 !important;
+  background: var(--ui-accent) !important;
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.18);
+}
+
+.simulation-panel,
+.telemetry-grid article,
+.control-panel,
+.training-dashboard,
+.training-search,
+.weekend-dashboard,
+.weekend-result-card,
+.design-studio-dashboard {
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+@media (max-width: 680px) {
+  .telemetry-hud__core {
+    grid-template-columns: minmax(80px, 0.75fr) minmax(54px, 0.45fr) minmax(100px, 1fr);
+    gap: 7px;
+  }
+
+  .telemetry-hud__diagnostics {
+    gap: 5px 7px;
+  }
+}

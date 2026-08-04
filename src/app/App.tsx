@@ -132,87 +132,93 @@ function AppTelemetry({
   const rpmRatio = Math.min(1, telemetry.rpm / telemetry.redlineRpm);
 
   return (
-    <div className="telemetry-hud" aria-label="차량 텔레메트리">
-      <div className="speed-readout">
-        <strong>{formatNumber(telemetry.speedKmh)}</strong>
-        <span>km/h</span>
-      </div>
-      <div className="gear-readout">
-        <span>GEAR</span>
-        <strong>{telemetry.gear}</strong>
-      </div>
-      <div className="rpm-readout">
-        <div className="rpm-label">
-          <span>RPM</span>
-          <span>{formatNumber(telemetry.rpm)}</span>
+    <div className="telemetry-hud telemetry-hud--player" aria-label="차량 텔레메트리">
+      {/* 속도·기어·RPM을 하나의 핵심 계기판으로 묶어 플레이 중 가장 먼저 읽히게 한다. */}
+      <div className="telemetry-hud__core">
+        <div className="speed-readout">
+          <strong>{formatNumber(telemetry.speedKmh)}</strong>
+          <span>km/h</span>
         </div>
-        <div className="rpm-bar" aria-label={"RPM " + formatNumber(telemetry.rpm)}>
-          <span style={{ width: String(rpmRatio * 100) + "%" }} />
+        <div className="gear-readout">
+          <span>GEAR</span>
+          <strong>{telemetry.gear}</strong>
         </div>
-      </div>
-      <div className="surface-readout">
-        <span>노면</span>
-        <strong>{telemetry.surface === "asphalt" ? "아스팔트" : "잔디"}</strong>
-      </div>
-      <div className="surface-readout">
-        <span>트랙 구간</span>
-        <strong>{telemetry.trackSectionLabel}</strong>
-      </div>
-      <div className="surface-readout">
-        <span>트랙 경계</span>
-        <strong className={telemetry.onTrack ? "track-status--valid" : "track-status--off"}>
-          {telemetry.onTrack
-            ? "유효 · " + formatNumber(telemetry.distanceToBoundaryM, 1) + " m"
-            : "이탈 · 리셋 권장"}
-        </strong>
-      </div>
-      <div className="surface-readout">
-        <span>트랙 리밋</span>
-        <strong className={trackLimits.lapValid ? "track-status--valid" : "track-status--off"}>
-          {trackLimits.violationCount}회 · 패널티 {formatNumber(trackLimits.penaltySeconds, 2)} s
-        </strong>
-      </div>
-      <div className="surface-readout">
-        <span>타이어 상태</span>
-        <strong>
-          {telemetry.tyreCondition.compound.toUpperCase()} · {formatNumber(telemetry.tyreCondition.averageTemperatureC, 0)} °C ·
-          {" "}{formatNumber(telemetry.tyreCondition.averageWearRatio * 100, 1)}% 마모
-        </strong>
-      </div>
-      <div className="surface-readout ai-readout">
-        <span>AI 상대</span>
-        <strong>{formatNumber(opponentTelemetry.speedKmh)} km/h · {opponentTelemetry.trackSectionLabel}</strong>
-      </div>
-      <div className="wheel-load-readout">
-        <span>휠 하중 / N</span>
-        <div>
-          <b>FL {formatNumber(telemetry.wheelLoadsN.frontLeft)}</b>
-          <b>FR {formatNumber(telemetry.wheelLoadsN.frontRight)}</b>
-          <b>RL {formatNumber(telemetry.wheelLoadsN.rearLeft)}</b>
-          <b>RR {formatNumber(telemetry.wheelLoadsN.rearRight)}</b>
+        <div className="rpm-readout">
+          <div className="rpm-label">
+            <span>RPM</span>
+            <span>{formatNumber(telemetry.rpm)}</span>
+          </div>
+          <div className="rpm-bar" aria-label={"RPM " + formatNumber(telemetry.rpm)}>
+            <span style={{ width: String(rpmRatio * 100) + "%" }} />
+          </div>
         </div>
       </div>
-      <div className="surface-readout">
-        <span>Rapier 접지</span>
-        <strong>
-          {suspensionTelemetry
-            ? String(suspensionTelemetry.groundedWheelCount) + "/4 · "
-              + formatNumber(suspensionTelemetry.chassisHeightM, 3) + " m · 공력 "
-              + formatNumber(suspensionTelemetry.downforceN) + " N"
-            : "초기화 중"}
-        </strong>
-      </div>
-      <div className="surface-readout">
-        <span>벽·연석 접촉</span>
-        <strong>
-          {suspensionTelemetry
-            ? "벽 " + suspensionTelemetry.wallContactCount + " · 연석 " + suspensionTelemetry.curbContactCount
-            : "초기화 중"}
-        </strong>
-      </div>
-      <div className="surface-readout ai-readout">
-        <span>AI 트랙 리밋</span>
-        <strong>{opponentTrackLimits.violationCount}회 · {opponentTrackLimits.lapValid ? "유효" : "무효"}</strong>
+      {/* 트랙·타이어·접지 진단은 핵심 계기판보다 낮은 밀도로 두어 주행 방향을 보존한다. */}
+      <div className="telemetry-hud__diagnostics">
+        <div className="surface-readout">
+          <span>노면</span>
+          <strong>{telemetry.surface === "asphalt" ? "아스팔트" : "잔디"}</strong>
+        </div>
+        <div className="surface-readout">
+          <span>트랙 구간</span>
+          <strong>{telemetry.trackSectionLabel}</strong>
+        </div>
+        <div className="surface-readout">
+          <span>트랙 경계</span>
+          <strong className={telemetry.onTrack ? "track-status--valid" : "track-status--off"}>
+            {telemetry.onTrack
+              ? "유효 · " + formatNumber(telemetry.distanceToBoundaryM, 1) + " m"
+              : "이탈 · 리셋 권장"}
+          </strong>
+        </div>
+        <div className="surface-readout">
+          <span>트랙 리밋</span>
+          <strong className={trackLimits.lapValid ? "track-status--valid" : "track-status--off"}>
+            {trackLimits.violationCount}회 · 패널티 {formatNumber(trackLimits.penaltySeconds, 2)} s
+          </strong>
+        </div>
+        <div className="surface-readout">
+          <span>타이어 상태</span>
+          <strong>
+            {telemetry.tyreCondition.compound.toUpperCase()} · {formatNumber(telemetry.tyreCondition.averageTemperatureC, 0)} °C ·
+            {" "}{formatNumber(telemetry.tyreCondition.averageWearRatio * 100, 1)}% 마모
+          </strong>
+        </div>
+        <div className="surface-readout ai-readout">
+          <span>AI 상대</span>
+          <strong>{formatNumber(opponentTelemetry.speedKmh)} km/h · {opponentTelemetry.trackSectionLabel}</strong>
+        </div>
+        <div className="wheel-load-readout">
+          <span>휠 하중 / N</span>
+          <div>
+            <b>FL {formatNumber(telemetry.wheelLoadsN.frontLeft)}</b>
+            <b>FR {formatNumber(telemetry.wheelLoadsN.frontRight)}</b>
+            <b>RL {formatNumber(telemetry.wheelLoadsN.rearLeft)}</b>
+            <b>RR {formatNumber(telemetry.wheelLoadsN.rearRight)}</b>
+          </div>
+        </div>
+        <div className="surface-readout">
+          <span>Rapier 접지</span>
+          <strong>
+            {suspensionTelemetry
+              ? String(suspensionTelemetry.groundedWheelCount) + "/4 · "
+                + formatNumber(suspensionTelemetry.chassisHeightM, 3) + " m · 공력 "
+                + formatNumber(suspensionTelemetry.downforceN) + " N"
+              : "초기화 중"}
+          </strong>
+        </div>
+        <div className="surface-readout">
+          <span>벽·연석 접촉</span>
+          <strong>
+            {suspensionTelemetry
+              ? "벽 " + suspensionTelemetry.wallContactCount + " · 연석 " + suspensionTelemetry.curbContactCount
+              : "초기화 중"}
+          </strong>
+        </div>
+        <div className="surface-readout ai-readout">
+          <span>AI 트랙 리밋</span>
+          <strong>{opponentTrackLimits.violationCount}회 · {opponentTrackLimits.lapValid ? "유효" : "무효"}</strong>
+        </div>
       </div>
     </div>
   );
@@ -220,7 +226,7 @@ function AppTelemetry({
 /** AI 교육 상태·진행률·현재 목표를 장면 위에 겹쳐 표시한다. */
 function TrainingOverlay({ snapshot }: { snapshot: AITrainingSnapshot }) {
   return (
-    <div className="training-overlay" aria-label="AI 교육 상태">
+    <div className="training-overlay training-overlay--debug" aria-label="AI 교육 상태">
       <div className="training-overlay__kicker">LIVE EPISODE / 120 HZ</div>
       <div className="training-overlay__heading">
         <div>
