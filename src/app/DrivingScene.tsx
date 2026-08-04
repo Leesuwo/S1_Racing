@@ -269,6 +269,39 @@ export function DrivingScene({
   const opponentSuspensionRig = useRef<RapierChassisSuspension | null>(null);
 
   useEffect(() => {
+    // 모드 전환 직후에도 App의 Canvas 기본 카메라가 잠깐 노출되지 않도록
+    // 현재 물리 시작 포즈에 맞춘 렌더 전용 카메라 위치를 즉시 적용한다.
+    const initialSnapshot = simulation.getRenderSnapshot(1);
+    forward.set(Math.sin(initialSnapshot.yawRad), 0, -Math.cos(initialSnapshot.yawRad));
+    if (cameraView === "cockpit") {
+      const initialRigTelemetry = suspensionRig.current?.getTelemetry();
+      const initialVisualHeight = initialRigTelemetry
+        ? initialRigTelemetry.chassisHeightM - initialRigTelemetry.referenceRideHeightM
+        : 0;
+      desiredCamera.set(
+        initialSnapshot.position.x + forward.x * COCKPIT_CAMERA.forwardOffsetM,
+        initialVisualHeight + COCKPIT_CAMERA.heightM,
+        initialSnapshot.position.z + forward.z * COCKPIT_CAMERA.forwardOffsetM,
+      );
+      target.copy(desiredCamera).addScaledVector(forward, COCKPIT_CAMERA.lookAheadM);
+      target.y -= COCKPIT_CAMERA.lookDownM;
+    } else {
+      desiredCamera.set(
+        initialSnapshot.position.x - forward.x * 7,
+        4.2,
+        initialSnapshot.position.z - forward.z * 7,
+      );
+      target.set(
+        initialSnapshot.position.x + forward.x * 4,
+        0.35,
+        initialSnapshot.position.z + forward.z * 4,
+      );
+    }
+    camera.position.copy(desiredCamera);
+    camera.lookAt(target);
+  }, [camera, cameraView, desiredCamera, forward, simulation, target]);
+
+  useEffect(() => {
     // 시점 전환은 projection만 바꾸며, 렌더러가 차량 포즈나 입력을 수정하지 않게 한다.
     if (!(camera instanceof THREE.PerspectiveCamera)) return;
 
