@@ -176,10 +176,31 @@ Driving 장면이 마운트되거나 Chase/Cockpit 시점을 전환할 때, 현�
 | Race Weekend | ![P4 Race Weekend 960x540](visual-baseline/2026-08-04/p4/960x540/weekend.png) | ![P4 Race Weekend 1440x900](visual-baseline/2026-08-04/p4/1440x900/weekend.png) |
 | Design Studio | ![P4 Design Studio 960x540](visual-baseline/2026-08-04/p4/960x540/design.png) | ![P4 Design Studio 1440x900](visual-baseline/2026-08-04/p4/1440x900/design.png) |
 
+## PS2-P5 결과
+
+선택적 화면 프로필을 실제 로컬 웹의 동일한 Training 장면에서 A/B 비교했다.
+
+- `nostalgia-soft`를 기본값으로 두고 Canvas에만 약한 채도 감소·대비 보정·0.16px blur를 적용했다. DOM HUD는 선명하게 유지한다.
+- `nostalgia-sharp`는 별도 흐림 없이 현재 `antialias: false`와 저폴리 외곽선을 그대로 사용한다.
+- `clean-debug`는 채도를 낮추고 대비를 유지해 물리·AI 상태와 주행선을 우선 판독한다.
+- 내부 저해상도 렌더 타깃·디더링·CRT scanline·색수차는 추가하지 않았다. 현재 기본 Geometry·팔레트·카메라만으로 목표 인상이 형성되며, 강한 후처리는 차량·HUD 판독성과 성능에 불필요한 위험이 있기 때문이다.
+- 오디오 이벤트 연결은 현재 M2A-0에 독립 오디오 믹서·자산 계약이 없으므로 이번 시각 마일스톤에서 보류했다. 사운드 시스템이 별도 마일스톤으로 승인되면 RPM·슬립·연석 이벤트와 함께 연결한다.
+
+세 프로필 모두 물리·입력·DOM HUD를 변경하지 않았고, 실제 웹에서 선택값을 전환해도 Training Lab 모드와 Canvas 장면이 유지되는 것을 E2E로 확인했다.
+
+### P5 프로필 비교 캡처
+
+| 프로필 | 캡처 |
+| --- | --- |
+| `nostalgia-soft` | ![P5 nostalgia soft](visual-baseline/2026-08-04/p5/nostalgia-soft.png) |
+| `nostalgia-sharp` | ![P5 nostalgia sharp](visual-baseline/2026-08-04/p5/nostalgia-sharp.png) |
+| `clean-debug` | ![P5 clean debug](visual-baseline/2026-08-04/p5/clean-debug.png) |
+
 ## 버전 이력
 
 | 날짜 | 버전 | 변경 |
 | --- | --- | --- |
+| 2026-08-04 | 0.6.0 | PS2-P5 Canvas 화면 프로필 3종과 선택적 후처리 범위를 실제 웹에서 비교하고, 저해상도·오디오 보류 결정을 기록 |
 | 2026-08-04 | 0.5.0 | PS2-P4 HUD 핵심/진단 계층, 불투명 패널, amber 메뉴 상태를 적용하고 4개 화면의 2개 viewport 캡처를 추가 |
 | 2026-08-04 | 0.4.0 | PS2-P3 속도 FOV kick·연석/벽 impulse·콕핏 시야 보정과 가속 입력 E2E·2개 viewport 캡처를 추가 |
 | 2026-08-04 | 0.3.0 | PS2-P2 차량 차체 재질·flat shading을 통일하고 480×270·960×540·1440×900 캡처를 추가 |

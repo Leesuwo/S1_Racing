@@ -86,6 +86,16 @@ const INITIAL_TELEMETRY: VehicleTelemetry = {
 /** M3A 트랙 리밋 HUD가 WebGL 초기화 전에도 유한한 값을 표시하도록 하는 시작 상태다. */
 const INITIAL_TRACK_LIMITS: TrackLimitsSnapshot = new TrackLimitsMonitor().getSnapshot();
 
+/** PS2 출력 기억을 비교하는 렌더 전용 화면 프로필 목록이다. 물리·입력·DOM HUD에는 영향을 주지 않는다. */
+const VISUAL_PROFILES = [
+  { id: "nostalgia-soft", label: "Nostalgia Soft" },
+  { id: "nostalgia-sharp", label: "Nostalgia Sharp" },
+  { id: "clean-debug", label: "Clean Debug" },
+] as const;
+
+/** 화면 프로필은 Canvas 후처리 선택만 소유하는 좁은 UI 상태다. */
+type VisualProfileId = (typeof VISUAL_PROFILES)[number]["id"];
+
 /** 속도·RPM·힘처럼 단위가 있는 HUD 숫자를 한국어 로케일로 표시한다. */
 function formatNumber(value: number, digits = 0): string {
   return value.toLocaleString("ko-KR", {
@@ -461,6 +471,8 @@ export function App() {
   const [designView, setDesignView] = useState<DesignStudioView>("hero");
   const [designSteeringAngleDeg, setDesignSteeringAngleDeg] = useState(0);
   const [designAutoRotate, setDesignAutoRotate] = useState(true);
+  // 현재 프로필은 Canvas에만 class로 전달하고 DOM HUD와 fixed-step 실행에는 전달하지 않는다.
+  const [visualProfile, setVisualProfile] = useState<VisualProfileId>("nostalgia-soft");
   // 콕핏뷰 선택은 App 셸이 소유하는 렌더 전용 UI 상태이며 물리·입력·AI에 전달하지 않는다.
   const [drivingCameraView, setDrivingCameraView] = useState<DrivingCameraView>("chase");
   // 플레이어 주행 모드의 마지막 텔레메트리 샘플이다.
@@ -684,7 +696,7 @@ export function App() {
   const designPaint = DESIGN_STUDIO_PAINTS[designPaintId];
 
   return (
-    <main className={"app-shell " + (trainingMode ? "app-shell--training" : weekendMode ? "app-shell--weekend" : designMode ? "app-shell--design" : "")}>
+    <main className={"app-shell " + (trainingMode ? "app-shell--training" : weekendMode ? "app-shell--weekend" : designMode ? "app-shell--design" : "") + " app-shell--profile-" + visualProfile}>
       <header className="topbar">
         <div>
           <p className="eyebrow">
@@ -746,9 +758,23 @@ export function App() {
               차 디자인
             </button>
           </div>
-          <span className={"status-chip " + (paused ? "status-chip--paused " : "") + (trainingMode ? "status-chip--training" : weekendMode ? "status-chip--weekend" : designMode ? "status-chip--design" : "")}>
-            {trainingMode ? trainingStatusLabel(trainingSnapshot.status) : weekendMode ? weekendStatusLabel(raceWeekendSnapshot) : designMode ? "검토 준비" : paused ? "일시정지" : "주행 준비"}
-          </span>
+          <div className="topbar__utility-row">
+            <label className="visual-profile-control">
+              <span>화면</span>
+              <select
+                aria-label="화면 프로필"
+                value={visualProfile}
+                onChange={(event) => setVisualProfile(event.target.value as VisualProfileId)}
+              >
+                {VISUAL_PROFILES.map((profile) => (
+                  <option key={profile.id} value={profile.id}>{profile.label}</option>
+                ))}
+              </select>
+            </label>
+            <span className={"status-chip " + (paused ? "status-chip--paused " : "") + (trainingMode ? "status-chip--training" : weekendMode ? "status-chip--weekend" : designMode ? "status-chip--design" : "")}>
+              {trainingMode ? trainingStatusLabel(trainingSnapshot.status) : weekendMode ? weekendStatusLabel(raceWeekendSnapshot) : designMode ? "검토 준비" : paused ? "일시정지" : "주행 준비"}
+            </span>
+          </div>
         </div>
       </header>
 

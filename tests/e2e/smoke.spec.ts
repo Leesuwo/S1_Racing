@@ -40,6 +40,19 @@ test("opens the AI Training Lab as the default visible screen", async ({ page })
   await expect(page.getByText("AI는 입력만 생성하고 차량 위치·속도는 VehicleSimulation이 계산합니다.")).toBeVisible();
 });
 
+test("switches Canvas visual profiles without changing the active mode", async ({ page }) => {
+  await page.goto("/");
+
+  const profile = page.getByLabel("화면 프로필");
+  await expect(profile).toHaveValue("nostalgia-soft");
+  await profile.selectOption("nostalgia-sharp");
+  await expect(profile).toHaveValue("nostalgia-sharp");
+  await expect(page.getByRole("heading", { name: "Training Lab" })).toBeVisible();
+  await profile.selectOption("clean-debug");
+  await expect(profile).toHaveValue("clean-debug");
+  await expect(page.getByRole("tab", { name: "AI 교육" })).toHaveAttribute("aria-selected", "true");
+});
+
 test("opens the car design review and switches its visual inspection controls", async ({ page }) => {
   await page.goto("/");
 

@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-08-04 — D-065
+
+**결정:** PS2 화면 프로필은 `nostalgia-soft`를 기본으로 하고, `nostalgia-sharp`와 `clean-debug`를 선택지로 제공한다. 후처리는 Canvas에만 적용하는 CSS filter로 제한하며 내부 저해상도 render target·dithering·CRT scanline·색수차·새 post-processing 패키지는 이번 단계에 추가하지 않는다.
+
+**이유:** 실제 로컬 웹의 동일 Training 장면에서 soft는 표준해상도 기억을 약하게 강화하면서 DOM HUD를 흐리지 않았고, sharp는 현재의 `antialias: false` 저폴리 외곽선을 보존했으며, clean-debug는 물리·AI 주행선 판독에 적합했다. 강한 화면 효과는 차량 실루엣·다음 코너·HUD 가독성과 성능을 동시에 압박할 수 있다.
+
+**경계:** 프로필은 `App`의 렌더 전용 UI 상태와 Canvas CSS에만 연결한다. `VehicleControlInput`, 120Hz fixed-step, `VehicleSimulation`, Rapier 접촉·타이어 힘, AI 위치 소유권, DOM 텍스트 접근성은 변경하지 않는다. 현재 M2A-0에는 독립 오디오 믹서·자산 계약이 없으므로 RPM·슬립·연석 오디오 연결은 사운드 마일스톤으로 보류한다.
+
+**검증:** 실제 로컬 웹에서 세 프로필을 같은 viewport로 캡처하고 선택 전환 E2E를 실행한다. 물리·AI·입력 회귀는 `npm run verify`로 확인하며, 새 렌더 모듈 경계를 추가하지 않으므로 Archify 원본은 변경하지 않는다.
+
 ## 2026-08-03 — D-064
 
 **결정:** S1 Racing의 그래픽·게임 감성은 Google 이미지와 Reddit의 `PS2 nostalgia` moodboard에서 추출한 신호를 특정 작품 복제 없이 재해석하는 **moodboard-first PS2 nostalgia circuit racer** 방향으로 진행한다. 저폴리 Geometry, 약간 부드러운 표준해상도 인상, 계단진 실루엣, 제한된 색상 수, 버텍스/fake lighting, 강한 명암과 안개, 낮은 추적 카메라, 큰 숫자 중심의 각진 HUD, 짧고 강한 주행 피드백을 공통 기준으로 삼는다.

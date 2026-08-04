@@ -1349,6 +1349,59 @@ h1 {
   box-shadow: none;
 }
 
+/* 화면 프로필 선택기는 상단 메뉴의 상태와 나란히 두어 Canvas 옵션임을 명확히 한다. */
+.topbar__utility-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.visual-profile-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 7px;
+  border: 1px solid var(--ui-line);
+  border-radius: 2px;
+  color: var(--ui-text-dim);
+  background: var(--ui-bg-raised);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+}
+
+.visual-profile-control select {
+  min-width: 112px;
+  padding: 5px 22px 5px 6px;
+  border-color: transparent;
+  border-radius: 1px;
+  color: var(--ui-accent);
+  background: var(--ui-surface);
+  font-family: inherit;
+  font-size: 0.56rem;
+}
+
+/* soft는 가벼운 색 번짐만, sharp는 현재 계단진 Canvas를 그대로, debug는 판독성을 우선한다. */
+.app-shell--profile-nostalgia-soft .simulation-panel canvas {
+  filter: saturate(0.92) contrast(1.02) blur(0.16px);
+}
+
+.app-shell--profile-nostalgia-sharp .simulation-panel canvas {
+  filter: saturate(1.04) contrast(1.05);
+}
+
+.app-shell--profile-clean-debug .simulation-panel canvas {
+  filter: saturate(0.78) contrast(1.04);
+}
+
+@media (max-width: 680px) {
+  .topbar__utility-row {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 680px) {
   .telemetry-hud__core {
     grid-template-columns: minmax(80px, 0.75fr) minmax(54px, 0.45fr) minmax(100px, 1fr);
